@@ -1,4 +1,34 @@
-# CURRENT VER= unknown / PENDING VER= dashboard-foundation
+# CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
+
+## Version Baseline Correction
+
+### Technical Notes
+
+- Corrected the prior unknown/dashboard-foundation placeholder milestone to the shared DanielClancy project baseline: `CURRENT VER= v0.1.2-beta / PENDING VER= v1.0`.
+- Kept the existing dashboard foundation milestone details intact under the corrected version heading.
+- StreamSuites and StreamSuites-Dashboard follow their own separate version formats and must not be altered as part of DanielClancy versioning.
+- Cloudflare Pages/DNS setup for `admin.danielclancy.net` should be completed after the admin dashboard has the Projects CMS scaffold, Media CMS scaffold, and public-site login/admin entry wiring ready for production testing. It does not need to interrupt the current local dashboard build yet.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin is now filed under the same version baseline as the public DanielClancy site.
+- The Cloudflare admin deployment checkpoint remains documented as a later readiness step, not completed in this task.
+
+### Files / Areas Changed
+
+- `BUMP_NOTES.md`
+
+### Testing Notes
+
+- Documentation-only correction; no runtime code or package scripts were changed.
+- `git diff --check` should be run for this repo after the edit.
+
+### Risks / Follow-Ups
+
+- Projects CMS remains a future task.
+- Media CMS remains a future task.
+- Public-site login/admin entry wiring remains a future task.
+- Cloudflare Pages/DNS setup remains deferred until the dashboard is ready for production testing.
 
 ## Dashboard Foundation
 
