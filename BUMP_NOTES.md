@@ -1,5 +1,49 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Admin CMS API, Hydration, And Auth UI Polish Milestone
+
+### Technical Notes
+
+- Added a Cloudflare Pages Functions admin CMS API at `functions/api/admin/cms/[[collection]].js` for `projects`, `media`, and `alerts`.
+- The CMS API requires the existing signed admin session cookie, rejects unauthenticated requests, rejects authenticated non-admin users, allowlists collection names, validates JSON row shape, and uses safe error codes.
+- Added first production storage contract around Cloudflare KV binding `DC_ADMIN_KV` with keys `cms:projects`, `cms:media`, and `cms:alerts`.
+- Wired Projects, Media, and Alerts to attempt API hydration/save through `/api/admin/cms/<collection>` and to keep the existing localStorage scaffold fallback when Pages Functions, auth, or KV storage are unavailable.
+- Added per-page admin storage status/sync UI for connected, not configured, saving/checking, and local browser fallback states.
+- Kept existing table editors, create/edit/detail modals, bulk editing, JSON copy/import/reset controls, and local persistence fallback behavior intact.
+- Updated the admin auth gate top mark to `assets/logos/logo.webp`, removed internal setup copy from the surfaced login UI, and kept manual email/password collapsed by default.
+- Preserved manual env-backed master admins and did not auto-promote OAuth users to admin.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Projects, Media, and Alerts now start behaving like operational admin pages when the hosted admin session and `DC_ADMIN_KV` binding are available.
+- Static/local views still work in local browser fallback mode and do not lose the existing scaffold workflows.
+- The login gate now uses the requested DanielClancy logo and avoids exposing setup notes to users.
+- Durable account-role storage remains future work.
+- Next step after this is Cloudflare KV binding setup and live CMS save/load verification.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `functions/api/admin/cms/[[collection]].js`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check functions/api/admin/cms/[[collection]].js`, `node --check functions/api/auth/[[path]].js`, `node --check assets/js/admin-auth.js`, `node --check assets/js/admin-app.js`, `node --check assets/js/scaffold-data.js`, and `git diff --check`.
+- Static-server smoke should verify auth gate logo/copy, collapsed manual email/password, local scaffold unlock, Projects/Media/Alerts fallback status, create/edit/save fallback, Overview/Settings loading, and mobile sanity.
+- Hosted/Pages-compatible smoke is still required after `DC_ADMIN_KV` is configured.
+
+### Risks / Follow-Ups
+
+- `DC_ADMIN_KV` is required for production CMS persistence and is not claimed configured live by this repo update.
+- Durable account-role storage remains future work.
+- The CMS API currently duplicates the smallest signed-session verification logic from the auth function; a future cleanup can extract shared helpers once the Pages Functions deployment shape is proven.
+
 ## Auth UX polish and signup scaffold milestone
 
 ### Technical Notes

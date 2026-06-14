@@ -462,7 +462,7 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
+  width: min(132px, 46vw);
   height: 58px;
   border: 1px solid rgba(219, 201, 166, 0.28);
   border-radius: 999px;
@@ -473,9 +473,25 @@ a {
 }
 
 .auth-brand-mark img {
-  width: 42px;
-  height: 42px;
+  width: min(110px, 38vw);
+  max-height: 40px;
   object-fit: contain;
+}
+
+.cms-storage-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--soft);
+}
+
+.cms-storage-status span:not(.badge) {
+  font-size: 12px;
 }
 
 .auth-card-header {

@@ -33,10 +33,10 @@
     if (!match) return "";
     const value = decodeURIComponent(match[1]);
     if (value === "not-ready") {
-      return "OAuth returned without a usable callback code. Admin access still requires an env-backed master admin session.";
+      return "OAuth returned without a usable callback code. Admin access is still restricted.";
     }
     if (value.endsWith("-callback-received")) {
-      return "OAuth returned successfully, but durable account-role storage is not connected yet. This account is not an admin unless explicitly allowlisted or promoted later.";
+      return "OAuth returned successfully. This account is not an admin unless explicitly granted admin access.";
     }
     return "OAuth did not unlock the admin dashboard. Admin access requires explicit admin authority.";
   }
@@ -55,6 +55,7 @@
       refresh,
       logout
     };
+    document.dispatchEvent(new CustomEvent("dc-admin-auth-status", { detail: window.DC_ADMIN_AUTH }));
     renderGate();
     renderTopbar();
   }
@@ -107,12 +108,12 @@
     const signup = authUiState.mode === "signup";
     gate.innerHTML = `
       <section class="auth-card" aria-labelledby="admin-auth-title">
-        <span class="auth-brand-mark" aria-hidden="true"><img src="./assets/logos/dciconcircle.svg" alt="" /></span>
+        <span class="auth-brand-mark" aria-hidden="true"><img src="./assets/logos/logo.webp" alt="" /></span>
         <div class="auth-card-header">
           <span class="section-kicker">Restricted dashboard</span>
-          <h1 id="admin-auth-title">${denied ? "Admin access required" : signup ? "Create a public account" : "Sign in to DanielClancy-Admin"}</h1>
+          <h1 id="admin-auth-title">${denied ? "Admin access required" : signup ? "Create account" : "Sign in"}</h1>
           <p>
-            Only admin accounts can enter the dashboard. OAuth can sign in a regular/public account, but it will not unlock admin unless a future durable role store or explicit allowlist promotes it.
+            ${denied ? "Admin access is required for this dashboard." : "Sign in to continue."}
           </p>
         </div>
         <div class="auth-mode-tabs" role="tablist" aria-label="Authentication mode">
@@ -141,7 +142,7 @@
                     <input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required />
                   </label>
                   <button class="button" type="submit">${signup ? "Request email signup" : "Sign in with email"}</button>
-                  <p class="auth-note">${signup ? "Email signup needs the durable account store. No password is stored by this client." : "Manual env-backed master admin login is the immediate production admin path."}</p>
+                  <p class="auth-note">${signup ? "Email signup is not available yet." : "Use an approved admin account."}</p>
                 </form>`
               : ""
           }
@@ -177,7 +178,7 @@
       } else if (session?.authenticated) {
         setStatus("denied", session, "Signed in, but this account is not marked as admin.");
       } else {
-        setStatus("required", null, oauthReturnMessage() || "Sign in with a master admin email/password account.");
+        setStatus("required", null, oauthReturnMessage() || "Admin access is required for this dashboard.");
       }
     } catch {
       const oauthMessage = oauthReturnMessage();
@@ -186,8 +187,8 @@
         null,
         oauthMessage ||
           (isLocalDev
-          ? "Auth endpoint is unavailable in this local/static view. Use local scaffold unlock only for UI smoke testing."
-          : "Auth endpoint is unavailable. Confirm Cloudflare Pages Functions and DNS setup.")
+          ? "Auth endpoint is unavailable in this local/static view. Local scaffold unlock is available for UI smoke testing."
+          : "Auth endpoint is unavailable.")
       );
     }
   }
@@ -214,7 +215,7 @@
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.session) {
-        setStatus("required", null, "Sign in failed. Check credentials and Cloudflare env vars.");
+        setStatus("required", null, "Sign in failed. Check credentials and try again.");
         return;
       }
       if (!payload.session.is_admin) {
@@ -246,13 +247,13 @@
       setStatus(
         sessionState.status === "denied" ? "denied" : "required",
         sessionState.session,
-        payload?.message || "Email signup needs the durable account store. Use OAuth for now or sign in with an existing admin account."
+        payload?.message || "Email signup is not available yet."
       );
     } catch {
       setStatus(
         sessionState.status === "denied" ? "denied" : "required",
         sessionState.session,
-        "Email signup needs the durable account store. Use OAuth for now or sign in with an existing admin account."
+        "Email signup is not available yet."
       );
     }
   }
@@ -304,8 +305,8 @@
     authUiState.mode = target.getAttribute("data-auth-mode") === "signup" ? "signup" : "signin";
     sessionState.message =
       authUiState.mode === "signup"
-        ? "OAuth is the preferred signup path. Email signup needs the durable account store."
-        : "Sign in with OAuth or expand email for the env-backed master admin path.";
+        ? "Create an account for DanielClancy.net."
+        : "Sign in to continue.";
     renderGate();
   });
 

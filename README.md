@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding. Projects CMS, Media CMS, Alerts, and account-type management rows remain browser-local scaffold persistence only; real API/export pipeline work and durable account-role storage are still pending.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS pages use KV when configured and retain browser-local fallback for static/dev views. Durable account-role storage is still pending.
 
 ## Local Use
 
@@ -12,7 +12,7 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, or production env vars have been configured.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js` and CMS endpoints under `functions/api/admin/cms/[[collection]].js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -38,6 +38,8 @@ Password verification happens only inside the Pages Function. Session cookies ar
 
 The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
 
+The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default.
+
 Required Cloudflare env vars:
 
 - `DC_ADMIN_EMAIL_1`
@@ -47,6 +49,10 @@ Required Cloudflare env vars:
 - `DC_AUTH_SESSION_SECRET`
 - `DC_PUBLIC_SITE_ORIGIN` - expected `https://danielclancy.net`
 - `DC_ADMIN_SITE_ORIGIN` - expected `https://admin.danielclancy.net`
+
+Required Cloudflare KV binding:
+
+- `DC_ADMIN_KV` - production CMS persistence for Projects, Media, and Alerts
 
 Recommended shared-cookie env var:
 
@@ -88,6 +94,27 @@ Settings includes an Account access section:
 - OAuth/public account rows can be marked `regular` or `admin` in local scaffold storage under `danielclancy-admin.accounts.scaffold.v1`.
 - Local account-type edits are not production authority and do not auto-promote signed-in OAuth users. Durable account-role persistence requires a future backend/export/storage layer.
 
+## Admin CMS API
+
+Implemented endpoints:
+
+- `GET /api/admin/cms/projects`
+- `PUT /api/admin/cms/projects`
+- `GET /api/admin/cms/media`
+- `PUT /api/admin/cms/media`
+- `GET /api/admin/cms/alerts`
+- `PUT /api/admin/cms/alerts`
+
+All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, and `alerts`.
+
+Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
+
+- `cms:projects`
+- `cms:media`
+- `cms:alerts`
+
+When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configured/fallback response instead of pretending to save. The dashboard keeps existing localStorage data available and labels this as local browser fallback. A simple static/Python server does not run Cloudflare Pages Functions, so local static views will use fallback mode unless served through a Pages-compatible dev runtime with bindings.
+
 ## Cloudflare Setup Checkpoint
 
 After local smoke testing, stop for Cloudflare setup before real OAuth/live auth testing:
@@ -122,6 +149,9 @@ DanielClancy-Admin/
 │   └── logos/
 ├── functions/
 │   └── api/
+│       ├── admin/
+│       │   └── cms/
+│       │       └── [[collection]].js
 │       └── auth/
 │           └── [[path]].js
 ├── BUMP_NOTES.md
@@ -136,8 +166,8 @@ DanielClancy-Admin/
 - Overview, Analytics, Accounts, Account Detail, Projects, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Projects CMS scaffold with localStorage persistence, table editing, create/edit/detail modal, bulk actions, reset, and JSON copy/import controls.
-- Media CMS scaffold with localStorage persistence, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
+- Projects CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and JSON copy/import controls.
+- Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
-- Alerts scaffold with localStorage persistence under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
+- Alerts scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
 - Alerts rows are not live runtime rules. Desktop app visibility, Pushover delivery, and hosted production testing require the StreamSuites/runtime bridge plus Cloudflare Pages/DNS/env setup for `admin.danielclancy.net`.

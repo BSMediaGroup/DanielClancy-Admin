@@ -31,6 +31,29 @@
     "manual_test"
   ];
   const ALERT_CHANNEL_TARGETS = ["desktop", "pushover", "both", "muted"];
+  const cmsStorageState = {
+    projects: {
+      status: "checking",
+      source: "local",
+      message: "Checking admin storage...",
+      lastSaved: "",
+      lastLoaded: ""
+    },
+    media: {
+      status: "checking",
+      source: "local",
+      message: "Checking admin storage...",
+      lastSaved: "",
+      lastLoaded: ""
+    },
+    alerts: {
+      status: "checking",
+      source: "local",
+      message: "Checking admin storage...",
+      lastSaved: "",
+      lastLoaded: ""
+    }
+  };
   const MASTER_ADMIN_ACCOUNTS = [
     { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1", envSecret: "DC_ADMIN_SECRET_1" },
     { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2", envSecret: "DC_ADMIN_SECRET_2" }
@@ -43,7 +66,8 @@
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local scaffold data loaded. Changes stay in this browser only."
+    message: "Local scaffold data loaded. Changes stay in this browser only.",
+    storage: cmsStorageState.projects
   };
   const mediaState = {
     items: loadMediaItems(),
@@ -54,7 +78,8 @@
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local media scaffold loaded. Changes stay in this browser only."
+    message: "Local media scaffold loaded. Changes stay in this browser only.",
+    storage: cmsStorageState.media
   };
   const alertsState = {
     rules: loadAlertRules(),
@@ -65,7 +90,8 @@
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local alert scaffold loaded. Rules are not live until a StreamSuites/runtime bridge and hosted env setup exist."
+    message: "Local alert scaffold loaded. Rules are not live until a StreamSuites/runtime bridge and hosted env setup exist.",
+    storage: cmsStorageState.alerts
   };
   const accountAccessState = {
     accounts: loadAccountAccessScaffold(),
@@ -163,6 +189,7 @@
 
   function persistProjects() {
     window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectState.projects, null, 2));
+    persistCmsCollection("projects");
   }
 
   function normalizeMediaItem(raw) {
@@ -219,6 +246,7 @@
 
   function persistMediaItems() {
     window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
+    persistCmsCollection("media");
   }
 
   function normalizeAlertRule(raw) {
@@ -269,6 +297,178 @@
 
   function persistAlertRules() {
     window.localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(alertsState.rules, null, 2));
+    persistCmsCollection("alerts");
+  }
+
+  function cmsEndpoint(collection) {
+    return `/api/admin/cms/${collection}`;
+  }
+
+  function getCmsConfig(collection) {
+    if (collection === "projects") {
+      return {
+        state: projectState,
+        storageKey: PROJECTS_STORAGE_KEY,
+        getItems: () => projectState.projects,
+        setItems: (items) => {
+          projectState.projects = items.map(normalizeProject);
+        },
+        render: renderProjects
+      };
+    }
+    if (collection === "media") {
+      return {
+        state: mediaState,
+        storageKey: MEDIA_STORAGE_KEY,
+        getItems: () => mediaState.items,
+        setItems: (items) => {
+          mediaState.items = items.map(normalizeMediaItem);
+        },
+        render: renderMedia
+      };
+    }
+    if (collection === "alerts") {
+      return {
+        state: alertsState,
+        storageKey: ALERTS_STORAGE_KEY,
+        getItems: () => alertsState.rules,
+        setItems: (items) => {
+          alertsState.rules = items.map(normalizeAlertRule);
+        },
+        render: renderAlerts
+      };
+    }
+    return null;
+  }
+
+  function activePageIs(collection) {
+    return parseRoute().page === collection;
+  }
+
+  function cmsStatusText(storage) {
+    if (storage.status === "connected") return "Admin storage: connected";
+    if (storage.status === "not-configured") return "Admin storage: not configured";
+    if (storage.status === "saving") return "Admin storage: saving...";
+    if (storage.status === "checking") return "Admin storage: checking...";
+    return "Using local browser fallback";
+  }
+
+  function cmsStatusTone(storage) {
+    if (storage.status === "connected") return "success";
+    if (storage.status === "checking" || storage.status === "saving") return "warn";
+    return "warn";
+  }
+
+  function cmsStatusMarkup(collection, actionName) {
+    const config = getCmsConfig(collection);
+    const storage = config.state.storage;
+    const detail = storage.lastSaved
+      ? `Last saved: ${formatTimestamp(storage.lastSaved)}`
+      : storage.lastLoaded
+        ? `Last loaded: ${formatTimestamp(storage.lastLoaded)}`
+        : storage.message;
+    return `
+      <div class="cms-storage-status" data-cms-storage="${escapeHtml(collection)}">
+        ${badge(cmsStatusText(storage), cmsStatusTone(storage))}
+        <span>${escapeHtml(detail)}</span>
+        <button class="button button-secondary" type="button" data-${actionName}="sync-cms">Sync/save to admin storage</button>
+      </div>
+    `;
+  }
+
+  function markCmsStorage(collection, status, message, extra = {}) {
+    const config = getCmsConfig(collection);
+    if (!config) return;
+    Object.assign(config.state.storage, {
+      status,
+      message,
+      ...extra
+    });
+  }
+
+  async function hydrateCmsCollection(collection, renderAfter = false) {
+    const config = getCmsConfig(collection);
+    if (!config) return;
+    markCmsStorage(collection, "checking", "Checking admin storage...");
+    try {
+      const response = await fetch(cmsEndpoint(collection), { credentials: "include" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        const error = payload?.error || `http_${response.status}`;
+        const status = error === "storage_not_configured" ? "not-configured" : "fallback";
+        markCmsStorage(collection, status, storageFallbackMessage(error), { source: "local" });
+      } else if (payload.configured === false) {
+        markCmsStorage(collection, "not-configured", "DC_ADMIN_KV is not configured. Using local browser fallback.", {
+          source: payload.source || "local_fallback_unavailable"
+        });
+      } else if (payload.source === "kv" && Array.isArray(payload.items)) {
+        config.setItems(payload.items);
+        window.localStorage.setItem(config.storageKey, JSON.stringify(config.getItems(), null, 2));
+        markCmsStorage(collection, "connected", "Loaded from admin storage.", {
+          source: "kv",
+          lastLoaded: payload.meta?.updatedAt || new Date().toISOString()
+        });
+      } else {
+        markCmsStorage(collection, "connected", "Admin storage is reachable. No saved collection exists yet; local browser data is still shown.", {
+          source: payload.source || "seed"
+        });
+      }
+    } catch {
+      markCmsStorage(collection, "fallback", "Pages Functions are unavailable here. Using local browser fallback.", {
+        source: "local"
+      });
+    }
+    if (renderAfter && activePageIs(collection)) {
+      config.render();
+    }
+  }
+
+  async function persistCmsCollection(collection, renderAfter = false, force = false) {
+    const config = getCmsConfig(collection);
+    if (!config) return;
+    const storage = config.state.storage;
+    if (!force && (storage.status === "not-configured" || storage.status === "fallback")) {
+      return;
+    }
+    markCmsStorage(collection, "saving", "Saving to admin storage...");
+    if (renderAfter && activePageIs(collection)) config.render();
+    try {
+      const response = await fetch(cmsEndpoint(collection), {
+        method: "PUT",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: config.getItems() })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        const error = payload?.error || `http_${response.status}`;
+        const status = error === "storage_not_configured" ? "not-configured" : "fallback";
+        markCmsStorage(collection, status, storageFallbackMessage(error), { source: "local" });
+      } else {
+        markCmsStorage(collection, "connected", "Saved to admin storage.", {
+          source: "kv",
+          lastSaved: payload.meta?.updatedAt || new Date().toISOString()
+        });
+      }
+    } catch {
+      markCmsStorage(collection, "fallback", "Pages Functions are unavailable here. Saved to local browser fallback only.", {
+        source: "local"
+      });
+    }
+    if (renderAfter && activePageIs(collection)) {
+      config.render();
+    }
+  }
+
+  function storageFallbackMessage(error) {
+    if (error === "storage_not_configured") return "DC_ADMIN_KV is not configured. Using local browser fallback.";
+    if (error === "unauthenticated") return "Admin session is required. Using local browser fallback.";
+    if (error === "admin_required") return "Signed-in account is not an admin. Using local browser fallback.";
+    return "Admin storage is unavailable. Using local browser fallback.";
+  }
+
+  function hydrateCmsCollections() {
+    ["projects", "media", "alerts"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
   }
 
   function normalizeAccountAccess(raw) {
@@ -794,18 +994,20 @@
         ${pageHeader(
           "Projects CMS scaffold",
           "Projects",
-          "Manage portfolio listing metadata in a browser-local scaffold. Saves use localStorage only and do not publish changes to DanielClancy.net.",
+          "Manage portfolio listing metadata. Admin storage is used when available; local browser fallback remains available for static/dev views.",
           `<button class="button" type="button" data-project-action="create">Create Project</button>
            <button class="button button-secondary" type="button" data-project-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-project-action="import-json">Import JSON</button>
            <button class="button button-secondary" type="button" data-project-action="reset">Reset seed</button>`
         )}
 
+        ${cmsStatusMarkup("projects", "project-action")}
+
         ${panel(
-          "Local scaffold status",
-          "Field completeness is checked locally only. No network checks, public-site writes, or backend export pipeline are active.",
+          "CMS status",
+          "Field completeness is checked locally only. Public-site publishing and external asset checks are still separate future work.",
           metricCards([
-            { label: "Projects", value: String(projectState.projects.length), note: "Rows in local browser storage.", tone: "warn" },
+            { label: "Projects", value: String(projectState.projects.length), note: projectState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
             { label: "Published", value: String(publishedCount), note: "Local visibility metadata only.", tone: "warn" },
             { label: "Featured", value: String(featuredCount), note: "Local homepage/archive flag only.", tone: "warn" },
             { label: "Asset issues", value: String(issueCount), note: "Missing-field checks only; links are not externally verified.", tone: issueCount ? "warn" : "" }
@@ -845,18 +1047,20 @@
         ${pageHeader(
           "Media CMS scaffold",
           "Media",
-          "Manage future /watch page media metadata in a browser-local scaffold. Saves use localStorage only and do not update DanielClancy.net.",
+          "Manage future /watch page media metadata. Admin storage is used when available; local browser fallback remains available for static/dev views.",
           `<button class="button" type="button" data-media-action="create">Create Media Item</button>
            <button class="button button-secondary" type="button" data-media-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-media-action="import-json">Import JSON</button>
            <button class="button button-secondary" type="button" data-media-action="reset">Reset seed</button>`
         )}
 
+        ${cmsStatusMarkup("media", "media-action")}
+
         ${panel(
-          "Local scaffold status",
+          "CMS status",
           "This editor does not publish content, fetch YouTube/Rumble feeds, embed StreamSuites profiles, or write public exports. Completeness checks are local field checks only.",
           metricCards([
-            { label: "Media rows", value: String(mediaState.items.length), note: "Rows in local browser storage.", tone: "warn" },
+            { label: "Media rows", value: String(mediaState.items.length), note: mediaState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
             { label: "Live/published", value: String(liveOrPublishedCount), note: "Local status metadata only.", tone: "warn" },
             { label: "Archived", value: String(archivedCount), note: "Future replay/history planning only.", tone: "warn" },
             { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; links are not externally verified.", tone: issueCount ? "warn" : "" }
@@ -1119,18 +1323,20 @@
         ${pageHeader(
           "Alerts scaffold",
           "Alerts",
-          "Manage DanielClancy.net alert-rule drafts in browser-local storage. These rules do not deliver until StreamSuites/runtime export or API wiring, Cloudflare deployment, DNS, OAuth, and Pushover env setup are completed.",
+          "Manage DanielClancy.net alert-rule drafts. Admin storage is used when available; local browser fallback remains available for static/dev views.",
           `<button class="button" type="button" data-alert-action="create">Create Alert Rule</button>
            <button class="button button-secondary" type="button" data-alert-action="copy-json">Copy JSON contract</button>
            <button class="button button-secondary" type="button" data-alert-action="import-json">Import JSON</button>
            <button class="button button-secondary" type="button" data-alert-action="reset">Reset seed</button>`
         )}
 
+        ${cmsStatusMarkup("alerts", "alert-action")}
+
         ${panel(
-          "Local scaffold status",
+          "CMS status",
           "Routing fields are shaped for desktop and Pushover delivery, but this page only edits local scaffold JSON.",
           metricCards([
-            { label: "Rules", value: String(alertsState.rules.length), note: "Rows in local browser storage.", tone: "warn" },
+            { label: "Rules", value: String(alertsState.rules.length), note: alertsState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
             { label: "Enabled", value: String(enabledCount), note: "Local enabled flags only.", tone: "warn" },
             { label: "Desktop targets", value: String(desktopCount), note: "Prepared for StreamSuites Alerts client catchment.", tone: "warn" },
             { label: "Pushover targets", value: String(pushoverCount), note: "Requires runtime env/config before live delivery.", tone: pushoverCount ? "warn" : "" }
@@ -1866,10 +2072,21 @@
             </div>
             <div class="card">
               <h3>Deferred integrations</h3>
-              <p class="muted">Projects CMS and Media CMS are local scaffold-only. Hosted auth/OAuth redirects can reach the admin gate, but OAuth/public role persistence and API/export pipeline work remain future durable storage work.</p>
+              <p class="muted">Projects, Media, and Alerts use admin CMS storage when the Cloudflare KV binding is configured. OAuth/public role persistence remains future durable storage work.</p>
             </div>
           </div>
         </section>
+
+        ${panel(
+          "Admin CMS storage readiness",
+          "Production CMS persistence depends on Cloudflare Pages Functions and KV.",
+          descriptionRows([
+            ["CMS API", "Projects, Media, and Alerts call /api/admin/cms/<collection> when an admin session is available"],
+            ["KV binding", "DC_ADMIN_KV is required for production persistence"],
+            ["Fallback", "localStorage fallback is browser-local only and remains available for static/dev views"],
+            ["Account roles", "Durable account-role storage remains future work; OAuth users are not auto-promoted"]
+          ])
+        )}
 
         ${panel(
           "Account access",
@@ -1903,7 +2120,8 @@
           descriptionRows([
             ["Runtime requirement", "No request-time Node runtime"],
             ["Secrets", "Manual admin passwords stay in Cloudflare Pages Function env vars only"],
-            ["Cloudflare Pages", "Functions auth endpoints added"],
+            ["Cloudflare Pages", "Functions auth and CMS endpoints added"],
+            ["Admin CMS storage", "DC_ADMIN_KV required for production Projects, Media, and Alerts persistence"],
             ["OAuth redirect URIs", "Provider redirects available; role promotion still future durable storage"],
             ["DNS / live deployment", "Not completed by this task"]
           ])
@@ -2259,6 +2477,8 @@
       importAlertsJson();
     } else if (alertAction === "reset") {
       resetAlerts();
+    } else if (alertAction === "sync-cms") {
+      persistCmsCollection("alerts", true, true);
     }
 
     if (alertAction) return;
@@ -2302,6 +2522,8 @@
       importMediaJson();
     } else if (mediaAction === "reset") {
       resetMedia();
+    } else if (mediaAction === "sync-cms") {
+      persistCmsCollection("media", true, true);
     }
 
     if (mediaAction) return;
@@ -2345,6 +2567,8 @@
       importProjectsJson();
     } else if (action === "reset") {
       resetProjects();
+    } else if (action === "sync-cms") {
+      persistCmsCollection("projects", true, true);
     }
   });
 
@@ -2932,10 +3156,16 @@
 
   window.addEventListener("hashchange", render);
   window.addEventListener("popstate", render);
+  document.addEventListener("dc-admin-auth-status", (event) => {
+    if (event.detail?.isAdmin) {
+      hydrateCmsCollections();
+    }
+  });
 
   if (!window.location.hash && ["/", "/index.html"].includes(window.location.pathname)) {
     window.location.hash = "#/overview";
   } else {
     render();
   }
+  hydrateCmsCollections();
 })();
