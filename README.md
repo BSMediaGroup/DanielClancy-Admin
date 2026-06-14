@@ -36,9 +36,9 @@ Manual email/password master admin accounts are the first production admin path:
 
 Password verification happens only inside the Pages Function. Session cookies are signed with `DC_AUTH_SESSION_SECRET`, HttpOnly, SameSite=Lax, and Secure on HTTPS requests. Do not place `DC_ADMIN_SECRET_1`, `DC_ADMIN_SECRET_2`, or OAuth client secrets in frontend JavaScript.
 
-The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
+The admin auth gate is a polished restricted-access screen with OAuth buttons first, Cloudflare Turnstile protection, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
 
-The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default.
+The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Turnstile tokens are verified server-side with Cloudflare Siteverify before manual login, signup scaffold responses, or OAuth start redirects. OAuth callbacks do not require Turnstile because the challenge belongs at start. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
 
 Required Cloudflare env vars:
 
@@ -49,6 +49,8 @@ Required Cloudflare env vars:
 - `DC_AUTH_SESSION_SECRET`
 - `DC_PUBLIC_SITE_ORIGIN` - expected `https://danielclancy.net`
 - `DC_ADMIN_SITE_ORIGIN` - expected `https://admin.danielclancy.net`
+- `DC_TURNSTILE_SITE_KEY`
+- `DC_TURNSTILE_SECRET_KEY`
 
 Required Cloudflare KV binding:
 
@@ -57,6 +59,12 @@ Required Cloudflare KV binding:
 Recommended shared-cookie env var:
 
 - `DC_AUTH_COOKIE_DOMAIN` - recommended `.danielclancy.net`
+
+Optional dev/test Turnstile bypass:
+
+- `DC_TURNSTILE_DEV_BYPASS=false` for normal production behavior; only set `true` in explicit dev/test environments
+
+`DC_TURNSTILE_SITE_KEY` is exposed only through the safe `/api/turnstile/config` Pages Function response. `DC_TURNSTILE_SECRET_KEY` must remain server-side only; missing production secrets fail protected auth actions closed. A simple static/file server cannot run Pages Functions, so local static views may show a Turnstile unavailable state until served through a Pages-compatible runtime with env bindings.
 
 OAuth env vars:
 
@@ -107,6 +115,8 @@ Implemented endpoints:
 
 All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, and `alerts`.
 
+CMS endpoints are not Turnstile-gated because they are operational admin APIs behind the signed admin session.
+
 Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
 
 - `cms:projects`
@@ -151,15 +161,20 @@ DanielClancy-Admin/
 │   ├── js/
 │   │   ├── admin-auth.js
 │   │   ├── admin-app.js
-│   │   └── scaffold-data.js
+│   │   ├── scaffold-data.js
+│   │   └── turnstile.js
 │   └── logos/
 ├── functions/
+│   ├── _shared/
+│   │   └── turnstile.js
 │   └── api/
 │       ├── admin/
 │       │   └── cms/
 │       │       └── [[collection]].js
-│       └── auth/
-│           └── [[path]].js
+│       ├── auth/
+│       │   └── [[path]].js
+│       └── turnstile/
+│           └── config.js
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html

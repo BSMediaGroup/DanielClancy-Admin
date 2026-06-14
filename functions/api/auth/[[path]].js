@@ -1,3 +1,5 @@
+import { verifyTurnstileToken } from "../../_shared/turnstile.js";
+
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const JSON_HEADERS = {
@@ -24,6 +26,7 @@ const OAUTH_PROVIDERS = {
     scope: "users.read tweet.read offline.access"
   }
 };
+const TURNSTILE_AUTH_MESSAGE = "Security check failed. Please refresh the challenge and try again.";
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -210,6 +213,14 @@ async function handleLogin(request, env) {
   }
   const email = String(payload.email || "").trim().toLowerCase();
   const password = String(payload.password || "");
+  const turnstileResult = await verifyTurnstileToken({
+    env,
+    token: payload.turnstileToken || payload["cf-turnstile-response"],
+    remoteIp: request.headers.get("CF-Connecting-IP") || ""
+  });
+  if (!turnstileResult.ok) {
+    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
+  }
   const candidates = [
     [env.DC_ADMIN_EMAIL_1, env.DC_ADMIN_SECRET_1],
     [env.DC_ADMIN_EMAIL_2, env.DC_ADMIN_SECRET_2]
@@ -241,14 +252,23 @@ async function handleLogin(request, env) {
   );
 }
 
-async function handleSignup(request) {
+async function handleSignup(request, env) {
   if (request.method !== "POST") {
     return json({ ok: false, error: "method_not_allowed" }, { status: 405 });
   }
+  let payload = {};
   try {
-    await request.json();
+    payload = await request.json();
   } catch {
     return json({ ok: false, error: "invalid_request" }, { status: 400 });
+  }
+  const turnstileResult = await verifyTurnstileToken({
+    env,
+    token: payload.turnstileToken || payload["cf-turnstile-response"],
+    remoteIp: request.headers.get("CF-Connecting-IP") || ""
+  });
+  if (!turnstileResult.ok) {
+    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
   }
   return json(
     {
@@ -265,9 +285,18 @@ function buildCallbackUrl(request, env, provider) {
   return `${origin.replace(/\/+$/, "")}/api/auth/oauth/${provider}/callback`;
 }
 
-function handleOAuthStart(request, env, provider) {
+async function handleOAuthStart(request, env, provider) {
   const config = OAUTH_PROVIDERS[provider];
   if (!config) return json({ ok: false, error: "unknown_provider" }, { status: 404 });
+  const url = new URL(request.url);
+  const turnstileResult = await verifyTurnstileToken({
+    env,
+    token: url.searchParams.get("turnstileToken"),
+    remoteIp: request.headers.get("CF-Connecting-IP") || ""
+  });
+  if (!turnstileResult.ok) {
+    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
+  }
   const clientId = String(env[config.clientId] || "").trim();
   const clientSecret = String(env[config.clientSecret] || "").trim();
   if (!clientId || !clientSecret) {
@@ -317,7 +346,7 @@ export async function onRequest(context) {
     } else if (path === "login") {
       response = await handleLogin(request, env);
     } else if (path === "signup") {
-      response = await handleSignup(request);
+      response = await handleSignup(request, env);
     } else if (path === "logout") {
       response = json({ ok: true }, { headers: { "set-cookie": clearCookie(request, env) } });
     } else {
@@ -325,7 +354,7 @@ export async function onRequest(context) {
       if (!match) {
         response = json({ ok: false, error: "not_found" }, { status: 404 });
       } else if (match[2] === "start") {
-        response = handleOAuthStart(request, env, match[1]);
+        response = await handleOAuthStart(request, env, match[1]);
       } else {
         response = handleOAuthCallback(request, env, match[1]);
       }

@@ -15,7 +15,10 @@
   };
   const authUiState = {
     mode: "signin",
-    emailOpen: false
+    emailOpen: false,
+    turnstileToken: "",
+    turnstileMessage: "Loading security check...",
+    turnstileController: null
   };
   const PROVIDERS = [
     { id: "github", label: "GitHub", icon: "./assets/icons/github.svg" },
@@ -25,6 +28,10 @@
 
   function endpoint(path) {
     return `${AUTH_ORIGIN}/api/auth/${path}`;
+  }
+
+  function turnstileConfigEndpoint() {
+    return `${AUTH_ORIGIN}/api/turnstile/config`;
   }
 
   function oauthReturnMessage() {
@@ -77,13 +84,40 @@
     return PROVIDERS
       .map(
         (provider) => `
-          <a class="button button-secondary auth-provider-button" href="${endpoint(`oauth/${provider.id}/start`)}">
+          <button class="button button-secondary auth-provider-button" type="button" data-auth-oauth="${provider.id}">
             <img class="auth-provider-icon" src="${provider.icon}" alt="" />
             <span>${authUiState.mode === "signup" ? "Sign up with" : "Continue with"} ${provider.label}</span>
-          </a>
+          </button>
         `
       )
       .join("");
+  }
+
+  function resetTurnstile() {
+    authUiState.turnstileToken = "";
+    if (authUiState.turnstileController) {
+      authUiState.turnstileController.reset();
+    }
+  }
+
+  function mountTurnstile() {
+    const target = document.querySelector("[data-auth-turnstile-widget]");
+    const messageTarget = document.querySelector("[data-auth-turnstile-message]");
+    if (!target || !window.DCTurnstile) return;
+    if (authUiState.turnstileController) {
+      authUiState.turnstileController.remove();
+      authUiState.turnstileController = null;
+    }
+    authUiState.turnstileController = window.DCTurnstile.create({
+      configUrl: turnstileConfigEndpoint(),
+      actionLabel: authUiState.mode === "signup" ? "create an account" : "sign in",
+      onChange: function (token, message) {
+        authUiState.turnstileToken = token || "";
+        authUiState.turnstileMessage = message || "";
+        if (messageTarget) messageTarget.textContent = authUiState.turnstileMessage;
+      }
+    });
+    authUiState.turnstileController.mount(target);
   }
 
   function renderSignedInIdentity() {
@@ -124,6 +158,10 @@
         <div class="auth-provider-grid">
           ${providerLinks()}
         </div>
+        <div class="auth-turnstile">
+          <div class="auth-turnstile-widget" data-auth-turnstile-widget></div>
+          <p class="auth-turnstile-message" data-auth-turnstile-message>${escapeHtml(authUiState.turnstileMessage)}</p>
+        </div>
         <div class="auth-divider"><span>or</span></div>
         <div class="auth-email-section">
           <button class="auth-email-toggle" type="button" data-auth-action="toggle-email" aria-expanded="${authUiState.emailOpen}">
@@ -157,6 +195,7 @@
         }
       </section>
     `;
+    mountTurnstile();
   }
 
   function escapeHtml(value) {
@@ -205,13 +244,17 @@
       setStatus("required", null, "Email and password are required.");
       return;
     }
+    if (!authUiState.turnstileToken) {
+      setStatus("required", null, "Complete the security check before continuing.");
+      return;
+    }
     setStatus("pending", null, "Checking server-side credentials...");
     try {
       const response = await fetch(endpoint("login"), {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, turnstileToken: authUiState.turnstileToken })
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.session) {
@@ -225,6 +268,8 @@
       setStatus("allowed", payload.session, "Admin session verified.");
     } catch {
       setStatus("required", null, "Auth endpoint is not reachable yet.");
+    } finally {
+      resetTurnstile();
     }
   }
 
@@ -235,13 +280,17 @@
       setStatus("required", sessionState.session, "Email is required before checking signup availability.");
       return;
     }
+    if (!authUiState.turnstileToken) {
+      setStatus("required", sessionState.session, "Complete the security check before continuing.");
+      return;
+    }
     setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Checking account creation availability...");
     try {
       const response = await fetch(endpoint("signup"), {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, turnstileToken: authUiState.turnstileToken })
       });
       const payload = await response.json().catch(() => null);
       setStatus(
@@ -255,7 +304,19 @@
         sessionState.session,
         "Email signup is not available yet."
       );
+    } finally {
+      resetTurnstile();
     }
+  }
+
+  function startOAuth(provider) {
+    if (!authUiState.turnstileToken) {
+      setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Complete the security check before continuing with OAuth.");
+      return;
+    }
+    const target = new URL(endpoint(`oauth/${provider}/start`));
+    target.searchParams.set("turnstileToken", authUiState.turnstileToken);
+    window.location.assign(target.toString());
   }
 
   async function logout() {
@@ -300,6 +361,12 @@
   });
 
   document.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-auth-oauth]");
+    if (!(target instanceof HTMLElement)) return;
+    startOAuth(target.getAttribute("data-auth-oauth"));
+  });
+
+  document.addEventListener("click", (event) => {
     const target = event.target.closest("[data-auth-mode]");
     if (!(target instanceof HTMLElement)) return;
     authUiState.mode = target.getAttribute("data-auth-mode") === "signup" ? "signup" : "signin";
@@ -307,6 +374,7 @@
       authUiState.mode === "signup"
         ? "Create an account for DanielClancy.net."
         : "Sign in to continue.";
+    authUiState.turnstileToken = "";
     renderGate();
   });
 

@@ -1,5 +1,53 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Turnstile admin auth protection milestone
+
+### Technical Notes
+
+- Added a Cloudflare Pages-compatible Turnstile Siteverify helper at `functions/_shared/turnstile.js`.
+- Added `/api/turnstile/config` so the auth gate can fetch `DC_TURNSTILE_SITE_KEY` without exposing `DC_TURNSTILE_SECRET_KEY`.
+- Added `assets/js/turnstile.js` as a small explicit-rendering helper for the static admin auth gate.
+- Added Turnstile to the admin auth gate/login/signup UI while preserving `assets/logos/logo.webp`, local OAuth provider icons, sign in/create account toggle, and collapsed manual email/password by default.
+- Manual email/password login now verifies Turnstile server-side before checking env-backed credentials.
+- Email signup scaffold now verifies Turnstile server-side before returning the durable-account-store-required response.
+- OAuth start flows now require a Turnstile token and verify it server-side before redirecting to GitHub, Google, or Twitter/X. OAuth callbacks are not Turnstile-gated.
+- CMS endpoints remain signed-session protected and were not Turnstile-gated or given widgets inside operational admin pages.
+- Added `DC_TURNSTILE_SITE_KEY`, `DC_TURNSTILE_SECRET_KEY`, and `DC_TURNSTILE_DEV_BYPASS=false` to `.env.example`.
+- Turnstile secret remains server-only.
+- Existing manual env-backed admin auth is preserved.
+- OAuth users are still not auto-promoted to admin.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+- Alert delivery bridge remains the next separate task.
+
+### Human-Readable Notes
+
+- The admin gate now requires a real server-verified anti-abuse challenge before protected auth actions.
+- Already-authenticated admin sessions can still view the dashboard without solving Turnstile again.
+- Local static/file views can show Turnstile unavailable until Pages Functions and env bindings are available; local scaffold unlock remains only for UI smoke testing.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/turnstile.js`
+- `functions/_shared/turnstile.js`
+- `functions/api/auth/[[path]].js`
+- `functions/api/turnstile/config.js`
+- `index.html`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check functions/api/auth/[[path]].js`, `node --check functions/_shared/turnstile.js`, `node --check functions/api/turnstile/config.js`, `node --check assets/js/turnstile.js`, `node --check assets/js/admin-auth.js`, and `git diff --check`.
+- Smoke test auth gate render, Turnstile container, collapsed email/password expansion, OAuth button presence/start gating, local/static unavailable messaging, local scaffold unlock, `#/overview`, `#/projects`, `#/media`, `#/alerts`, and mobile sanity.
+
+### Risks / Follow-Ups
+
+- Live Turnstile verification requires the Cloudflare Pages deployment to have matching `DC_TURNSTILE_SITE_KEY` and `DC_TURNSTILE_SECRET_KEY` values.
+- Hosted OAuth start and callback testing still depends on provider app/env/callback configuration.
+
 ## Projects Public Baseline And KV Overlay Safety Milestone
 
 ### Technical Notes
