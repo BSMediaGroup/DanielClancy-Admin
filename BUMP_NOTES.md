@@ -1,5 +1,49 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Media CMS Local Scaffold
+
+### Technical Notes
+
+- Enabled the Media navigation entry and added the `#/media` route to the existing static hash-router shell while leaving Projects enabled.
+- Added a table-style Media CMS scaffold with search, status filtering, platform filtering, local field-completeness filtering, row selection, detail/edit/delete actions, and media count/status cards.
+- Added a Media lightbox editor modal for create, edit, and detail review flows with required title and slug/id validation.
+- Added local bulk editing controls for selected media rows: status/visibility posture through status, platform, featured flag, add tag, remove tag, and confirmed bulk delete.
+- Added localStorage persistence under `danielclancy-admin.media.scaffold.v1`, plus confirmed reseed/reset, JSON copy, and validated JSON import controls.
+- Seed media rows are clearly fake scaffold rows aligned where practical to the current public `/watch` feed shape: id/slug, title, provider/platform, thumbnail path, embed URL, video URL, published date, summary/excerpt, and description. The scaffold also includes future livestream/replay fields.
+- Media health is local field completeness only. It checks for missing title, slug/id, thumbnail, embed/video URL, archived livestream replay URL, scheduled stream date, tags, and draft/hidden status. It does not perform network checks or claim external link/feed verification.
+- The public site `/watch` schema is only partially admin-ready because the public repo currently hydrates from a server-side YouTube feed rather than a local CMS export. The admin scaffold preserves a flexible schema until a real API/export contract is designed.
+
+### Human-Readable Notes
+
+- Media can now be planned in a polished admin UI scaffold for future DanielClancy.net `/watch` page management.
+- Saves are local to the browser and do not publish to DanielClancy.net.
+- The page is intentionally clear that StreamSuites profile embedding, YouTube/Rumble/external feed integration, public login/admin entry wiring, and real API/export wiring remain future work.
+
+### Files / Areas Changed
+
+- `index.html`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `assets/js/scaffold-data.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing Notes
+
+- Run `node --check assets/js/scaffold-data.js` and `node --check assets/js/admin-app.js`.
+- Run `git diff --check`.
+- No `package.json` exists in this repo, so npm lint/typecheck/build checks are unavailable unless a package workflow is added later.
+- Perform a local static-server smoke check for `#/media`, create modal, edit modal, bulk status/platform/featured/tag controls, localStorage reload behavior, reset/reseed confirmation, and mobile viewport sanity.
+
+### Risks / Follow-Ups
+
+- Media CMS is scaffold/local-persistence only.
+- It does not publish to DanielClancy.net yet.
+- StreamSuites profile/media integration remains future work.
+- YouTube/Rumble/external feed integration remains future work.
+- Public login/admin entry wiring remains future work.
+- Cloudflare Pages/DNS setup for `admin.danielclancy.net` remains a later checkpoint after Media CMS and public login/admin wiring are ready for production testing.
+
 ## Projects CMS Local Scaffold
 
 ### Technical Notes

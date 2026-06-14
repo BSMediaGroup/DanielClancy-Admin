@@ -11,10 +11,11 @@
     { id: "accounts", label: "Accounts", icon: "AC", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "SE", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "PR", path: "#/projects" },
-    { id: "media", label: "Media", icon: "ME", path: "", disabled: true }
+    { id: "media", label: "Media", icon: "ME", path: "#/media" }
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
+  const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
   const projectState = {
     projects: loadProjects(),
     search: "",
@@ -24,6 +25,17 @@
     bulkMode: false,
     modal: null,
     message: "Local scaffold data loaded. Changes stay in this browser only."
+  };
+  const mediaState = {
+    items: loadMediaItems(),
+    search: "",
+    status: "all",
+    platform: "all",
+    health: "all",
+    selected: new Set(),
+    bulkMode: false,
+    modal: null,
+    message: "Local media scaffold loaded. Changes stay in this browser only."
   };
 
   function escapeHtml(value) {
@@ -119,6 +131,62 @@
     window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectState.projects, null, 2));
   }
 
+  function normalizeMediaItem(raw) {
+    const fallbackId = createSlug(raw?.slug || raw?.id || raw?.title || `media-${Date.now()}`);
+    const status = String(raw?.status || raw?.visibility || "draft").toLowerCase();
+    const platform = String(raw?.platform || raw?.provider || "local").toLowerCase();
+    const type = String(raw?.type || raw?.kind || "video").toLowerCase();
+
+    return {
+      id: String(raw?.id || fallbackId),
+      slug: createSlug(raw?.slug || raw?.id || raw?.title || fallbackId),
+      title: String(raw?.title || ""),
+      type: ["livestream", "video", "short", "clip", "podcast", "upload", "embed"].includes(type) ? type : "video",
+      status: ["draft", "scheduled", "live", "archived", "hidden", "published"].includes(status) ? status : "draft",
+      visibility: ["public", "draft", "hidden", "private"].includes(String(raw?.visibility || "").toLowerCase())
+        ? String(raw.visibility).toLowerCase()
+        : status === "published" || status === "live" ? "public" : status === "hidden" ? "hidden" : "draft",
+      platform: ["youtube", "rumble", "streamsuites", "local", "external"].includes(platform) ? platform : "external",
+      scheduledAt: String(raw?.scheduledAt || raw?.scheduled_at || ""),
+      publishedAt: String(raw?.publishedAt || raw?.published_at || raw?.date || ""),
+      featured: Boolean(raw?.featured),
+      thumbnailPath: String(raw?.thumbnailPath || raw?.thumbnailUrl || ""),
+      embedUrl: String(raw?.embedUrl || ""),
+      videoUrl: String(raw?.videoUrl || raw?.url || ""),
+      replayUrl: String(raw?.replayUrl || ""),
+      externalPageUrl: String(raw?.externalPageUrl || raw?.pageUrl || ""),
+      summary: String(raw?.summary || raw?.excerpt || ""),
+      description: String(raw?.description || ""),
+      tags: arrayFromValue(raw?.tags || []),
+      internalNotes: String(raw?.internalNotes || ""),
+      updatedAt: String(raw?.updatedAt || new Date().toISOString())
+    };
+  }
+
+  function loadMediaItems() {
+    const seed = Array.isArray(data.media) ? data.media.map(normalizeMediaItem) : [];
+
+    try {
+      const stored = window.localStorage.getItem(MEDIA_STORAGE_KEY);
+      if (!stored) {
+        return seed;
+      }
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return seed;
+      }
+
+      return parsed.map(normalizeMediaItem);
+    } catch {
+      return seed;
+    }
+  }
+
+  function persistMediaItems() {
+    window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
+  }
+
   function projectAssetIssues(project) {
     const issues = [];
 
@@ -142,6 +210,76 @@
     if (value === "published") return "success";
     if (value === "archived" || value === "hidden") return "danger";
     return "warn";
+  }
+
+  function mediaCompletenessIssues(item) {
+    const issues = [];
+
+    if (!item.title) issues.push("missing title");
+    if (!item.slug) issues.push("missing slug/id");
+    if (!item.thumbnailPath) issues.push("missing thumbnail");
+    if (!item.embedUrl && !item.videoUrl) issues.push("missing embed/video URL");
+    if (item.type === "livestream" && item.status === "archived" && !item.replayUrl) issues.push("missing replay URL");
+    if (item.status === "scheduled" && !item.scheduledAt) issues.push("missing scheduled date");
+    if (!item.tags.length) issues.push("missing tags");
+    if (item.status === "draft" || item.status === "hidden" || item.visibility !== "public") issues.push("hidden/draft status");
+
+    return issues;
+  }
+
+  function mediaHealthTone(item) {
+    const issues = mediaCompletenessIssues(item);
+    if (!issues.length) return "success";
+    if (issues.length <= 2) return "warn";
+    return "danger";
+  }
+
+  function mediaStatusTone(value) {
+    if (value === "live" || value === "published") return "success";
+    if (value === "archived" || value === "hidden") return "danger";
+    return "warn";
+  }
+
+  function mediaSearchBlob(item) {
+    return [
+      item.title,
+      item.slug,
+      item.type,
+      item.status,
+      item.visibility,
+      item.platform,
+      item.scheduledAt,
+      item.publishedAt,
+      item.thumbnailPath,
+      item.embedUrl,
+      item.videoUrl,
+      item.replayUrl,
+      item.externalPageUrl,
+      item.summary,
+      item.description,
+      item.tags.join(" ")
+    ]
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function filteredMediaItems() {
+    const term = mediaState.search.trim().toLowerCase();
+    return mediaState.items.filter((item) => {
+      if (mediaState.status !== "all" && item.status !== mediaState.status) {
+        return false;
+      }
+
+      if (mediaState.platform !== "all" && item.platform !== mediaState.platform) {
+        return false;
+      }
+
+      const issues = mediaCompletenessIssues(item);
+      if (mediaState.health === "issues" && !issues.length) return false;
+      if (mediaState.health === "complete" && issues.length) return false;
+
+      return !term || mediaSearchBlob(item).includes(term);
+    });
   }
 
   function uniqueValues(values) {
@@ -535,6 +673,282 @@
     `;
   }
 
+  function renderMedia() {
+    routeTitle.textContent = "Media";
+    const visibleItems = filteredMediaItems();
+    const selectedVisible = visibleItems.filter((item) => mediaState.selected.has(item.id)).length;
+    const issueCount = mediaState.items.filter((item) => mediaCompletenessIssues(item).length).length;
+    const featuredCount = mediaState.items.filter((item) => item.featured).length;
+    const liveOrPublishedCount = mediaState.items.filter((item) => item.status === "live" || item.status === "published").length;
+    const archivedCount = mediaState.items.filter((item) => item.status === "archived").length;
+    const statuses = uniqueValues(mediaState.items.map((item) => item.status));
+    const platforms = uniqueValues(mediaState.items.map((item) => item.platform));
+
+    app.innerHTML = `
+      <div class="page media-page">
+        ${pageHeader(
+          "Media CMS scaffold",
+          "Media",
+          "Manage future /watch page media metadata in a browser-local scaffold. Saves use localStorage only and do not update DanielClancy.net.",
+          `<button class="button" type="button" data-media-action="create">Create Media Item</button>
+           <button class="button button-secondary" type="button" data-media-action="copy-json">Copy JSON</button>
+           <button class="button button-secondary" type="button" data-media-action="import-json">Import JSON</button>
+           <button class="button button-secondary" type="button" data-media-action="reset">Reset seed</button>`
+        )}
+
+        ${panel(
+          "Local scaffold status",
+          "This editor does not publish content, fetch YouTube/Rumble feeds, embed StreamSuites profiles, or write public exports. Completeness checks are local field checks only.",
+          metricCards([
+            { label: "Media rows", value: String(mediaState.items.length), note: "Rows in local browser storage.", tone: "warn" },
+            { label: "Live/published", value: String(liveOrPublishedCount), note: "Local status metadata only.", tone: "warn" },
+            { label: "Archived", value: String(archivedCount), note: "Future replay/history planning only.", tone: "warn" },
+            { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; links are not externally verified.", tone: issueCount ? "warn" : "" }
+          ])
+        )}
+
+        ${panel(
+          "Filters and bulk controls",
+          "Search media metadata, select rows, and apply bulk changes to local scaffold rows.",
+          renderMediaControls(statuses, platforms, visibleItems.length, selectedVisible, featuredCount)
+        )}
+
+        ${panel(
+          "Media table editor",
+          "Table-style CMS editor aligned to the current public /watch feed shape where practical, with room for livestream and replay metadata.",
+          renderMediaTable(visibleItems)
+        )}
+
+        ${mediaState.modal ? renderMediaModal(mediaState.modal) : ""}
+      </div>
+    `;
+  }
+
+  function renderMediaControls(statuses, platforms, visibleCount, selectedVisible, featuredCount) {
+    return `
+      <div class="cms-toolbar" data-media-controls>
+        <label class="field field-wide">
+          <span>Search</span>
+          <input class="input" type="search" value="${escapeHtml(mediaState.search)}" placeholder="Title, slug, platform, URL, tag, status" data-media-filter="search" />
+        </label>
+        <label class="field">
+          <span>Status</span>
+          <select class="input" data-media-filter="status">
+            <option value="all"${mediaState.status === "all" ? " selected" : ""}>All statuses</option>
+            ${statuses
+              .map((status) => `<option value="${escapeHtml(status)}"${mediaState.status === status ? " selected" : ""}>${escapeHtml(status)}</option>`)
+              .join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Platform</span>
+          <select class="input" data-media-filter="platform">
+            <option value="all"${mediaState.platform === "all" ? " selected" : ""}>All platforms</option>
+            ${platforms
+              .map((platform) => `<option value="${escapeHtml(platform)}"${mediaState.platform === platform ? " selected" : ""}>${escapeHtml(platform)}</option>`)
+              .join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Health</span>
+          <select class="input" data-media-filter="health">
+            <option value="all"${mediaState.health === "all" ? " selected" : ""}>All rows</option>
+            <option value="issues"${mediaState.health === "issues" ? " selected" : ""}>Needs fields</option>
+            <option value="complete"${mediaState.health === "complete" ? " selected" : ""}>Complete fields</option>
+          </select>
+        </label>
+        <div class="cms-toolbar-summary">
+          ${badge(`${visibleCount} visible`, "warn")}
+          ${badge(`${mediaState.selected.size} selected`, selectedVisible ? "success" : "warn")}
+          ${badge(`${featuredCount} featured`, "warn")}
+          ${badge("Browser local only", "warn")}
+        </div>
+      </div>
+      <div class="bulk-panel ${mediaState.bulkMode ? "is-open" : ""}">
+        <div>
+          <strong>Bulk editing mode</strong>
+          <p class="muted">Selected-row actions update ${escapeHtml(MEDIA_STORAGE_KEY)} only. Delete requires confirmation and never affects DanielClancy.net.</p>
+        </div>
+        <div class="toolbar">
+          <button class="button button-secondary" type="button" data-media-action="toggle-bulk">${mediaState.bulkMode ? "Close bulk mode" : "Open bulk mode"}</button>
+          <button class="button button-secondary" type="button" data-media-action="select-visible">Select visible</button>
+          <button class="button button-secondary" type="button" data-media-action="clear-selection">Clear selection</button>
+          <select class="input input-compact" data-media-bulk-field="status" ${mediaState.selected.size ? "" : "disabled"}>
+            <option value="">Set status</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="live">Live</option>
+            <option value="published">Published</option>
+            <option value="archived">Archived</option>
+            <option value="hidden">Hidden</option>
+          </select>
+          <select class="input input-compact" data-media-bulk-field="platform" ${mediaState.selected.size ? "" : "disabled"}>
+            <option value="">Set platform</option>
+            <option value="youtube">YouTube</option>
+            <option value="rumble">Rumble</option>
+            <option value="streamsuites">StreamSuites</option>
+            <option value="local">Local</option>
+            <option value="external">External</option>
+          </select>
+          <select class="input input-compact" data-media-bulk-field="featured" ${mediaState.selected.size ? "" : "disabled"}>
+            <option value="">Set featured</option>
+            <option value="true">Featured yes</option>
+            <option value="false">Featured no</option>
+          </select>
+          <input class="input input-compact" type="text" placeholder="Tag" data-media-bulk-tag ${mediaState.selected.size ? "" : "disabled"} />
+          <button class="button button-secondary" type="button" data-media-action="bulk-add-tag" ${mediaState.selected.size ? "" : "disabled"}>Add tag</button>
+          <button class="button button-secondary" type="button" data-media-action="bulk-remove-tag" ${mediaState.selected.size ? "" : "disabled"}>Remove tag</button>
+          <button class="button button-danger" type="button" data-media-action="bulk-delete" ${mediaState.selected.size ? "" : "disabled"}>Delete selected</button>
+        </div>
+        <div class="project-message" role="status">${escapeHtml(mediaState.message)}</div>
+      </div>
+    `;
+  }
+
+  function renderMediaTable(items) {
+    if (!items.length) {
+      return `<div class="empty-state">No local scaffold media items match the current filters. Create a media item or reset the seed rows.</div>`;
+    }
+
+    return `
+      <div class="table-wrap media-table-wrap">
+        <table class="table project-table media-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" aria-label="Select visible media items" data-media-select-all ${items.every((item) => mediaState.selected.has(item.id)) ? "checked" : ""} /></th>
+              <th>Title</th>
+              <th>Slug / ID</th>
+              <th>Type</th>
+              <th>Status / visibility</th>
+              <th>Platform</th>
+              <th>Date</th>
+              <th>Featured</th>
+              <th>URLs / thumbnail</th>
+              <th>Tags</th>
+              <th>Media health</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(renderMediaRow).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderMediaRow(item) {
+    const issues = mediaCompletenessIssues(item);
+    const issueLabel = issues.length ? issues.join(", ") : "complete fields";
+    const dateLabel = item.scheduledAt || item.publishedAt || "Undated";
+    return `
+      <tr>
+        <td><input type="checkbox" aria-label="Select ${escapeHtml(item.title || item.slug)}" data-media-select="${escapeHtml(item.id)}" ${mediaState.selected.has(item.id) ? "checked" : ""} /></td>
+        <td><strong>${escapeHtml(item.title || "Untitled media scaffold")}</strong><br><span>${escapeHtml(item.summary || "No summary field")}</span></td>
+        <td><code>${escapeHtml(item.slug)}</code></td>
+        <td>${badge(item.type)}</td>
+        <td>${badge(item.status, mediaStatusTone(item.status))}<br>${badge(item.visibility, item.visibility === "public" ? "success" : "warn")}</td>
+        <td>${badge(item.platform)}</td>
+        <td>${escapeHtml(dateLabel)}</td>
+        <td>${item.featured ? badge("Featured", "success") : badge("Standard")}</td>
+        <td>
+          <span class="path-text">${escapeHtml(item.thumbnailPath || "Missing thumbnail")}</span>
+          <span class="path-text">${escapeHtml(item.embedUrl || item.videoUrl || "Missing embed/video URL")}</span>
+          <span class="path-text">${escapeHtml(item.replayUrl || "No replay URL")}</span>
+        </td>
+        <td><div class="chip-row">${item.tags.slice(0, 4).map((tag) => badge(tag)).join("") || badge("No tags", "warn")}</div></td>
+        <td>${badge(issueLabel, mediaHealthTone(item))}<br><small>Local field completeness only</small></td>
+        <td>${escapeHtml(formatTimestamp(item.updatedAt))}</td>
+        <td>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-media-action="detail" data-media-id="${escapeHtml(item.id)}">Detail</button>
+            <button class="button button-secondary" type="button" data-media-action="edit" data-media-id="${escapeHtml(item.id)}">Edit</button>
+            <button class="button button-danger" type="button" data-media-action="delete" data-media-id="${escapeHtml(item.id)}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderMediaModal(modal) {
+    const item = modal.item;
+    const readOnly = modal.mode === "detail";
+    const issues = mediaCompletenessIssues(item);
+    const title = modal.mode === "create" ? "Create media scaffold" : modal.mode === "detail" ? "Media detail" : "Edit media scaffold";
+    return `
+      <div class="modal-backdrop" data-media-modal-backdrop>
+        <section class="modal media-modal" role="dialog" aria-modal="true" aria-labelledby="media-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">Local /watch scaffold editor</span>
+              <h2 id="media-modal-title">${escapeHtml(title)}</h2>
+              <p>Save writes only to ${escapeHtml(MEDIA_STORAGE_KEY)} in this browser. It does not update DanielClancy.net or fetch external feeds.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close media editor" data-media-action="close-modal">x</button>
+          </header>
+          <form class="modal-body project-form media-form" data-media-form>
+            <input type="hidden" name="originalId" value="${escapeHtml(item.id)}" />
+            <div class="form-grid">
+              ${field("Title", "title", item.title, "text", true, readOnly)}
+              ${field("Slug / ID", "slug", item.slug, "text", true, readOnly)}
+              <label class="field">
+                <span>Type</span>
+                <select class="input" name="type" ${readOnly ? "disabled" : ""}>
+                  ${["livestream", "video", "short", "clip", "podcast", "upload", "embed"].map((type) => `<option value="${type}"${item.type === type ? " selected" : ""}>${type}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Status</span>
+                <select class="input" name="status" ${readOnly ? "disabled" : ""}>
+                  ${["draft", "scheduled", "live", "published", "archived", "hidden"].map((status) => `<option value="${status}"${item.status === status ? " selected" : ""}>${status}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Visibility</span>
+                <select class="input" name="visibility" ${readOnly ? "disabled" : ""}>
+                  ${["public", "draft", "hidden", "private"].map((visibility) => `<option value="${visibility}"${item.visibility === visibility ? " selected" : ""}>${visibility}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Platform</span>
+                <select class="input" name="platform" ${readOnly ? "disabled" : ""}>
+                  ${["youtube", "rumble", "streamsuites", "local", "external"].map((platform) => `<option value="${platform}"${item.platform === platform ? " selected" : ""}>${platform}</option>`).join("")}
+                </select>
+              </label>
+              ${field("Scheduled/live date", "scheduledAt", item.scheduledAt, "datetime-local", false, readOnly)}
+              ${field("Published date", "publishedAt", item.publishedAt, "datetime-local", false, readOnly)}
+              <label class="checkbox-field">
+                <input type="checkbox" name="featured" ${item.featured ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Featured media item</span>
+              </label>
+              ${field("Thumbnail path", "thumbnailPath", item.thumbnailPath, "text", false, readOnly)}
+              ${field("Embed URL", "embedUrl", item.embedUrl, "url", false, readOnly)}
+              ${field("Video URL", "videoUrl", item.videoUrl, "url", false, readOnly)}
+              ${field("Replay URL", "replayUrl", item.replayUrl, "url", false, readOnly)}
+              ${field("External page URL", "externalPageUrl", item.externalPageUrl, "url", false, readOnly)}
+              ${textareaField("Summary / excerpt", "summary", item.summary, readOnly)}
+              ${textareaField("Description", "description", item.description, readOnly)}
+              ${textareaField("Tags", "tags", item.tags.join("\n"), readOnly)}
+              ${textareaField("Internal notes", "internalNotes", item.internalNotes, readOnly)}
+            </div>
+            <aside class="asset-status-box">
+              <h3>Media health</h3>
+              <p>Local field completeness only. No network checks, feed verification, external embed validation, or public publishing is performed.</p>
+              <div class="chip-row">
+                ${issues.length ? issues.map((issue) => badge(issue, "warn")).join("") : badge("Complete local fields", "success")}
+              </div>
+            </aside>
+            <footer class="modal-footer">
+              <button class="button button-secondary" type="button" data-media-action="close-modal">Cancel</button>
+              ${readOnly ? `<button class="button" type="button" data-media-action="edit" data-media-id="${escapeHtml(item.id)}">Edit</button>` : `<button class="button" type="submit">Save local scaffold</button>`}
+            </footer>
+          </form>
+        </section>
+      </div>
+    `;
+  }
+
   function renderProjectControls(statuses, visibleCount, selectedVisible) {
     return `
       <div class="cms-toolbar" data-project-controls>
@@ -762,6 +1176,20 @@
     });
   }
 
+  function emptyMediaItem() {
+    return normalizeMediaItem({
+      id: `media-${Date.now()}`,
+      slug: "",
+      title: "",
+      type: "video",
+      status: "draft",
+      visibility: "draft",
+      platform: "local",
+      featured: false,
+      internalNotes: "Created in DanielClancy-Admin local media scaffold. Not published."
+    });
+  }
+
   function formatTimestamp(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value || "Unknown";
@@ -946,6 +1374,8 @@
       renderAccounts();
     } else if (route.page === "projects") {
       renderProjects();
+    } else if (route.page === "media") {
+      renderMedia();
     } else if (route.page === "settings") {
       renderSettings();
     } else {
@@ -976,6 +1406,11 @@
       projectState.search = target.value;
       renderProjects();
     }
+
+    if (target.matches("[data-media-filter='search']")) {
+      mediaState.search = target.value;
+      renderMedia();
+    }
   });
 
   app.addEventListener("change", (event) => {
@@ -991,6 +1426,24 @@
     if (target.matches("[data-project-filter='asset']")) {
       projectState.asset = target.value;
       renderProjects();
+      return;
+    }
+
+    if (target.matches("[data-media-filter='status']")) {
+      mediaState.status = target.value;
+      renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-media-filter='platform']")) {
+      mediaState.platform = target.value;
+      renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-media-filter='health']")) {
+      mediaState.health = target.value;
+      renderMedia();
       return;
     }
 
@@ -1017,6 +1470,29 @@
       return;
     }
 
+    if (target.matches("[data-media-select]")) {
+      const id = target.getAttribute("data-media-select");
+      if (target.checked) {
+        mediaState.selected.add(id);
+      } else {
+        mediaState.selected.delete(id);
+      }
+      renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-media-select-all]")) {
+      filteredMediaItems().forEach((item) => {
+        if (target.checked) {
+          mediaState.selected.add(item.id);
+        } else {
+          mediaState.selected.delete(item.id);
+        }
+      });
+      renderMedia();
+      return;
+    }
+
     if (target.matches("[data-bulk-field='status']") && target.value) {
       bulkUpdate((project) => ({ ...project, status: target.value, updatedAt: new Date().toISOString() }));
       projectState.message = `Updated status for ${projectState.selected.size} selected project scaffold row(s).`;
@@ -1031,27 +1507,105 @@
       projectState.message = `Updated featured flag for ${projectState.selected.size} selected project scaffold row(s).`;
       persistProjects();
       renderProjects();
+      return;
+    }
+
+    if (target.matches("[data-media-bulk-field='status']") && target.value) {
+      bulkUpdateMedia((item) => ({ ...item, status: target.value, updatedAt: new Date().toISOString() }));
+      mediaState.message = `Updated status for ${mediaState.selected.size} selected media scaffold row(s).`;
+      persistMediaItems();
+      renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-media-bulk-field='platform']") && target.value) {
+      bulkUpdateMedia((item) => ({ ...item, platform: target.value, updatedAt: new Date().toISOString() }));
+      mediaState.message = `Updated platform for ${mediaState.selected.size} selected media scaffold row(s).`;
+      persistMediaItems();
+      renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-media-bulk-field='featured']") && target.value) {
+      const featured = target.value === "true";
+      bulkUpdateMedia((item) => ({ ...item, featured, updatedAt: new Date().toISOString() }));
+      mediaState.message = `Updated featured flag for ${mediaState.selected.size} selected media scaffold row(s).`;
+      persistMediaItems();
+      renderMedia();
     }
   });
 
   app.addEventListener("submit", (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.matches("[data-project-form]")) return;
+    if (!(form instanceof HTMLFormElement)) return;
+
+    if (form.matches("[data-media-form]")) {
+      event.preventDefault();
+      saveMediaFromForm(form);
+      return;
+    }
+
+    if (!form.matches("[data-project-form]")) return;
 
     event.preventDefault();
     saveProjectFromForm(form);
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop]");
+    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
+    const mediaAction = target.getAttribute("data-media-action");
     const id = target.getAttribute("data-project-id");
+    const mediaId = target.getAttribute("data-media-id");
 
-    if (!action && target.matches("[data-project-modal-backdrop]")) {
+    if (!action && !mediaAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]"))) {
       return;
     }
+
+    if (mediaAction === "create") {
+      mediaState.modal = { mode: "create", item: emptyMediaItem() };
+      renderMedia();
+    } else if (mediaAction === "detail") {
+      const item = mediaState.items.find((entry) => entry.id === mediaId);
+      if (item) mediaState.modal = { mode: "detail", item };
+      renderMedia();
+    } else if (mediaAction === "edit") {
+      const item = mediaId ? mediaState.items.find((entry) => entry.id === mediaId) : mediaState.modal?.item;
+      if (item) mediaState.modal = { mode: "edit", item };
+      renderMedia();
+    } else if (mediaAction === "delete") {
+      deleteMediaItem(mediaId);
+    } else if (mediaAction === "close-modal") {
+      mediaState.modal = null;
+      renderMedia();
+    } else if (mediaAction === "toggle-bulk") {
+      mediaState.bulkMode = !mediaState.bulkMode;
+      renderMedia();
+    } else if (mediaAction === "select-visible") {
+      filteredMediaItems().forEach((item) => mediaState.selected.add(item.id));
+      mediaState.message = "Visible media scaffold rows selected.";
+      renderMedia();
+    } else if (mediaAction === "clear-selection") {
+      mediaState.selected.clear();
+      mediaState.message = "Selection cleared.";
+      renderMedia();
+    } else if (mediaAction === "bulk-add-tag") {
+      bulkMediaTag("add");
+    } else if (mediaAction === "bulk-remove-tag") {
+      bulkMediaTag("remove");
+    } else if (mediaAction === "bulk-delete") {
+      bulkDeleteMedia();
+    } else if (mediaAction === "copy-json") {
+      copyMediaJson();
+    } else if (mediaAction === "import-json") {
+      importMediaJson();
+    } else if (mediaAction === "reset") {
+      resetMedia();
+    }
+
+    if (mediaAction) return;
 
     if (action === "create") {
       projectState.modal = { mode: "create", project: emptyProject() };
@@ -1096,6 +1650,12 @@
   });
 
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && mediaState.modal) {
+      mediaState.modal = null;
+      renderMedia();
+      return;
+    }
+
     if (event.key === "Escape" && projectState.modal) {
       projectState.modal = null;
       renderProjects();
@@ -1165,6 +1725,64 @@
     renderProjects();
   }
 
+  function saveMediaFromForm(form) {
+    const title = formValue(form, "title");
+    const slug = createSlug(formValue(form, "slug") || title);
+
+    if (!title || !slug) {
+      mediaState.message = "Title and slug/id are required before saving.";
+      renderMedia();
+      return;
+    }
+
+    const originalId = formValue(form, "originalId");
+    const saved = normalizeMediaItem({
+      id: slug,
+      slug,
+      title,
+      type: formValue(form, "type"),
+      status: formValue(form, "status"),
+      visibility: formValue(form, "visibility"),
+      platform: formValue(form, "platform"),
+      scheduledAt: formValue(form, "scheduledAt"),
+      publishedAt: formValue(form, "publishedAt"),
+      featured: Boolean(form.querySelector("[name='featured']")?.checked),
+      thumbnailPath: formValue(form, "thumbnailPath"),
+      embedUrl: formValue(form, "embedUrl"),
+      videoUrl: formValue(form, "videoUrl"),
+      replayUrl: formValue(form, "replayUrl"),
+      externalPageUrl: formValue(form, "externalPageUrl"),
+      summary: formValue(form, "summary"),
+      description: formValue(form, "description"),
+      tags: textareaArray(formValue(form, "tags")),
+      internalNotes: formValue(form, "internalNotes"),
+      updatedAt: new Date().toISOString()
+    });
+
+    const existingIndex = mediaState.items.findIndex((item) => item.id === originalId);
+    const duplicate = mediaState.items.some((item, index) => item.id === saved.id && index !== existingIndex);
+    if (duplicate) {
+      mediaState.message = "A media scaffold row already uses that slug/id.";
+      renderMedia();
+      return;
+    }
+
+    if (existingIndex >= 0) {
+      mediaState.items[existingIndex] = saved;
+    } else {
+      mediaState.items.unshift(saved);
+    }
+
+    if (originalId !== saved.id) {
+      mediaState.selected.delete(originalId);
+    }
+
+    persistMediaItems();
+    mediaState.modal = null;
+    mediaState.message = `Saved ${saved.title} locally. This does not publish to DanielClancy.net.`;
+    renderMedia();
+  }
+
   function deleteProject(id) {
     const project = projectState.projects.find((item) => item.id === id);
     if (!project) return;
@@ -1180,9 +1798,30 @@
     renderProjects();
   }
 
+  function deleteMediaItem(id) {
+    const item = mediaState.items.find((entry) => entry.id === id);
+    if (!item) return;
+
+    if (!window.confirm(`Delete local scaffold media item "${item.title || item.slug}"? This will not affect DanielClancy.net.`)) {
+      return;
+    }
+
+    mediaState.items = mediaState.items.filter((entry) => entry.id !== id);
+    mediaState.selected.delete(id);
+    persistMediaItems();
+    mediaState.message = `Deleted local scaffold row: ${item.title || item.slug}.`;
+    renderMedia();
+  }
+
   function bulkUpdate(mutator) {
     projectState.projects = projectState.projects.map((project) =>
       projectState.selected.has(project.id) ? normalizeProject(mutator(project)) : project
+    );
+  }
+
+  function bulkUpdateMedia(mutator) {
+    mediaState.items = mediaState.items.map((item) =>
+      mediaState.selected.has(item.id) ? normalizeMediaItem(mutator(item)) : item
     );
   }
 
@@ -1206,6 +1845,26 @@
     renderProjects();
   }
 
+  function bulkMediaTag(mode) {
+    const input = app.querySelector("[data-media-bulk-tag]");
+    const tag = String(input?.value || "").trim();
+    if (!tag) {
+      mediaState.message = "Enter a tag before applying a bulk tag action.";
+      renderMedia();
+      return;
+    }
+
+    bulkUpdateMedia((item) => {
+      const tags = new Set(item.tags);
+      if (mode === "add") tags.add(tag);
+      if (mode === "remove") tags.delete(tag);
+      return { ...item, tags: Array.from(tags), updatedAt: new Date().toISOString() };
+    });
+    persistMediaItems();
+    mediaState.message = `${mode === "add" ? "Added" : "Removed"} tag "${tag}" on selected local media scaffold row(s).`;
+    renderMedia();
+  }
+
   function bulkDelete() {
     const count = projectState.selected.size;
     if (!count) return;
@@ -1218,6 +1877,20 @@
     persistProjects();
     projectState.message = `Deleted ${count} local scaffold row(s).`;
     renderProjects();
+  }
+
+  function bulkDeleteMedia() {
+    const count = mediaState.selected.size;
+    if (!count) return;
+    if (!window.confirm(`Delete ${count} selected local scaffold media row(s)? This will not affect DanielClancy.net.`)) {
+      return;
+    }
+
+    mediaState.items = mediaState.items.filter((item) => !mediaState.selected.has(item.id));
+    mediaState.selected.clear();
+    persistMediaItems();
+    mediaState.message = `Deleted ${count} local media scaffold row(s).`;
+    renderMedia();
   }
 
   function copyProjectsJson() {
@@ -1236,6 +1909,24 @@
     }
 
     window.prompt("Copy local scaffold JSON", json);
+  }
+
+  function copyMediaJson() {
+    const json = JSON.stringify(mediaState.items, null, 2);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(json).then(
+        () => {
+          mediaState.message = "Copied local media scaffold JSON to the clipboard.";
+          renderMedia();
+        },
+        () => {
+          window.prompt("Copy local media scaffold JSON", json);
+        }
+      );
+      return;
+    }
+
+    window.prompt("Copy local media scaffold JSON", json);
   }
 
   function importProjectsJson() {
@@ -1269,6 +1960,37 @@
     }
   }
 
+  function importMediaJson() {
+    const value = window.prompt("Paste a JSON array of media scaffold rows. This replaces local browser data only.");
+    if (!value) return;
+
+    try {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) {
+        throw new Error("Expected a JSON array.");
+      }
+
+      const normalized = parsed.map(normalizeMediaItem);
+      const ids = new Set(normalized.map((item) => item.id));
+      if (ids.size !== normalized.length) {
+        throw new Error("Media slug/id values must be unique.");
+      }
+
+      if (!window.confirm(`Import ${normalized.length} media scaffold row(s) into local browser storage?`)) {
+        return;
+      }
+
+      mediaState.items = normalized;
+      mediaState.selected.clear();
+      persistMediaItems();
+      mediaState.message = "Imported media scaffold JSON into local browser storage.";
+      renderMedia();
+    } catch (error) {
+      mediaState.message = `Import failed: ${error.message}`;
+      renderMedia();
+    }
+  }
+
   function resetProjects() {
     if (!window.confirm("Reset Projects CMS scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
       return;
@@ -1279,6 +2001,18 @@
     persistProjects();
     projectState.message = "Projects CMS scaffold reset to repo seed data.";
     renderProjects();
+  }
+
+  function resetMedia() {
+    if (!window.confirm("Reset Media CMS scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
+      return;
+    }
+
+    mediaState.items = (data.media || []).map(normalizeMediaItem);
+    mediaState.selected.clear();
+    persistMediaItems();
+    mediaState.message = "Media CMS scaffold reset to repo seed data.";
+    renderMedia();
   }
 
   window.addEventListener("hashchange", render);

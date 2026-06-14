@@ -604,6 +604,10 @@ a {
   min-width: 1280px;
 }
 
+.media-table {
+  min-width: 1480px;
+}
+
 .project-table th:first-child,
 .project-table td:first-child {
   width: 44px;
@@ -647,6 +651,10 @@ a {
   border-radius: var(--radius-md);
   background: rgba(12, 15, 18, 0.98);
   box-shadow: var(--shadow);
+}
+
+.media-modal {
+  width: min(1180px, 96vw);
 }
 
 .modal-header,

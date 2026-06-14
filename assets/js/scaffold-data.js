@@ -10,8 +10,8 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       },
       {
         label: "Portfolio content",
-        value: "Projects scaffold",
-        note: "Projects CMS editing is browser-local only. Media CMS work remains intentionally outside this milestone.",
+        value: "Projects + Media",
+        note: "Projects and Media CMS editing are browser-local only. No public export pipeline is connected.",
         tone: "warn"
       },
       {
@@ -32,7 +32,7 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       "DanielClancy professional branding and local font assets",
       "No destructive controls or authority-state mutations",
       "Projects CMS navigation enabled with local scaffold persistence",
-      "Future Media navigation visible but disabled"
+      "Media CMS navigation enabled with local scaffold persistence"
     ],
     readiness: [
       { label: "Shell", value: "Ready for review" },
@@ -133,6 +133,74 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       updatedAt: "2025-11-21T22:49:03Z"
     }
   ],
+  media: [
+    {
+      id: "latest-youtube-release-scaffold",
+      slug: "latest-youtube-release-scaffold",
+      title: "Latest YouTube release scaffold",
+      type: "video",
+      status: "draft",
+      visibility: "hidden",
+      platform: "YouTube",
+      scheduledAt: "",
+      publishedAt: "",
+      featured: true,
+      thumbnailPath: "",
+      embedUrl: "",
+      videoUrl: "",
+      replayUrl: "",
+      externalPageUrl: "",
+      summary: "Local placeholder aligned to the public /watch featured release shape.",
+      description: "This row represents the fields DanielClancy-Admin will need before it can manage the public watch page. It does not fetch, embed, or publish a real YouTube item.",
+      tags: ["watch-page", "featured"],
+      internalNotes: "Public /watch currently hydrates YouTube feed data from /api/watch-feed. This admin scaffold is intentionally separate and browser-local.",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
+      id: "scheduled-livestream-scaffold",
+      slug: "scheduled-livestream-scaffold",
+      title: "Scheduled livestream scaffold",
+      type: "livestream",
+      status: "scheduled",
+      visibility: "draft",
+      platform: "external",
+      scheduledAt: "",
+      publishedAt: "",
+      featured: false,
+      thumbnailPath: "",
+      embedUrl: "",
+      videoUrl: "",
+      replayUrl: "",
+      externalPageUrl: "",
+      summary: "Local placeholder for a future current/past livestream management row.",
+      description: "Use this row to test scheduled stream metadata, thumbnail requirements, replay readiness, and local completeness warnings without claiming a real scheduled event.",
+      tags: ["livestream"],
+      internalNotes: "No YouTube, Rumble, StreamSuites, or public-site integration is wired by this scaffold.",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
+      id: "archived-replay-scaffold",
+      slug: "archived-replay-scaffold",
+      title: "Archived replay scaffold",
+      type: "livestream",
+      status: "archived",
+      visibility: "hidden",
+      platform: "local",
+      scheduledAt: "",
+      publishedAt: "",
+      featured: false,
+      thumbnailPath: "",
+      embedUrl: "",
+      videoUrl: "",
+      replayUrl: "",
+      externalPageUrl: "",
+      summary: "Local placeholder for an archived livestream that should eventually point to a replay URL.",
+      description: "Completeness checks intentionally flag archived livestreams without replay URLs so future /watch curation can stay honest.",
+      tags: [],
+      internalNotes: "Clearly fake scaffold row for local UI testing only.",
+      updatedAt: "2026-06-15T00:00:00Z"
+    }
+  ],
   analytics: {
     markers: [
       { label: "Sample AU", x: "76%", y: "68%" },
@@ -149,6 +217,7 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       { route: "/analytics", surface: "Analytics", status: "Scaffold" },
       { route: "/accounts", surface: "Accounts", status: "Scaffold" },
       { route: "/projects", surface: "Projects CMS", status: "Local scaffold" },
+      { route: "/media", surface: "Media CMS", status: "Local scaffold" },
       { route: "/settings", surface: "Settings", status: "Scaffold" }
     ],
     notes: [
