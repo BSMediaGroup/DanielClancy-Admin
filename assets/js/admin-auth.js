@@ -13,9 +13,32 @@
     isAdmin: false,
     message: "Checking admin session..."
   };
+  const authUiState = {
+    mode: "signin",
+    emailOpen: false
+  };
+  const PROVIDERS = [
+    { id: "github", label: "GitHub", icon: "./assets/icons/github.svg" },
+    { id: "google", label: "Google", icon: "./assets/icons/google.svg" },
+    { id: "twitter", label: "Twitter/X", icon: "./assets/icons/x.svg" }
+  ];
 
   function endpoint(path) {
     return `${AUTH_ORIGIN}/api/auth/${path}`;
+  }
+
+  function oauthReturnMessage() {
+    const hash = String(window.location.hash || "");
+    const match = hash.match(/[?&]oauth=([^&]+)/);
+    if (!match) return "";
+    const value = decodeURIComponent(match[1]);
+    if (value === "not-ready") {
+      return "OAuth returned without a usable callback code. Admin access still requires an env-backed master admin session.";
+    }
+    if (value.endsWith("-callback-received")) {
+      return "OAuth returned successfully, but durable account-role storage is not connected yet. This account is not an admin unless explicitly allowlisted or promoted later.";
+    }
+    return "OAuth did not unlock the admin dashboard. Admin access requires explicit admin authority.";
   }
 
   function setStatus(status, session, message) {
@@ -50,15 +73,30 @@
   }
 
   function providerLinks() {
-    return ["github", "google", "twitter"]
+    return PROVIDERS
       .map(
         (provider) => `
-          <a class="button button-secondary" href="${endpoint(`oauth/${provider}/start`)}">
-            Continue with ${provider === "twitter" ? "Twitter/X" : provider[0].toUpperCase() + provider.slice(1)}
+          <a class="button button-secondary auth-provider-button" href="${endpoint(`oauth/${provider.id}/start`)}">
+            <img class="auth-provider-icon" src="${provider.icon}" alt="" />
+            <span>${authUiState.mode === "signup" ? "Sign up with" : "Continue with"} ${provider.label}</span>
           </a>
         `
       )
       .join("");
+  }
+
+  function renderSignedInIdentity() {
+    const session = sessionState.session;
+    if (!session?.authenticated) return "";
+    const identity = session.email || session.display_name || "Signed in account";
+    const provider = session.provider ? ` via ${session.provider}` : "";
+    return `
+      <div class="auth-signed-in">
+        <span class="section-kicker">Signed in, admin access required</span>
+        <strong>${escapeHtml(identity)}</strong>
+        <span>${escapeHtml(`Regular account${provider}`)}</span>
+      </div>
+    `;
   }
 
   function renderGate() {
@@ -66,30 +104,50 @@
     if (!gate) return;
     gate.hidden = sessionState.status === "allowed";
     const denied = sessionState.status === "denied";
+    const signup = authUiState.mode === "signup";
     gate.innerHTML = `
       <section class="auth-card" aria-labelledby="admin-auth-title">
+        <span class="auth-brand-mark" aria-hidden="true"><img src="./assets/logos/dciconcircle.svg" alt="" /></span>
         <div class="auth-card-header">
           <span class="section-kicker">Restricted dashboard</span>
-          <h1 id="admin-auth-title">${denied ? "Admin access required" : "Sign in to DanielClancy-Admin"}</h1>
+          <h1 id="admin-auth-title">${denied ? "Admin access required" : signup ? "Create a public account" : "Sign in to DanielClancy-Admin"}</h1>
           <p>
-            Manual env-backed master admin accounts are the first production admin path. OAuth login is available only after Cloudflare env vars and provider redirect URIs are configured.
+            Only admin accounts can enter the dashboard. OAuth can sign in a regular/public account, but it will not unlock admin unless a future durable role store or explicit allowlist promotes it.
           </p>
         </div>
+        <div class="auth-mode-tabs" role="tablist" aria-label="Authentication mode">
+          <button class="auth-mode-tab ${!signup ? "auth-mode-tab-active" : ""}" type="button" data-auth-mode="signin" aria-pressed="${!signup}">Sign in</button>
+          <button class="auth-mode-tab ${signup ? "auth-mode-tab-active" : ""}" type="button" data-auth-mode="signup" aria-pressed="${signup}">Create account</button>
+        </div>
+        ${renderSignedInIdentity()}
         <div class="auth-provider-grid">
           ${providerLinks()}
         </div>
-        <form class="auth-form" data-auth-login>
-          <label>
-            <span>Email</span>
-            <input name="email" type="email" autocomplete="email" required />
-          </label>
-          <label>
-            <span>Password</span>
-            <input name="password" type="password" autocomplete="current-password" required />
-          </label>
-          <button class="button" type="submit">Sign in</button>
-        </form>
+        <div class="auth-divider"><span>or</span></div>
+        <div class="auth-email-section">
+          <button class="auth-email-toggle" type="button" data-auth-action="toggle-email" aria-expanded="${authUiState.emailOpen}">
+            <span>${signup ? "Use email signup" : "Use email instead"}</span>
+            <span aria-hidden="true">${authUiState.emailOpen ? "-" : "+"}</span>
+          </button>
+          ${
+            authUiState.emailOpen
+              ? `<form class="auth-form" data-auth-login>
+                  <label>
+                    <span>Email</span>
+                    <input name="email" type="email" autocomplete="email" required />
+                  </label>
+                  <label>
+                    <span>Password</span>
+                    <input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required />
+                  </label>
+                  <button class="button" type="submit">${signup ? "Request email signup" : "Sign in with email"}</button>
+                  <p class="auth-note">${signup ? "Email signup needs the durable account store. No password is stored by this client." : "Manual env-backed master admin login is the immediate production admin path."}</p>
+                </form>`
+              : ""
+          }
+        </div>
         <p class="auth-message" id="admin-auth-message" role="status" aria-live="polite">${escapeHtml(sessionState.message)}</p>
+        ${denied ? `<button class="button button-secondary" type="button" data-auth-action="logout">Sign out</button>` : ""}
         ${
           isLocalDev
             ? `<button class="button button-secondary" type="button" data-auth-action="dev-unlock">Local scaffold unlock</button>
@@ -119,20 +177,26 @@
       } else if (session?.authenticated) {
         setStatus("denied", session, "Signed in, but this account is not marked as admin.");
       } else {
-        setStatus("required", null, "Sign in with a master admin email/password account.");
+        setStatus("required", null, oauthReturnMessage() || "Sign in with a master admin email/password account.");
       }
     } catch {
+      const oauthMessage = oauthReturnMessage();
       setStatus(
         "required",
         null,
-        isLocalDev
+        oauthMessage ||
+          (isLocalDev
           ? "Auth endpoint is unavailable in this local/static view. Use local scaffold unlock only for UI smoke testing."
-          : "Auth endpoint is unavailable. Confirm Cloudflare Pages Functions and DNS setup."
+          : "Auth endpoint is unavailable. Confirm Cloudflare Pages Functions and DNS setup.")
       );
     }
   }
 
   async function login(form) {
+    if (authUiState.mode === "signup") {
+      await signup(form);
+      return;
+    }
     const formData = new FormData(form);
     const email = String(formData.get("email") || "");
     const password = String(formData.get("password") || "");
@@ -163,6 +227,36 @@
     }
   }
 
+  async function signup(form) {
+    const formData = new FormData(form);
+    const email = String(formData.get("email") || "");
+    if (!email.trim()) {
+      setStatus("required", sessionState.session, "Email is required before checking signup availability.");
+      return;
+    }
+    setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Checking account creation availability...");
+    try {
+      const response = await fetch(endpoint("signup"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const payload = await response.json().catch(() => null);
+      setStatus(
+        sessionState.status === "denied" ? "denied" : "required",
+        sessionState.session,
+        payload?.message || "Email signup needs the durable account store. Use OAuth for now or sign in with an existing admin account."
+      );
+    } catch {
+      setStatus(
+        sessionState.status === "denied" ? "denied" : "required",
+        sessionState.session,
+        "Email signup needs the durable account store. Use OAuth for now or sign in with an existing admin account."
+      );
+    }
+  }
+
   async function logout() {
     try {
       await fetch(endpoint("logout"), { method: "POST", credentials: "include" });
@@ -184,6 +278,10 @@
     if (!(target instanceof HTMLElement)) return;
     const action = target.getAttribute("data-auth-action");
     if (action === "logout") logout();
+    if (action === "toggle-email") {
+      authUiState.emailOpen = !authUiState.emailOpen;
+      renderGate();
+    }
     if (action === "dev-unlock" && isLocalDev) {
       setStatus(
         "allowed",
@@ -198,6 +296,17 @@
         "Local scaffold admin view unlocked for UI smoke testing only."
       );
     }
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-auth-mode]");
+    if (!(target instanceof HTMLElement)) return;
+    authUiState.mode = target.getAttribute("data-auth-mode") === "signup" ? "signup" : "signin";
+    sessionState.message =
+      authUiState.mode === "signup"
+        ? "OAuth is the preferred signup path. Email signup needs the durable account store."
+        : "Sign in with OAuth or expand email for the env-backed master admin path.";
+    renderGate();
   });
 
   document.addEventListener("DOMContentLoaded", refresh);

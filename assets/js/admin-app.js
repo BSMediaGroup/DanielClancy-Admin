@@ -1841,6 +1841,7 @@
         </label>
         <button class="button" type="submit">Save local scaffold row</button>
       </form>
+      <p class="auth-note">Saving here does not promote a live OAuth/public account. It only records a local planning row until durable account-role storage exists.</p>
       <p class="auth-message">${escapeHtml(accountAccessState.message)}</p>
     `;
   }
@@ -1865,14 +1866,14 @@
             </div>
             <div class="card">
               <h3>Deferred integrations</h3>
-              <p class="muted">Projects CMS and Media CMS are local scaffold-only. Public login wiring and the admin session gate now have an auth foundation, while API/export pipeline work and Cloudflare/DNS setup remain pending.</p>
+              <p class="muted">Projects CMS and Media CMS are local scaffold-only. Hosted auth/OAuth redirects can reach the admin gate, but OAuth/public role persistence and API/export pipeline work remain future durable storage work.</p>
             </div>
           </div>
         </section>
 
         ${panel(
           "Account access",
-          "Manual master admins are env-backed and non-removable. OAuth/public account type rows below are browser-local scaffold data only.",
+          "Manual master admins are env-backed and production-authoritative. OAuth/public account type rows below are browser-local scaffold data only until durable account-role storage exists.",
           renderAccountAccessScaffold()
         )}
 
@@ -1903,7 +1904,7 @@
             ["Runtime requirement", "No request-time Node runtime"],
             ["Secrets", "Manual admin passwords stay in Cloudflare Pages Function env vars only"],
             ["Cloudflare Pages", "Functions auth endpoints added"],
-            ["OAuth redirect URIs", "Provider setup required before live testing"],
+            ["OAuth redirect URIs", "Provider redirects available; role promotion still future durable storage"],
             ["DNS / live deployment", "Not completed by this task"]
           ])
         )}

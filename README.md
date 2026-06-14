@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding. Projects CMS, Media CMS, Alerts, and account-type management rows remain browser-local scaffold persistence only; real API/export pipeline work and live Cloudflare/DNS setup are still pending.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding. Projects CMS, Media CMS, Alerts, and account-type management rows remain browser-local scaffold persistence only; real API/export pipeline work and durable account-role storage are still pending.
 
 ## Local Use
 
@@ -20,6 +20,7 @@ Implemented endpoints:
 
 - `GET /api/auth/session`
 - `POST /api/auth/login`
+- `POST /api/auth/signup`
 - `POST /api/auth/logout`
 - `GET /api/auth/oauth/github/start`
 - `GET /api/auth/oauth/google/start`
@@ -34,6 +35,8 @@ Manual email/password master admin accounts are the first production admin path:
 - `daniel@brainstream.media` via `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`
 
 Password verification happens only inside the Pages Function. Session cookies are signed with `DC_AUTH_SESSION_SECRET`, HttpOnly, SameSite=Lax, and Secure on HTTPS requests. Do not place `DC_ADMIN_SECRET_1`, `DC_ADMIN_SECRET_2`, or OAuth client secrets in frontend JavaScript.
+
+The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
 
 Required Cloudflare env vars:
 
@@ -81,9 +84,9 @@ Required OAuth redirect URIs:
 
 Settings includes an Account access section:
 
-- The two manual master admin accounts are shown as env-backed and non-removable.
+- The two manual master admin accounts are shown as env-backed, production-authoritative, and non-removable.
 - OAuth/public account rows can be marked `regular` or `admin` in local scaffold storage under `danielclancy-admin.accounts.scaffold.v1`.
-- Local account-type edits are not production authority. Durable account-role persistence requires a future backend/export/storage layer.
+- Local account-type edits are not production authority and do not auto-promote signed-in OAuth users. Durable account-role persistence requires a future backend/export/storage layer.
 
 ## Cloudflare Setup Checkpoint
 
@@ -95,7 +98,7 @@ After local smoke testing, stop for Cloudflare setup before real OAuth/live auth
 - Create OAuth apps in GitHub, Google Cloud, and Twitter/X developer portals.
 - Register callback URLs.
 - Add any Pushover env/config needed before DanielClancy alerts can route through StreamSuites.
-- Confirm the hosted admin dashboard loads before trying live OAuth callbacks.
+- Confirm the hosted admin dashboard loads and OAuth callbacks return to the clean admin-required state for non-admin sessions.
 - Confirm cookies across `danielclancy.net` and `admin.danielclancy.net`.
 
 ## Repository Tree

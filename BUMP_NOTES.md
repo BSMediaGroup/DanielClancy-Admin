@@ -1,5 +1,44 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Auth UX polish and signup scaffold milestone
+
+### Technical Notes
+
+- Rebuilt the admin auth gate presentation with a DC mark, OAuth-first provider actions, a sign in/create account toggle, and a collapsed manual email/password section.
+- Added local GitHub, Google, and Twitter/X icon usage for OAuth buttons from existing repo assets.
+- Preserved manual env-backed master admin login as the immediate production admin path through `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1` and `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`.
+- Added `/api/auth/signup` as an honest scaffold endpoint that returns `durable_account_store_required`; it does not persist accounts or passwords.
+- Kept OAuth sessions non-admin unless explicit future allowlist/promotion work exists. OAuth live env setup has been completed externally enough for provider flows to redirect, but durable account-role storage remains future work.
+- Clarified Settings account-access copy so env-backed manual admins are production-authoritative and OAuth/public account rows are local scaffold only until durable role storage exists.
+
+### Human-Readable Notes
+
+- The login gate now looks like a finished DanielClancy-Admin access screen.
+- Manual email/password admin login is collapsed by default and can be expanded when needed.
+- OAuth non-admin users should see a clean admin-access-required state rather than a confusing login loop.
+- Signup UI is scaffolded honestly: OAuth is the preferred route for now, and email signup explains the missing durable store.
+- The next planned phase is making scaffolded admin pages operational/hydrated.
+
+### Files / Areas Changed
+
+- `functions/api/auth/[[path]].js`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check functions/api/auth/[[path]].js`, `node --check assets/js/admin-auth.js`, `node --check assets/js/admin-app.js`, and `git diff --check`.
+- Smoke test auth gate render, OAuth button URLs, manual email expansion, signup limitation messaging, OAuth/non-admin denied messaging, local scaffold unlock, and existing `#/overview`, `#/projects`, `#/media`, and `#/alerts` route loading after local scaffold unlock.
+
+### Risks / Follow-Ups
+
+- Durable account store remains future work.
+- OAuth admin promotion remains future explicit allowlist/durable-role work and must not be inferred from display names, provider usernames, or emails without server-side authority.
+- Settings account-access rows remain local scaffold records only.
+
 ## Alerts Page And DanielClancy Alert Catchment Scaffold
 
 ### Technical Notes

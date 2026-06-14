@@ -241,6 +241,25 @@ async function handleLogin(request, env) {
   );
 }
 
+async function handleSignup(request) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "method_not_allowed" }, { status: 405 });
+  }
+  try {
+    await request.json();
+  } catch {
+    return json({ ok: false, error: "invalid_request" }, { status: 400 });
+  }
+  return json(
+    {
+      ok: false,
+      error: "durable_account_store_required",
+      message: "Email signup needs the durable account store. Use OAuth for now or sign in with an existing admin account."
+    },
+    { status: 501 }
+  );
+}
+
 function buildCallbackUrl(request, env, provider) {
   const origin = env.DC_ADMIN_SITE_ORIGIN || new URL(request.url).origin;
   return `${origin.replace(/\/+$/, "")}/api/auth/oauth/${provider}/callback`;
@@ -297,6 +316,8 @@ export async function onRequest(context) {
       response = json({ ok: true, session: sessionResponse(await readSession(request, env)) });
     } else if (path === "login") {
       response = await handleLogin(request, env);
+    } else if (path === "signup") {
+      response = await handleSignup(request);
     } else if (path === "logout") {
       response = json({ ok: true }, { headers: { "set-cookie": clearCookie(request, env) } });
     } else {
