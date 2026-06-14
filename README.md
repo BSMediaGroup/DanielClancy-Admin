@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding. Projects CMS, Media CMS, and account-type management rows remain browser-local scaffold persistence only; real API/export pipeline work and live Cloudflare/DNS setup are still pending.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding. Projects CMS, Media CMS, Alerts, and account-type management rows remain browser-local scaffold persistence only; real API/export pipeline work and live Cloudflare/DNS setup are still pending.
 
 ## Local Use
 
@@ -94,6 +94,8 @@ After local smoke testing, stop for Cloudflare setup before real OAuth/live auth
 - Add the Cloudflare env vars listed above.
 - Create OAuth apps in GitHub, Google Cloud, and Twitter/X developer portals.
 - Register callback URLs.
+- Add any Pushover env/config needed before DanielClancy alerts can route through StreamSuites.
+- Confirm the hosted admin dashboard loads before trying live OAuth callbacks.
 - Confirm cookies across `danielclancy.net` and `admin.danielclancy.net`.
 
 ## Repository Tree
@@ -134,4 +136,5 @@ DanielClancy-Admin/
 - Projects CMS scaffold with localStorage persistence, table editing, create/edit/detail modal, bulk actions, reset, and JSON copy/import controls.
 - Media CMS scaffold with localStorage persistence, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
-- Alerts page remains future work.
+- Alerts scaffold with localStorage persistence under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
+- Alerts rows are not live runtime rules. Desktop app visibility, Pushover delivery, and hosted production testing require the StreamSuites/runtime bridge plus Cloudflare Pages/DNS/env setup for `admin.danielclancy.net`.

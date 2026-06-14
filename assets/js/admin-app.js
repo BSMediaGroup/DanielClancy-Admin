@@ -11,12 +11,26 @@
     { id: "accounts", label: "Accounts", icon: "AC", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "SE", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "PR", path: "#/projects" },
-    { id: "media", label: "Media", icon: "ME", path: "#/media" }
+    { id: "media", label: "Media", icon: "ME", path: "#/media" },
+    { id: "alerts", label: "Alerts", icon: "AL", path: "#/alerts" }
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
+  const ALERTS_STORAGE_KEY = "danielclancy-admin.alerts.scaffold.v1";
   const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
+  const ALERT_SURFACES = ["danielclancy.net", "admin.danielclancy.net"];
+  const ALERT_SEVERITIES = ["info", "warning", "critical"];
+  const ALERT_TRIGGER_TYPES = [
+    "contact_form",
+    "auth_admin_login",
+    "portfolio_update",
+    "media_watch_update",
+    "deployment",
+    "analytics_threshold",
+    "manual_test"
+  ];
+  const ALERT_CHANNEL_TARGETS = ["desktop", "pushover", "both", "muted"];
   const MASTER_ADMIN_ACCOUNTS = [
     { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1", envSecret: "DC_ADMIN_SECRET_1" },
     { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2", envSecret: "DC_ADMIN_SECRET_2" }
@@ -41,6 +55,17 @@
     bulkMode: false,
     modal: null,
     message: "Local media scaffold loaded. Changes stay in this browser only."
+  };
+  const alertsState = {
+    rules: loadAlertRules(),
+    search: "",
+    severity: "all",
+    surface: "all",
+    target: "all",
+    selected: new Set(),
+    bulkMode: false,
+    modal: null,
+    message: "Local alert scaffold loaded. Rules are not live until a StreamSuites/runtime bridge and hosted env setup exist."
   };
   const accountAccessState = {
     accounts: loadAccountAccessScaffold(),
@@ -196,6 +221,56 @@
     window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
   }
 
+  function normalizeAlertRule(raw) {
+    const fallbackId = createSlug(raw?.id || raw?.slug || raw?.name || `alert-${Date.now()}`);
+    const severity = String(raw?.severity || "info").toLowerCase();
+    const triggerType = String(raw?.triggerType || raw?.trigger_type || "manual_test").toLowerCase();
+    const target = String(raw?.channelTarget || raw?.channel_target || "desktop").toLowerCase();
+    const sourceSurface = String(raw?.sourceSurface || raw?.source_surface || raw?.domain || "danielclancy.net").toLowerCase();
+
+    return {
+      id: createSlug(raw?.id || raw?.slug || fallbackId),
+      name: String(raw?.name || raw?.ruleName || "Untitled alert rule scaffold"),
+      enabled: Boolean(raw?.enabled),
+      severity: ALERT_SEVERITIES.includes(severity) ? severity : "info",
+      sourceSurface: ALERT_SURFACES.includes(sourceSurface) ? sourceSurface : "danielclancy.net",
+      triggerType: ALERT_TRIGGER_TYPES.includes(triggerType) ? triggerType : "manual_test",
+      channelTarget: ALERT_CHANNEL_TARGETS.includes(target) ? target : "desktop",
+      desktopEnabled: raw?.desktopEnabled === undefined ? target === "desktop" || target === "both" : Boolean(raw.desktopEnabled),
+      pushoverEnabled: raw?.pushoverEnabled === undefined ? target === "pushover" || target === "both" : Boolean(raw.pushoverEnabled),
+      titleTemplate: String(raw?.titleTemplate || raw?.title_template || raw?.title || ""),
+      messageTemplate: String(raw?.messageTemplate || raw?.message_template || raw?.message || ""),
+      tags: arrayFromValue(raw?.tags || []),
+      notes: String(raw?.notes || raw?.internalNotes || ""),
+      health: String(raw?.health || raw?.status || "scaffold"),
+      updatedAt: String(raw?.updatedAt || raw?.updated_at || new Date().toISOString())
+    };
+  }
+
+  function loadAlertRules() {
+    const seed = Array.isArray(data.alerts) ? data.alerts.map(normalizeAlertRule) : [];
+
+    try {
+      const stored = window.localStorage.getItem(ALERTS_STORAGE_KEY);
+      if (!stored) {
+        return seed;
+      }
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return seed;
+      }
+
+      return parsed.map(normalizeAlertRule);
+    } catch {
+      return seed;
+    }
+  }
+
+  function persistAlertRules() {
+    window.localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(alertsState.rules, null, 2));
+  }
+
   function normalizeAccountAccess(raw) {
     const provider = String(raw?.provider || "github").toLowerCase();
     const identifier = String(raw?.identifier || raw?.email || raw?.username || "").trim();
@@ -326,6 +401,40 @@
 
       return !term || mediaSearchBlob(item).includes(term);
     });
+  }
+
+  function alertSearchBlob(rule) {
+    return [
+      rule.name,
+      rule.id,
+      rule.severity,
+      rule.sourceSurface,
+      rule.triggerType,
+      rule.channelTarget,
+      rule.titleTemplate,
+      rule.messageTemplate,
+      rule.tags.join(" "),
+      rule.notes,
+      rule.health
+    ]
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function filteredAlertRules() {
+    const term = alertsState.search.trim().toLowerCase();
+    return alertsState.rules.filter((rule) => {
+      if (alertsState.severity !== "all" && rule.severity !== alertsState.severity) return false;
+      if (alertsState.surface !== "all" && rule.sourceSurface !== alertsState.surface) return false;
+      if (alertsState.target !== "all" && rule.channelTarget !== alertsState.target) return false;
+      return !term || alertSearchBlob(rule).includes(term);
+    });
+  }
+
+  function alertHealthTone(rule) {
+    if (rule.enabled && (rule.desktopEnabled || rule.pushoverEnabled) && rule.name && rule.id) return "success";
+    if (!rule.enabled || rule.channelTarget === "muted") return "warn";
+    return "danger";
   }
 
   function uniqueValues(values) {
@@ -996,6 +1105,273 @@
     `;
   }
 
+  function renderAlerts() {
+    routeTitle.textContent = "Alerts";
+    const visibleRules = filteredAlertRules();
+    const selectedVisible = visibleRules.filter((rule) => alertsState.selected.has(rule.id)).length;
+    const enabledCount = alertsState.rules.filter((rule) => rule.enabled).length;
+    const desktopCount = alertsState.rules.filter((rule) => rule.desktopEnabled && rule.channelTarget !== "muted").length;
+    const pushoverCount = alertsState.rules.filter((rule) => rule.pushoverEnabled && rule.channelTarget !== "muted").length;
+    const mutedCount = alertsState.rules.filter((rule) => rule.channelTarget === "muted").length;
+
+    app.innerHTML = `
+      <div class="page alerts-page">
+        ${pageHeader(
+          "Alerts scaffold",
+          "Alerts",
+          "Manage DanielClancy.net alert-rule drafts in browser-local storage. These rules do not deliver until StreamSuites/runtime export or API wiring, Cloudflare deployment, DNS, OAuth, and Pushover env setup are completed.",
+          `<button class="button" type="button" data-alert-action="create">Create Alert Rule</button>
+           <button class="button button-secondary" type="button" data-alert-action="copy-json">Copy JSON contract</button>
+           <button class="button button-secondary" type="button" data-alert-action="import-json">Import JSON</button>
+           <button class="button button-secondary" type="button" data-alert-action="reset">Reset seed</button>`
+        )}
+
+        ${panel(
+          "Local scaffold status",
+          "Routing fields are shaped for desktop and Pushover delivery, but this page only edits local scaffold JSON.",
+          metricCards([
+            { label: "Rules", value: String(alertsState.rules.length), note: "Rows in local browser storage.", tone: "warn" },
+            { label: "Enabled", value: String(enabledCount), note: "Local enabled flags only.", tone: "warn" },
+            { label: "Desktop targets", value: String(desktopCount), note: "Prepared for StreamSuites Alerts client catchment.", tone: "warn" },
+            { label: "Pushover targets", value: String(pushoverCount), note: "Requires runtime env/config before live delivery.", tone: pushoverCount ? "warn" : "" }
+          ])
+        )}
+
+        ${panel(
+          "Catchment contract",
+          "DanielClancy alert rules should be exported as a future runtime-owned contract, not treated as production delivery from this static page.",
+          `<div class="grid grid-2">
+            <article class="card">
+              <span class="metric-label">Contract</span>
+              <h3>danielclancy</h3>
+              <p class="muted">Project: DanielClancy; public origin: https://danielclancy.net; admin origin: https://admin.danielclancy.net; targets: desktop, pushover.</p>
+            </article>
+            <article class="card">
+              <span class="metric-label">Delivery checkpoint</span>
+              <h3>Not live</h3>
+              <p class="muted">Live delivery requires StreamSuites/runtime bridge/export/API work plus Cloudflare Pages, DNS, auth/session env vars, OAuth redirect URIs, and Pushover env/config where applicable.</p>
+            </article>
+          </div>`
+        )}
+
+        ${panel(
+          "Filters and bulk controls",
+          "Search alert rules, select rows, and apply confirmed bulk changes to local scaffold rows.",
+          renderAlertControls(visibleRules.length, selectedVisible, mutedCount)
+        )}
+
+        ${panel(
+          "Alert rule table editor",
+          "Table-style rule editor for DanielClancy source surfaces and future StreamSuites desktop/Pushover routing.",
+          renderAlertTable(visibleRules)
+        )}
+
+        ${alertsState.modal ? renderAlertModal(alertsState.modal) : ""}
+      </div>
+    `;
+  }
+
+  function renderAlertControls(visibleCount, selectedVisible, mutedCount) {
+    return `
+      <div class="cms-toolbar alerts-toolbar" data-alert-controls>
+        <label class="field field-wide">
+          <span>Search</span>
+          <input class="input" type="search" value="${escapeHtml(alertsState.search)}" placeholder="Name, rule id, domain, trigger, template, tag" data-alert-filter="search" />
+        </label>
+        <label class="field">
+          <span>Severity</span>
+          <select class="input" data-alert-filter="severity">
+            <option value="all"${alertsState.severity === "all" ? " selected" : ""}>All severities</option>
+            ${ALERT_SEVERITIES.map((severity) => `<option value="${severity}"${alertsState.severity === severity ? " selected" : ""}>${severity}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Surface / domain</span>
+          <select class="input" data-alert-filter="surface">
+            <option value="all"${alertsState.surface === "all" ? " selected" : ""}>All domains</option>
+            ${ALERT_SURFACES.map((surface) => `<option value="${surface}"${alertsState.surface === surface ? " selected" : ""}>${surface}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Target</span>
+          <select class="input" data-alert-filter="target">
+            <option value="all"${alertsState.target === "all" ? " selected" : ""}>All targets</option>
+            ${ALERT_CHANNEL_TARGETS.map((target) => `<option value="${target}"${alertsState.target === target ? " selected" : ""}>${target}</option>`).join("")}
+          </select>
+        </label>
+        <div class="cms-toolbar-summary">
+          ${badge(`${visibleCount} visible`, "warn")}
+          ${badge(`${alertsState.selected.size} selected`, selectedVisible ? "success" : "warn")}
+          ${badge(`${mutedCount} muted`, mutedCount ? "warn" : "")}
+          ${badge("Local scaffold only", "warn")}
+        </div>
+      </div>
+      <div class="bulk-panel ${alertsState.bulkMode ? "is-open" : ""}">
+        <div>
+          <strong>Bulk editing mode</strong>
+          <p class="muted">Bulk actions update ${escapeHtml(ALERTS_STORAGE_KEY)} only. Delete requires confirmation and does not affect StreamSuites runtime alerts.</p>
+        </div>
+        <div class="toolbar">
+          <button class="button button-secondary" type="button" data-alert-action="toggle-bulk">${alertsState.bulkMode ? "Close bulk mode" : "Open bulk mode"}</button>
+          <button class="button button-secondary" type="button" data-alert-action="select-visible">Select visible</button>
+          <button class="button button-secondary" type="button" data-alert-action="clear-selection">Clear selection</button>
+          <button class="button button-secondary" type="button" data-alert-action="bulk-enable" ${alertsState.selected.size ? "" : "disabled"}>Enable</button>
+          <button class="button button-secondary" type="button" data-alert-action="bulk-disable" ${alertsState.selected.size ? "" : "disabled"}>Disable</button>
+          <select class="input input-compact" data-alert-bulk-field="severity" ${alertsState.selected.size ? "" : "disabled"}>
+            <option value="">Set severity</option>
+            ${ALERT_SEVERITIES.map((severity) => `<option value="${severity}">${severity}</option>`).join("")}
+          </select>
+          <select class="input input-compact" data-alert-bulk-field="target" ${alertsState.selected.size ? "" : "disabled"}>
+            <option value="">Set target</option>
+            ${ALERT_CHANNEL_TARGETS.map((target) => `<option value="${target}">${target}</option>`).join("")}
+          </select>
+          <input class="input input-compact" type="text" placeholder="Tag" data-alert-bulk-tag ${alertsState.selected.size ? "" : "disabled"} />
+          <button class="button button-secondary" type="button" data-alert-action="bulk-add-tag" ${alertsState.selected.size ? "" : "disabled"}>Add tag</button>
+          <button class="button button-secondary" type="button" data-alert-action="bulk-remove-tag" ${alertsState.selected.size ? "" : "disabled"}>Remove tag</button>
+          <button class="button button-danger" type="button" data-alert-action="bulk-delete" ${alertsState.selected.size ? "" : "disabled"}>Delete selected</button>
+        </div>
+        <div class="project-message" role="status">${escapeHtml(alertsState.message)}</div>
+      </div>
+    `;
+  }
+
+  function renderAlertTable(rules) {
+    if (!rules.length) {
+      return `<div class="empty-state">No local alert rules match the current filters. Create a rule or reset the seed rows.</div>`;
+    }
+
+    return `
+      <div class="table-wrap">
+        <table class="table project-table alerts-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" aria-label="Select visible alert rules" data-alert-select-all ${rules.every((rule) => alertsState.selected.has(rule.id)) ? "checked" : ""} /></th>
+              <th>Rule</th>
+              <th>Status</th>
+              <th>Severity</th>
+              <th>Source surface</th>
+              <th>Trigger</th>
+              <th>Target channel</th>
+              <th>Routing</th>
+              <th>Template</th>
+              <th>Tags</th>
+              <th>Health</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rules.map(renderAlertRow).join("")}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderAlertRow(rule) {
+    return `
+      <tr>
+        <td><input type="checkbox" aria-label="Select ${escapeHtml(rule.name)}" data-alert-select="${escapeHtml(rule.id)}" ${alertsState.selected.has(rule.id) ? "checked" : ""} /></td>
+        <td><strong>${escapeHtml(rule.name)}</strong><br><code>${escapeHtml(rule.id)}</code></td>
+        <td>${badge(rule.enabled ? "Enabled" : "Disabled", rule.enabled ? "success" : "warn")}</td>
+        <td>${badge(rule.severity, rule.severity === "critical" ? "danger" : rule.severity === "warning" ? "warn" : "")}</td>
+        <td>${badge(rule.sourceSurface)}</td>
+        <td>${escapeHtml(rule.triggerType.replace(/_/g, " "))}</td>
+        <td>${badge(rule.channelTarget, rule.channelTarget === "muted" ? "warn" : "")}</td>
+        <td>${badge(`Desktop ${rule.desktopEnabled ? "on" : "off"}`, rule.desktopEnabled ? "success" : "warn")} ${badge(`Pushover ${rule.pushoverEnabled ? "on" : "off"}`, rule.pushoverEnabled ? "success" : "warn")}</td>
+        <td><strong>${escapeHtml(rule.titleTemplate || "No title template")}</strong><br><span>${escapeHtml(rule.messageTemplate || "No message template")}</span></td>
+        <td><div class="chip-row">${rule.tags.slice(0, 4).map((tag) => badge(tag)).join("") || badge("No tags", "warn")}</div></td>
+        <td>${badge(rule.health, alertHealthTone(rule))}<br><small>Scaffold/export readiness only</small></td>
+        <td>${escapeHtml(formatTimestamp(rule.updatedAt))}</td>
+        <td>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-alert-action="detail" data-alert-id="${escapeHtml(rule.id)}">Detail</button>
+            <button class="button button-secondary" type="button" data-alert-action="edit" data-alert-id="${escapeHtml(rule.id)}">Edit</button>
+            <button class="button button-danger" type="button" data-alert-action="delete" data-alert-id="${escapeHtml(rule.id)}">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderAlertModal(modal) {
+    const rule = modal.rule;
+    const readOnly = modal.mode === "detail";
+    const title = modal.mode === "create" ? "Create alert rule" : modal.mode === "detail" ? "Alert rule detail" : "Edit alert rule";
+    return `
+      <div class="modal-backdrop" data-alert-modal-backdrop>
+        <section class="modal media-modal" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">DanielClancy alert scaffold</span>
+              <h2 id="alert-modal-title">${escapeHtml(title)}</h2>
+              <p>Save writes only to ${escapeHtml(ALERTS_STORAGE_KEY)}. Live desktop/Pushover delivery requires StreamSuites/runtime bridge and hosted env setup.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close alert editor" data-alert-action="close-modal">x</button>
+          </header>
+          <form class="modal-body project-form" data-alert-form>
+            <input type="hidden" name="originalId" value="${escapeHtml(rule.id)}" />
+            <div class="form-grid">
+              ${field("Rule name", "name", rule.name, "text", true, readOnly)}
+              ${field("Rule id / code", "id", rule.id, "text", true, readOnly)}
+              <label class="field">
+                <span>Source surface / domain</span>
+                <select class="input" name="sourceSurface" ${readOnly ? "disabled" : ""}>
+                  ${ALERT_SURFACES.map((surface) => `<option value="${surface}"${rule.sourceSurface === surface ? " selected" : ""}>${surface}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Severity</span>
+                <select class="input" name="severity" ${readOnly ? "disabled" : ""}>
+                  ${ALERT_SEVERITIES.map((severity) => `<option value="${severity}"${rule.severity === severity ? " selected" : ""}>${severity}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Trigger type</span>
+                <select class="input" name="triggerType" ${readOnly ? "disabled" : ""}>
+                  ${ALERT_TRIGGER_TYPES.map((trigger) => `<option value="${trigger}"${rule.triggerType === trigger ? " selected" : ""}>${trigger.replace(/_/g, " ")}</option>`).join("")}
+                </select>
+              </label>
+              <label class="field">
+                <span>Channel target</span>
+                <select class="input" name="channelTarget" ${readOnly ? "disabled" : ""}>
+                  ${ALERT_CHANNEL_TARGETS.map((target) => `<option value="${target}"${rule.channelTarget === target ? " selected" : ""}>${target}</option>`).join("")}
+                </select>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" name="enabled" ${rule.enabled ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Rule enabled</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" name="desktopEnabled" ${rule.desktopEnabled ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Desktop alert enabled</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" name="pushoverEnabled" ${rule.pushoverEnabled ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Pushover enabled</span>
+              </label>
+              ${textareaField("Title template", "titleTemplate", rule.titleTemplate, readOnly)}
+              ${textareaField("Message template", "messageTemplate", rule.messageTemplate, readOnly)}
+              ${textareaField("Tags", "tags", rule.tags.join("\n"), readOnly)}
+              ${textareaField("Notes", "notes", rule.notes, readOnly)}
+            </div>
+            <aside class="asset-status-box">
+              <h3>Scaffold-only warning</h3>
+              <p>This editor does not send alerts, register desktop clients, write StreamSuites runtime rules, or contact Pushover. Export JSON for review and future bridge wiring.</p>
+              <div class="chip-row">
+                ${badge("Project DanielClancy", "warn")}
+                ${badge("Namespace danielclancy", "warn")}
+                ${badge(rule.sourceSurface)}
+              </div>
+            </aside>
+            <footer class="modal-footer">
+              <button class="button button-secondary" type="button" data-alert-action="close-modal">Cancel</button>
+              ${readOnly ? `<button class="button" type="button" data-alert-action="edit" data-alert-id="${escapeHtml(rule.id)}">Edit</button>` : `<button class="button" type="submit">Save local scaffold</button>`}
+            </footer>
+          </form>
+        </section>
+      </div>
+    `;
+  }
+
   function renderProjectControls(statuses, visibleCount, selectedVisible) {
     return `
       <div class="cms-toolbar" data-project-controls>
@@ -1235,6 +1611,58 @@
       featured: false,
       internalNotes: "Created in DanielClancy-Admin local media scaffold. Not published."
     });
+  }
+
+  function emptyAlertRule() {
+    return normalizeAlertRule({
+      id: `alert-${Date.now()}`,
+      name: "",
+      enabled: false,
+      severity: "info",
+      sourceSurface: "danielclancy.net",
+      triggerType: "manual_test",
+      channelTarget: "desktop",
+      desktopEnabled: true,
+      pushoverEnabled: false,
+      titleTemplate: "DanielClancy alert",
+      messageTemplate: "Scaffold alert rule triggered for DanielClancy.",
+      tags: ["scaffold"],
+      notes: "Created in DanielClancy-Admin local alert scaffold. Not live."
+    });
+  }
+
+  function alignAlertTargetFlags(rule, target) {
+    if (target === "both") {
+      return { ...rule, channelTarget: target, desktopEnabled: true, pushoverEnabled: true };
+    }
+    if (target === "desktop") {
+      return { ...rule, channelTarget: target, desktopEnabled: true, pushoverEnabled: false };
+    }
+    if (target === "pushover") {
+      return { ...rule, channelTarget: target, desktopEnabled: false, pushoverEnabled: true };
+    }
+    if (target === "muted") {
+      return { ...rule, channelTarget: target, desktopEnabled: false, pushoverEnabled: false };
+    }
+    return rule;
+  }
+
+  function buildAlertContract() {
+    return {
+      project: "DanielClancy",
+      source_namespace: "danielclancy",
+      public_origin: "https://danielclancy.net",
+      admin_origin: "https://admin.danielclancy.net",
+      targets: ["desktop", "pushover"],
+      storage_key: ALERTS_STORAGE_KEY,
+      delivery_status: "scaffold_only",
+      requirements: [
+        "StreamSuites/runtime export or API bridge must accept these rules before live delivery.",
+        "Cloudflare Pages project, admin.danielclancy.net DNS, auth/session env vars, and OAuth redirect URIs must be configured before live hosted testing.",
+        "Pushover API/user env or routing config must be configured before DanielClancy Pushover delivery."
+      ],
+      rules: alertsState.rules.map(normalizeAlertRule)
+    };
   }
 
   function formatTimestamp(value) {
@@ -1508,6 +1936,8 @@
       renderProjects();
     } else if (route.page === "media") {
       renderMedia();
+    } else if (route.page === "alerts") {
+      renderAlerts();
     } else if (route.page === "settings") {
       renderSettings();
     } else {
@@ -1543,6 +1973,11 @@
       mediaState.search = target.value;
       renderMedia();
     }
+
+    if (target.matches("[data-alert-filter='search']")) {
+      alertsState.search = target.value;
+      renderAlerts();
+    }
   });
 
   app.addEventListener("change", (event) => {
@@ -1576,6 +2011,24 @@
     if (target.matches("[data-media-filter='health']")) {
       mediaState.health = target.value;
       renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-alert-filter='severity']")) {
+      alertsState.severity = target.value;
+      renderAlerts();
+      return;
+    }
+
+    if (target.matches("[data-alert-filter='surface']")) {
+      alertsState.surface = target.value;
+      renderAlerts();
+      return;
+    }
+
+    if (target.matches("[data-alert-filter='target']")) {
+      alertsState.target = target.value;
+      renderAlerts();
       return;
     }
 
@@ -1625,6 +2078,29 @@
       return;
     }
 
+    if (target.matches("[data-alert-select]")) {
+      const id = target.getAttribute("data-alert-select");
+      if (target.checked) {
+        alertsState.selected.add(id);
+      } else {
+        alertsState.selected.delete(id);
+      }
+      renderAlerts();
+      return;
+    }
+
+    if (target.matches("[data-alert-select-all]")) {
+      filteredAlertRules().forEach((rule) => {
+        if (target.checked) {
+          alertsState.selected.add(rule.id);
+        } else {
+          alertsState.selected.delete(rule.id);
+        }
+      });
+      renderAlerts();
+      return;
+    }
+
     if (target.matches("[data-bulk-field='status']") && target.value) {
       bulkUpdate((project) => ({ ...project, status: target.value, updatedAt: new Date().toISOString() }));
       projectState.message = `Updated status for ${projectState.selected.size} selected project scaffold row(s).`;
@@ -1664,6 +2140,22 @@
       mediaState.message = `Updated featured flag for ${mediaState.selected.size} selected media scaffold row(s).`;
       persistMediaItems();
       renderMedia();
+      return;
+    }
+
+    if (target.matches("[data-alert-bulk-field='severity']") && target.value) {
+      bulkUpdateAlerts((rule) => ({ ...rule, severity: target.value, updatedAt: new Date().toISOString() }));
+      alertsState.message = `Updated severity for ${alertsState.selected.size} selected alert rule scaffold row(s).`;
+      persistAlertRules();
+      renderAlerts();
+      return;
+    }
+
+    if (target.matches("[data-alert-bulk-field='target']") && target.value) {
+      bulkUpdateAlerts((rule) => alignAlertTargetFlags({ ...rule, updatedAt: new Date().toISOString() }, target.value));
+      alertsState.message = `Updated target channel for ${alertsState.selected.size} selected alert rule scaffold row(s).`;
+      persistAlertRules();
+      renderAlerts();
     }
   });
 
@@ -1683,6 +2175,12 @@
       return;
     }
 
+    if (form.matches("[data-alert-form]")) {
+      event.preventDefault();
+      saveAlertFromForm(form);
+      return;
+    }
+
     if (!form.matches("[data-project-form]")) return;
 
     event.preventDefault();
@@ -1690,14 +2188,16 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-account-access-action]");
+    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const mediaAction = target.getAttribute("data-media-action");
+    const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
+    const alertId = target.getAttribute("data-alert-id");
     const accountAccessId = target.getAttribute("data-account-access-id");
 
     if (accountAccessAction === "remove") {
@@ -1705,9 +2205,62 @@
       return;
     }
 
-    if (!action && !mediaAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]"))) {
+    if (!action && !mediaAction && !alertAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]"))) {
       return;
     }
+
+    if (alertAction === "create") {
+      alertsState.modal = { mode: "create", rule: emptyAlertRule() };
+      renderAlerts();
+    } else if (alertAction === "detail") {
+      const rule = alertsState.rules.find((entry) => entry.id === alertId);
+      if (rule) alertsState.modal = { mode: "detail", rule };
+      renderAlerts();
+    } else if (alertAction === "edit") {
+      const rule = alertId ? alertsState.rules.find((entry) => entry.id === alertId) : alertsState.modal?.rule;
+      if (rule) alertsState.modal = { mode: "edit", rule };
+      renderAlerts();
+    } else if (alertAction === "delete") {
+      deleteAlertRule(alertId);
+    } else if (alertAction === "close-modal") {
+      alertsState.modal = null;
+      renderAlerts();
+    } else if (alertAction === "toggle-bulk") {
+      alertsState.bulkMode = !alertsState.bulkMode;
+      renderAlerts();
+    } else if (alertAction === "select-visible") {
+      filteredAlertRules().forEach((rule) => alertsState.selected.add(rule.id));
+      alertsState.message = "Visible alert scaffold rows selected.";
+      renderAlerts();
+    } else if (alertAction === "clear-selection") {
+      alertsState.selected.clear();
+      alertsState.message = "Selection cleared.";
+      renderAlerts();
+    } else if (alertAction === "bulk-enable") {
+      bulkUpdateAlerts((rule) => ({ ...rule, enabled: true, updatedAt: new Date().toISOString() }));
+      alertsState.message = `Enabled ${alertsState.selected.size} selected alert scaffold row(s).`;
+      persistAlertRules();
+      renderAlerts();
+    } else if (alertAction === "bulk-disable") {
+      bulkUpdateAlerts((rule) => ({ ...rule, enabled: false, updatedAt: new Date().toISOString() }));
+      alertsState.message = `Disabled ${alertsState.selected.size} selected alert scaffold row(s).`;
+      persistAlertRules();
+      renderAlerts();
+    } else if (alertAction === "bulk-add-tag") {
+      bulkAlertTag("add");
+    } else if (alertAction === "bulk-remove-tag") {
+      bulkAlertTag("remove");
+    } else if (alertAction === "bulk-delete") {
+      bulkDeleteAlerts();
+    } else if (alertAction === "copy-json") {
+      copyAlertsJson();
+    } else if (alertAction === "import-json") {
+      importAlertsJson();
+    } else if (alertAction === "reset") {
+      resetAlerts();
+    }
+
+    if (alertAction) return;
 
     if (mediaAction === "create") {
       mediaState.modal = { mode: "create", item: emptyMediaItem() };
@@ -1795,6 +2348,12 @@
   });
 
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && alertsState.modal) {
+      alertsState.modal = null;
+      renderAlerts();
+      return;
+    }
+
     if (event.key === "Escape" && mediaState.modal) {
       mediaState.modal = null;
       renderMedia();
@@ -1968,6 +2527,59 @@
     renderMedia();
   }
 
+  function saveAlertFromForm(form) {
+    const name = formValue(form, "name");
+    const id = createSlug(formValue(form, "id") || name);
+
+    if (!name || !id) {
+      alertsState.message = "Rule name and rule id/code are required before saving.";
+      renderAlerts();
+      return;
+    }
+
+    const originalId = formValue(form, "originalId");
+    const saved = normalizeAlertRule({
+      id,
+      name,
+      enabled: Boolean(form.querySelector("[name='enabled']")?.checked),
+      severity: formValue(form, "severity"),
+      sourceSurface: formValue(form, "sourceSurface"),
+      triggerType: formValue(form, "triggerType"),
+      channelTarget: formValue(form, "channelTarget"),
+      desktopEnabled: Boolean(form.querySelector("[name='desktopEnabled']")?.checked),
+      pushoverEnabled: Boolean(form.querySelector("[name='pushoverEnabled']")?.checked),
+      titleTemplate: formValue(form, "titleTemplate"),
+      messageTemplate: formValue(form, "messageTemplate"),
+      tags: textareaArray(formValue(form, "tags")),
+      notes: formValue(form, "notes"),
+      health: "scaffold",
+      updatedAt: new Date().toISOString()
+    });
+
+    const existingIndex = alertsState.rules.findIndex((rule) => rule.id === originalId);
+    const duplicate = alertsState.rules.some((rule, index) => rule.id === saved.id && index !== existingIndex);
+    if (duplicate) {
+      alertsState.message = "An alert scaffold row already uses that rule id/code.";
+      renderAlerts();
+      return;
+    }
+
+    if (existingIndex >= 0) {
+      alertsState.rules[existingIndex] = saved;
+    } else {
+      alertsState.rules.unshift(saved);
+    }
+
+    if (originalId !== saved.id) {
+      alertsState.selected.delete(originalId);
+    }
+
+    persistAlertRules();
+    alertsState.modal = null;
+    alertsState.message = `Saved ${saved.name} locally. This does not write StreamSuites runtime alert rules or send Pushover notifications.`;
+    renderAlerts();
+  }
+
   function deleteProject(id) {
     const project = projectState.projects.find((item) => item.id === id);
     if (!project) return;
@@ -1998,6 +2610,21 @@
     renderMedia();
   }
 
+  function deleteAlertRule(id) {
+    const rule = alertsState.rules.find((entry) => entry.id === id);
+    if (!rule) return;
+
+    if (!window.confirm(`Delete local scaffold alert rule "${rule.name || rule.id}"? This will not affect StreamSuites runtime alerts.`)) {
+      return;
+    }
+
+    alertsState.rules = alertsState.rules.filter((entry) => entry.id !== id);
+    alertsState.selected.delete(id);
+    persistAlertRules();
+    alertsState.message = `Deleted local alert scaffold row: ${rule.name || rule.id}.`;
+    renderAlerts();
+  }
+
   function bulkUpdate(mutator) {
     projectState.projects = projectState.projects.map((project) =>
       projectState.selected.has(project.id) ? normalizeProject(mutator(project)) : project
@@ -2007,6 +2634,12 @@
   function bulkUpdateMedia(mutator) {
     mediaState.items = mediaState.items.map((item) =>
       mediaState.selected.has(item.id) ? normalizeMediaItem(mutator(item)) : item
+    );
+  }
+
+  function bulkUpdateAlerts(mutator) {
+    alertsState.rules = alertsState.rules.map((rule) =>
+      alertsState.selected.has(rule.id) ? normalizeAlertRule(mutator(rule)) : rule
     );
   }
 
@@ -2050,6 +2683,26 @@
     renderMedia();
   }
 
+  function bulkAlertTag(mode) {
+    const input = app.querySelector("[data-alert-bulk-tag]");
+    const tag = String(input?.value || "").trim();
+    if (!tag) {
+      alertsState.message = "Enter a tag before applying a bulk tag action.";
+      renderAlerts();
+      return;
+    }
+
+    bulkUpdateAlerts((rule) => {
+      const tags = new Set(rule.tags);
+      if (mode === "add") tags.add(tag);
+      if (mode === "remove") tags.delete(tag);
+      return { ...rule, tags: Array.from(tags), updatedAt: new Date().toISOString() };
+    });
+    persistAlertRules();
+    alertsState.message = `${mode === "add" ? "Added" : "Removed"} tag "${tag}" on selected local alert scaffold row(s).`;
+    renderAlerts();
+  }
+
   function bulkDelete() {
     const count = projectState.selected.size;
     if (!count) return;
@@ -2076,6 +2729,20 @@
     persistMediaItems();
     mediaState.message = `Deleted ${count} local media scaffold row(s).`;
     renderMedia();
+  }
+
+  function bulkDeleteAlerts() {
+    const count = alertsState.selected.size;
+    if (!count) return;
+    if (!window.confirm(`Delete ${count} selected local alert scaffold row(s)? This will not affect StreamSuites runtime alerts.`)) {
+      return;
+    }
+
+    alertsState.rules = alertsState.rules.filter((rule) => !alertsState.selected.has(rule.id));
+    alertsState.selected.clear();
+    persistAlertRules();
+    alertsState.message = `Deleted ${count} local alert scaffold row(s).`;
+    renderAlerts();
   }
 
   function copyProjectsJson() {
@@ -2112,6 +2779,24 @@
     }
 
     window.prompt("Copy local media scaffold JSON", json);
+  }
+
+  function copyAlertsJson() {
+    const json = JSON.stringify(buildAlertContract(), null, 2);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(json).then(
+        () => {
+          alertsState.message = "Copied DanielClancy alert scaffold contract JSON to the clipboard.";
+          renderAlerts();
+        },
+        () => {
+          window.prompt("Copy DanielClancy alert scaffold contract JSON", json);
+        }
+      );
+      return;
+    }
+
+    window.prompt("Copy DanielClancy alert scaffold contract JSON", json);
   }
 
   function importProjectsJson() {
@@ -2176,6 +2861,38 @@
     }
   }
 
+  function importAlertsJson() {
+    const value = window.prompt("Paste a JSON array of alert scaffold rows, or the exported DanielClancy alert contract. This replaces local browser data only.");
+    if (!value) return;
+
+    try {
+      const parsed = JSON.parse(value);
+      const rows = Array.isArray(parsed) ? parsed : parsed && Array.isArray(parsed.rules) ? parsed.rules : null;
+      if (!rows) {
+        throw new Error("Expected a JSON array or a contract object with a rules array.");
+      }
+
+      const normalized = rows.map(normalizeAlertRule);
+      const ids = new Set(normalized.map((rule) => rule.id));
+      if (ids.size !== normalized.length) {
+        throw new Error("Alert rule id/code values must be unique.");
+      }
+
+      if (!window.confirm(`Import ${normalized.length} alert scaffold row(s) into local browser storage?`)) {
+        return;
+      }
+
+      alertsState.rules = normalized;
+      alertsState.selected.clear();
+      persistAlertRules();
+      alertsState.message = "Imported alert scaffold JSON into local browser storage.";
+      renderAlerts();
+    } catch (error) {
+      alertsState.message = `Import failed: ${error.message}`;
+      renderAlerts();
+    }
+  }
+
   function resetProjects() {
     if (!window.confirm("Reset Projects CMS scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
       return;
@@ -2198,6 +2915,18 @@
     persistMediaItems();
     mediaState.message = "Media CMS scaffold reset to repo seed data.";
     renderMedia();
+  }
+
+  function resetAlerts() {
+    if (!window.confirm("Reset Alerts scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
+      return;
+    }
+
+    alertsState.rules = (data.alerts || []).map(normalizeAlertRule);
+    alertsState.selected.clear();
+    persistAlertRules();
+    alertsState.message = "Alerts scaffold reset to repo seed data.";
+    renderAlerts();
   }
 
   window.addEventListener("hashchange", render);

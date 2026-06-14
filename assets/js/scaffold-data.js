@@ -25,6 +25,12 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
         value: "Not wired",
         note: "Public login widget and admin auth/session contracts are future work.",
         tone: "warn"
+      },
+      {
+        label: "Alerts",
+        value: "Local scaffold",
+        note: "DanielClancy alert rules export a contract only. No live desktop or Pushover delivery is connected here.",
+        tone: "warn"
       }
     ],
     posture: [
@@ -32,13 +38,15 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       "DanielClancy professional branding and local font assets",
       "No destructive controls or authority-state mutations",
       "Projects CMS navigation enabled with local scaffold persistence",
-      "Media CMS navigation enabled with local scaffold persistence"
+      "Media CMS navigation enabled with local scaffold persistence",
+      "Alerts navigation enabled with local scaffold persistence and JSON contract export"
     ],
     readiness: [
       { label: "Shell", value: "Ready for review" },
       { label: "Routes", value: "Client-side scaffold" },
-    { label: "Cloudflare", value: "Static fallback only" },
-    { label: "Admin API", value: "Pending" }
+      { label: "Cloudflare", value: "Static fallback only" },
+      { label: "Admin API", value: "Pending" },
+      { label: "Alerts", value: "Scaffold only" }
     ]
   },
   projects: [
@@ -201,6 +209,76 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       updatedAt: "2026-06-15T00:00:00Z"
     }
   ],
+  alerts: [
+    {
+      id: "contact-form-critical",
+      name: "Contact form critical inquiry",
+      enabled: true,
+      severity: "critical",
+      sourceSurface: "danielclancy.net",
+      triggerType: "contact_form",
+      channelTarget: "both",
+      desktopEnabled: true,
+      pushoverEnabled: true,
+      titleTemplate: "DanielClancy contact inquiry",
+      messageTemplate: "A contact form inquiry was submitted on danielclancy.net.",
+      tags: ["contact", "public-site"],
+      notes: "Scaffold rule for future StreamSuites/runtime bridge. No live form event is connected by this admin page.",
+      health: "scaffold",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
+      id: "admin-login-watch",
+      name: "Admin login watch",
+      enabled: true,
+      severity: "warning",
+      sourceSurface: "admin.danielclancy.net",
+      triggerType: "auth_admin_login",
+      channelTarget: "desktop",
+      desktopEnabled: true,
+      pushoverEnabled: false,
+      titleTemplate: "DanielClancy admin login",
+      messageTemplate: "An admin login event was observed for admin.danielclancy.net.",
+      tags: ["auth", "admin"],
+      notes: "Scaffold-only login visibility rule. Live delivery requires hosted auth/session env setup and runtime alert routing.",
+      health: "scaffold",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
+      id: "portfolio-update-watch",
+      name: "Portfolio update watch",
+      enabled: false,
+      severity: "info",
+      sourceSurface: "danielclancy.net",
+      triggerType: "portfolio_update",
+      channelTarget: "desktop",
+      desktopEnabled: true,
+      pushoverEnabled: false,
+      titleTemplate: "DanielClancy portfolio update",
+      messageTemplate: "A portfolio scaffold/export update is ready for review.",
+      tags: ["portfolio", "projects"],
+      notes: "Future export/API bridge rule. This does not publish portfolio content.",
+      health: "scaffold",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
+      id: "deployment-watch",
+      name: "Deployment watch",
+      enabled: false,
+      severity: "warning",
+      sourceSurface: "admin.danielclancy.net",
+      triggerType: "deployment",
+      channelTarget: "muted",
+      desktopEnabled: false,
+      pushoverEnabled: false,
+      titleTemplate: "DanielClancy deployment checkpoint",
+      messageTemplate: "A DanielClancy admin deployment checkpoint needs review.",
+      tags: ["deployment", "cloudflare"],
+      notes: "Muted scaffold row for Cloudflare Pages/DNS readiness tracking before live OAuth testing.",
+      health: "scaffold",
+      updatedAt: "2026-06-15T00:00:00Z"
+    }
+  ],
   analytics: {
     markers: [
       { label: "Sample AU", x: "76%", y: "68%" },
@@ -218,6 +296,7 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       { route: "/accounts", surface: "Accounts", status: "Scaffold" },
       { route: "/projects", surface: "Projects CMS", status: "Local scaffold" },
       { route: "/media", surface: "Media CMS", status: "Local scaffold" },
+      { route: "/alerts", surface: "Alerts", status: "Local scaffold" },
       { route: "/settings", surface: "Settings", status: "Scaffold" }
     ],
     notes: [

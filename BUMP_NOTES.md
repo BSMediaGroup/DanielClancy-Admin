@@ -1,5 +1,43 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Alerts Page And DanielClancy Alert Catchment Scaffold
+
+### Technical Notes
+
+- Enabled the Alerts navigation entry and added the `#/alerts` route in the static admin shell.
+- Added a table-style Alerts scaffold with search/filtering, status cards, select-all/row selection, bulk enable/disable, bulk severity, bulk target channel, bulk tag add/remove, and confirmed bulk delete.
+- Added a lightbox create/edit/detail modal with rule name and rule id/code validation, Escape/close handling, desktop/Pushover routing controls, and DanielClancy source domain controls.
+- Added localStorage persistence under `danielclancy-admin.alerts.scaffold.v1`, repo seed rows, reset/reseed confirmation, JSON import, and JSON contract export for future bridge review.
+- The exported contract identifies `project=DanielClancy`, `source_namespace=danielclancy`, `https://danielclancy.net`, `https://admin.danielclancy.net`, desktop/Pushover targets, and local scaffold rules.
+- Existing StreamSuites alert behavior must remain preserved; this admin page does not write StreamSuites runtime alert rules or send Pushover notifications.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin now has an Alerts CMS-style workspace for planning DanielClancy.net and admin.danielclancy.net alert rules.
+- The page is explicitly local/scaffold-only until a safe StreamSuites/runtime export or API bridge is connected.
+- Live desktop alert delivery and Pushover routing require runtime/env/config setup outside this local scaffold.
+- Cloudflare Pages/DNS setup for `admin.danielclancy.net` is now due before live hosted/OAuth/admin testing.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `assets/js/scaffold-data.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check assets/js/admin-app.js` and `node --check assets/js/scaffold-data.js`.
+- Run `git diff --check`.
+- `package.json` exists only for module syntax parsing and has no npm lint/typecheck/build scripts yet.
+- Smoke test `#/alerts`, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete, localStorage reload, reset/reseed confirmation, JSON export/import, mobile viewport sanity, and existing `#/projects` / `#/media` routes.
+
+### Risks / Follow-Ups
+
+- Alerts CMS is local/scaffold unless a safe live bridge is implemented.
+- Pushover live routing requires env/config setup if not already present.
+- Cloudflare Pages project, `admin.danielclancy.net` custom domain/DNS, Cloudflare env vars, OAuth app setup, OAuth redirect URIs, and hosted dashboard confirmation are required before live OAuth callbacks or live admin testing.
+
 ## Auth/login foundation milestone
 
 ### Technical Notes
@@ -21,7 +59,7 @@
 - OAuth login methods require Cloudflare env vars and provider redirect URI setup before live testing.
 - OAuth users are not automatically master admins unless explicitly allowlisted or promoted through the future durable account-role system.
 - Public session-aware content remains future work.
-- Alerts page remains future work.
+- Alerts page is now covered by a local scaffold workspace; live StreamSuites/runtime delivery remains future work.
 - Cloudflare Pages/DNS setup checkpoint is now approaching and should be completed before real OAuth production testing.
 
 ### Files / Areas Changed
