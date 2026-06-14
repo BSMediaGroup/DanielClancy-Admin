@@ -1,5 +1,49 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Projects Public Baseline And KV Overlay Safety Milestone
+
+### Technical Notes
+
+- Added `assets/data/public-projects-baseline.json`, generated from the public DanielClancy repo's WorkSet-derived portfolio pipeline.
+- Updated `functions/api/admin/cms/[[collection]].js` so `projects` loads the protected public baseline before KV and returns a merged `baseline_plus_kv` result with `baselineCount`, `kvCount`, `mergedCount`, `baselineProtected`, and `partialKvMerged` metadata.
+- Legacy Projects KV shapes remain readable, including bare arrays, wrapper objects with `items`, and the previous partial three-row scaffold data.
+- Projects PUT now stores a `baseline_overlay` wrapper and rejects unsafe saves that omit protected baseline records unless hiding is explicit.
+- Updated Projects UI/local fallback so baseline records are merged with local/admin overlay data, imports are treated as overlays when partial, reconcile saves a safe merged wrapper, and baseline deletes become archived/hidden soft-delete actions.
+- Media and Alerts behavior is not the focus of this fix and remains on the existing scaffold/KV/local fallback path.
+- Manual env-backed admin access remains preserved.
+- OAuth users are still not auto-promoted to admin.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Projects CMS now treats the existing DanielClancy public-site projects as a protected baseline.
+- Partial KV/scaffold data no longer replaces the full project list or collapses Projects to the old small seed.
+- Existing public baseline records are protected from hard delete; deleting a baseline row archives/hides it through admin overlay metadata.
+- KV now acts as overlay/reconciled admin storage for Projects.
+- Public-site publishing/hydration from DanielClancy-Admin remains future work.
+
+### Files / Areas Changed
+
+- `assets/data/public-projects-baseline.json`
+- `functions/api/admin/cms/[[collection]].js`
+- `assets/js/admin-app.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check functions/api/admin/cms/[[collection]].js` and `node --check assets/js/admin-app.js`.
+- Run `node --check assets/js/scaffold-data.js` to confirm unchanged scaffold data still parses.
+- Run `git diff --check`.
+- Validate by inspection that the generated public baseline has 16 projects, which is greater than the previous three-row scaffold/KV sample.
+- Validate by inspection that Projects GET cannot return only partial KV rows when the baseline asset exists, baseline deletes become archive/hidden updates, and admin-created rows can still be hard-deleted.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages verification should confirm the `ASSETS` binding serves `assets/data/public-projects-baseline.json` to the Pages Function.
+- The public DanielClancy.net publishing/hydration bridge remains future work.
+- If the public portfolio source changes, regenerate the admin baseline snapshot from the public repo before relying on it as current.
+
 ## Admin CMS API, Hydration, And Auth UI Polish Milestone
 
 ### Technical Notes

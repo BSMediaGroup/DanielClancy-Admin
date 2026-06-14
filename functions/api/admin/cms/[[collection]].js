@@ -10,6 +10,8 @@ const COLLECTIONS = {
   media: { key: "cms:media", maxRows: 500 },
   alerts: { key: "cms:alerts", maxRows: 500 }
 };
+const PROJECTS_BASELINE_PATH = "/assets/data/public-projects-baseline.json";
+const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -182,9 +184,158 @@ function validateRows(collection, value) {
   return "";
 }
 
-async function readCollection(env, collection) {
+function projectIdentity(row) {
+  return String(row?.id || row?.slug || "").trim().toLowerCase();
+}
+
+function normalizeStoredCollection(parsed) {
+  const items = Array.isArray(parsed?.items) ? parsed.items : Array.isArray(parsed) ? parsed : [];
+  return {
+    items,
+    wrapper: parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null
+  };
+}
+
+async function loadProjectsBaseline(request, env) {
+  if (!env?.ASSETS || typeof env.ASSETS.fetch !== "function") {
+    return {
+      meta: {
+        sourceRepo: "DanielClancy",
+        projectCount: 0,
+        sourceFilesUsed: [],
+        missingReason: "assets_binding_unavailable"
+      },
+      projects: []
+    };
+  }
+
+  const url = new URL(PROJECTS_BASELINE_PATH, request.url);
+  const response = await env.ASSETS.fetch(url);
+  if (!response.ok) {
+    return {
+      meta: {
+        sourceRepo: "DanielClancy",
+        projectCount: 0,
+        sourceFilesUsed: [],
+        missingReason: `asset_http_${response.status}`
+      },
+      projects: []
+    };
+  }
+
+  const parsed = await response.json();
+  const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
+  return {
+    meta: {
+      ...(parsed?.meta || {}),
+      projectCount: projects.length
+    },
+    projects
+  };
+}
+
+function mergeProjectsBaselineWithKv(baselinePayload, storedItems, storedWrapper = null) {
+  const baseline = Array.isArray(baselinePayload?.projects) ? baselinePayload.projects : [];
+  const baselineIds = new Set(baseline.map(projectIdentity).filter(Boolean));
+  const hiddenBaselineIds = new Set(
+    Array.isArray(storedWrapper?.hiddenBaselineIds)
+      ? storedWrapper.hiddenBaselineIds.map((id) => String(id).trim().toLowerCase()).filter(Boolean)
+      : []
+  );
+  const kvItems = Array.isArray(storedItems) ? storedItems : [];
+  const kvById = new Map();
+  const adminCreatedItems = [];
+
+  for (const item of kvItems) {
+    const id = projectIdentity(item);
+    if (!id) continue;
+    if (baselineIds.has(id)) {
+      kvById.set(id, item);
+    } else {
+      adminCreatedItems.push({
+        ...item,
+        baselineProtected: false,
+        source: item?.source || "admin_created"
+      });
+    }
+  }
+
+  const mergedBaselineItems = baseline
+    .filter((item) => !hiddenBaselineIds.has(projectIdentity(item)))
+    .map((item) => {
+      const id = projectIdentity(item);
+      const overlay = kvById.get(id) || {};
+      return {
+        ...item,
+        ...overlay,
+        id: item.id,
+        slug: item.slug,
+        livePage: overlay.livePage || item.livePage,
+        sourceFolder: item.sourceFolder,
+        baselineProtected: true,
+        baselineVersion: PROJECTS_BASELINE_VERSION,
+        source: overlay.source || "public_baseline"
+      };
+    });
+
+  return {
+    items: [...mergedBaselineItems, ...adminCreatedItems],
+    hiddenBaselineIds: Array.from(hiddenBaselineIds),
+    meta: {
+      baselineCount: baseline.length,
+      kvCount: kvItems.length,
+      mergedCount: mergedBaselineItems.length + adminCreatedItems.length,
+      adminCreatedCount: adminCreatedItems.length,
+      hiddenBaselineCount: hiddenBaselineIds.size,
+      baselineProtected: baseline.length > 0,
+      partialKvMerged: baseline.length > 0 && kvItems.length > 0 && kvItems.length < baseline.length,
+      baselineVersion: PROJECTS_BASELINE_VERSION,
+      baseline: baselinePayload?.meta || null
+    }
+  };
+}
+
+function validateProjectsPayloadSafety(items, baselinePayload, payload) {
+  const baseline = Array.isArray(baselinePayload?.projects) ? baselinePayload.projects : [];
+  if (!baseline.length) return "";
+  const itemIds = new Set((items || []).map(projectIdentity).filter(Boolean));
+  const baselineIds = baseline.map(projectIdentity).filter(Boolean);
+  const hiddenIds = new Set(
+    Array.isArray(payload?.hiddenBaselineIds)
+      ? payload.hiddenBaselineIds.map((id) => String(id).trim().toLowerCase()).filter(Boolean)
+      : []
+  );
+  const missing = baselineIds.filter((id) => !itemIds.has(id) && !hiddenIds.has(id));
+  if (missing.length && payload?.mode !== "baseline_overlay") {
+    return "projects_payload_missing_baseline_records";
+  }
+  if (items.length < baseline.length && payload?.mode !== "baseline_overlay") {
+    return "projects_payload_smaller_than_baseline";
+  }
+  return "";
+}
+
+async function readCollection(request, env, collection) {
   const binding = env.DC_ADMIN_KV;
+  const baselinePayload = collection === "projects" ? await loadProjectsBaseline(request, env) : null;
   if (!binding || typeof binding.get !== "function") {
+    if (collection === "projects" && baselinePayload?.projects?.length) {
+      const merged = mergeProjectsBaselineWithKv(baselinePayload, []);
+      return {
+        ok: true,
+        configured: false,
+        storageConfigured: false,
+        source: "baseline_only_storage_not_configured",
+        collection,
+        items: merged.items,
+        meta: {
+          storage: "kv",
+          binding: "DC_ADMIN_KV",
+          message: "DC_ADMIN_KV is not configured; returning protected public Projects baseline.",
+          ...merged.meta
+        }
+      };
+    }
     return {
       ok: true,
       configured: false,
@@ -202,6 +353,24 @@ async function readCollection(env, collection) {
 
   const raw = await binding.get(COLLECTIONS[collection].key);
   if (!raw) {
+    if (collection === "projects" && baselinePayload?.projects?.length) {
+      const merged = mergeProjectsBaselineWithKv(baselinePayload, []);
+      return {
+        ok: true,
+        configured: true,
+        storageConfigured: true,
+        source: "baseline_only",
+        collection,
+        items: merged.items,
+        meta: {
+          storage: "kv",
+          binding: "DC_ADMIN_KV",
+          key: COLLECTIONS[collection].key,
+          message: "No KV record exists yet; returning protected public Projects baseline.",
+          ...merged.meta
+        }
+      };
+    }
     return {
       ok: true,
       configured: true,
@@ -219,7 +388,25 @@ async function readCollection(env, collection) {
 
   try {
     const parsed = JSON.parse(raw);
-    const items = Array.isArray(parsed?.items) ? parsed.items : Array.isArray(parsed) ? parsed : [];
+    const { items, wrapper } = normalizeStoredCollection(parsed);
+    if (collection === "projects" && baselinePayload?.projects?.length) {
+      const merged = mergeProjectsBaselineWithKv(baselinePayload, items, wrapper);
+      return {
+        ok: true,
+        configured: true,
+        storageConfigured: true,
+        source: "baseline_plus_kv",
+        collection,
+        items: merged.items,
+        meta: {
+          storage: "kv",
+          binding: "DC_ADMIN_KV",
+          key: COLLECTIONS[collection].key,
+          updatedAt: wrapper?.updatedAt || null,
+          ...merged.meta
+        }
+      };
+    }
     return {
       ok: true,
       configured: true,
@@ -265,23 +452,56 @@ async function writeCollection(request, env, collection) {
   }
 
   const updatedAt = new Date().toISOString();
-  const stored = {
+  let stored = {
     collection,
     items,
     updatedAt
   };
+  if (collection === "projects") {
+    const baselinePayload = await loadProjectsBaseline(request, env);
+    const safetyError = validateProjectsPayloadSafety(items, baselinePayload, payload);
+    if (safetyError) {
+      return json(
+        {
+          ok: false,
+          error: safetyError,
+          baselineProtected: true,
+          baselineCount: baselinePayload?.projects?.length || 0,
+          message: "Projects saves must preserve the protected public-site baseline or use baseline_overlay with explicit hiddenBaselineIds."
+        },
+        { status: 409 }
+      );
+    }
+    stored = {
+      collection,
+      mode: "baseline_overlay",
+      baselineVersion: PROJECTS_BASELINE_VERSION,
+      updatedAt,
+      items,
+      adminCreatedItems: Array.isArray(payload?.adminCreatedItems) ? payload.adminCreatedItems : [],
+      hiddenBaselineIds: Array.isArray(payload?.hiddenBaselineIds) ? payload.hiddenBaselineIds : []
+    };
+  }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
+  const responseItems =
+    collection === "projects"
+      ? mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).items
+      : items;
   return json({
     ok: true,
     configured: true,
-    source: "kv",
+    storageConfigured: true,
+    source: collection === "projects" ? "baseline_overlay_saved" : "kv",
     collection,
-    items,
+    items: responseItems,
     meta: {
       storage: "kv",
       binding: "DC_ADMIN_KV",
       key: COLLECTIONS[collection].key,
-      updatedAt
+      updatedAt,
+      ...(collection === "projects"
+        ? mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).meta
+        : {})
     }
   });
 }
@@ -302,7 +522,7 @@ export async function onRequest(context) {
       if (admin.response) {
         response = admin.response;
       } else if (request.method === "GET") {
-        response = await readCollection(env, collection);
+        response = await readCollection(request, env, collection);
       } else if (request.method === "PUT") {
         response = await writeCollection(request, env, collection);
       } else {

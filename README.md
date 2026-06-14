@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS pages use KV when configured and retain browser-local fallback for static/dev views. Durable account-role storage is still pending.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS pages use KV when configured and retain browser-local fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows. Durable account-role storage is still pending.
 
 ## Local Use
 
@@ -115,6 +115,10 @@ Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
 
 When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configured/fallback response instead of pretending to save. The dashboard keeps existing localStorage data available and labels this as local browser fallback. A simple static/Python server does not run Cloudflare Pages Functions, so local static views will use fallback mode unless served through a Pages-compatible dev runtime with bindings.
 
+Projects are handled differently from Media and Alerts. `assets/data/public-projects-baseline.json` is a generated snapshot from the public DanielClancy repo's WorkSet-derived portfolio pipeline (`cmsdata/wix/collection-tables/WorkSet.csv`, `src/content/workSetPortfolio.ts`, and the public portfolio routes). The Projects API loads that baseline first, then merges `cms:projects` KV data as admin edits, metadata, visibility/status changes, and admin-created additions. Legacy bare-array KV data and older partial scaffold rows are treated as overlays and must not collapse the Projects list to only those rows.
+
+Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
+
 ## Cloudflare Setup Checkpoint
 
 After local smoke testing, stop for Cloudflare setup before real OAuth/live auth testing:
@@ -136,6 +140,8 @@ DanielClancy-Admin/
 ├── assets/
 │   ├── css/
 │   │   └── admin.css
+│   ├── data/
+│   │   └── public-projects-baseline.json
 │   ├── fonts/
 │   │   ├── Recharge-Bold.otf
 │   │   ├── SuiGeneris-Regular.otf
@@ -166,7 +172,7 @@ DanielClancy-Admin/
 - Overview, Analytics, Accounts, Account Detail, Projects, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Projects CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and JSON copy/import controls.
+- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.

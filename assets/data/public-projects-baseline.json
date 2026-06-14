@@ -1,0 +1,909 @@
+{
+  "meta": {
+    "sourceRepo": "DanielClancy",
+    "sourceDescription": "Generated from the public DanielClancy WorkSet.csv portfolio pipeline used by src/content/workSetPortfolio.ts and public /portfolio detail routes.",
+    "generatedAt": "2026-06-14T23:01:44.538Z",
+    "projectCount": 16,
+    "sourceFilesUsed": [
+      "cmsdata/wix/collection-tables/WorkSet.csv",
+      "src/content/workSetPortfolio.ts",
+      "src/content/siteContent.ts",
+      "src/pages/PortfolioPage.tsx",
+      "src/pages/PortfolioDetailPage.tsx"
+    ]
+  },
+  "projects": [
+    {
+      "id": "proposed-retail-development-for-dawesville-iga",
+      "slug": "proposed-retail-development-for-dawesville-iga",
+      "title": "Dawesville IGA",
+      "client": "Dawesville 3 Pty Ltd",
+      "category": "Structural",
+      "discipline": "Structural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2012",
+      "dateLabel": "January 2012",
+      "featured": false,
+      "role": null,
+      "summary": "Structural engineering documentation including footing and ground slab plans, strip footings, pad footings, wall panel base fixing details, slab control joints, and typical concrete panel elevations...",
+      "description": "Structural engineering documentation including footing and ground slab plans, strip footings, pad footings, wall panel base fixing details, slab control joints, and typical concrete panel elevations for a proposed retail development. Drawings show reinforcement details, construction notes, and typical sections for the main building structure.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Dawesville IGA_Page_1.jpg",
+        "Dawesville IGA_Page_2.jpg",
+        "Dawesville IGA_Page_3.jpg"
+      ],
+      "documentPath": "Dawesville IGA.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/proposed-retail-development-for-dawesville-iga",
+      "tags": [
+        "Retail building structural works",
+        "Structural"
+      ],
+      "studio": [
+        "ACCE"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Dawesville IGA_Page_1.jpg",
+        "Dawesville IGA_Page_2.jpg",
+        "Dawesville IGA_Page_3.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "cue-roadhouse",
+      "slug": "cue-roadhouse",
+      "title": "Cue Roadhouse",
+      "client": "Riley Consulting",
+      "category": "Civil / Transport",
+      "discipline": "Civil, Transport",
+      "status": "published",
+      "visibility": "public",
+      "year": "2016",
+      "dateLabel": "December 2016",
+      "featured": false,
+      "role": null,
+      "summary": "Civil and landscape design drawings for the Cue Roadhouse redevelopment along Austin Street in Cue WA. The documents illustrate site layout new sealed roadways car parking...",
+      "description": "Civil and landscape design drawings for the Cue Roadhouse redevelopment along Austin Street in Cue WA. The documents illustrate site layout new sealed roadways car parking 24 bays kerbing upgrades new footpaths landscaped entry statements site vehicle movement paths fuel tank placement fencing and stormwater elements. The plans also include a general arrangement location plan and intersection upgrade works for Marshall Street.",
+      "heroImage": "/media/portfolio/cue-roadhouse.jpg",
+      "thumbnailPath": "/media/portfolio/cue-roadhouse.jpg",
+      "galleryPaths": [
+        "CUE ROADHOUSE_Page_1.jpg",
+        "CUE ROADHOUSE_Page_2.jpg"
+      ],
+      "documentPath": "CUE ROADHOUSE.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/cue-roadhouse",
+      "tags": [
+        "Roadhouse site upgrade and civil works",
+        "Civil",
+        "Transport"
+      ],
+      "studio": [
+        "Riley Consulting"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "CUE ROADHOUSE_Page_1.jpg",
+        "CUE ROADHOUSE_Page_2.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "slug": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "title": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "client": "Ampol Australia Petroleum Pty Ltd",
+      "category": "Architectural / Civil / Landscape",
+      "discipline": "Architectural, Civil, Landscape",
+      "status": "published",
+      "visibility": "public",
+      "year": "2021",
+      "dateLabel": "April 2021",
+      "featured": true,
+      "role": null,
+      "summary": "Design documentation for the redevelopment of the Pheasants Nest Southbound Highway Service Centre along the M31 Hume Highway. The drawing set includes demolition, site analysis, detailed...",
+      "description": "Design documentation for the redevelopment of the Pheasants Nest Southbound Highway Service Centre along the M31 Hume Highway. The drawing set includes demolition, site analysis, detailed site layout, zoning plans, architectural canopy plans, building layouts, elevations, roof plans, signage layouts, and civil/landscape coordination elements. Work includes reconfiguration of parking, drive-thru lanes, heavy vehicle refuelling, car refuelling canopies, bio-treatment basins, pedestrian circulation, building upgrades, and integrated landscape areas.",
+      "heroImage": "/media/portfolio/pheasants-nest.jpg",
+      "thumbnailPath": "/media/portfolio/pheasants-nest.jpg",
+      "galleryPaths": [
+        "010.PNG",
+        "PNN_AR_DA_Page_29.jpg",
+        "PNN_AR_DA_Page_17.jpg",
+        "PNN_AR_DA_Page_21.jpg",
+        "004.PNG",
+        "PNN_AR_DA_Page_31.jpg",
+        "PNN_AR_DA_Page_32.jpg",
+        "008.PNG",
+        "011.PNG",
+        "PNN_AR_DA_Page_25.jpg",
+        "007.PNG",
+        "009.PNG",
+        "005.PNG",
+        "006.PNG",
+        "001.PNG",
+        "003.PNG",
+        "002.PNG",
+        "012.PNG",
+        "013.PNG",
+        "014.PNG",
+        "PNN_AR_DA_Page_30.jpg",
+        "PNN_AR_DA_Page_34.jpg",
+        "PNN_AR_DA_Page_26.jpg",
+        "PNN_AR_DA_Page_27.jpg",
+        "PNN_AR_DA_Page_22.jpg",
+        "PNN_AR_DA_Page_33.jpg",
+        "PNN_AR_DA_Page_24.jpg",
+        "PNN_AR_DA_Page_18.jpg",
+        "PNN_AR_DA_Page_20.jpg",
+        "PNN_AR_DA_Page_16.jpg",
+        "PNN_AR_DA_Page_15.jpg"
+      ],
+      "documentPath": "PNS_AR_DA.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "tags": [
+        "Highway service centre redevelopment",
+        "Architectural",
+        "Civil",
+        "Landscape"
+      ],
+      "studio": [
+        "Richmond+Ross"
+      ],
+      "software": [
+        "Revit",
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "010.PNG",
+        "PNN_AR_DA_Page_29.jpg",
+        "PNN_AR_DA_Page_17.jpg",
+        "PNN_AR_DA_Page_21.jpg",
+        "004.PNG",
+        "PNN_AR_DA_Page_31.jpg",
+        "PNN_AR_DA_Page_32.jpg",
+        "008.PNG",
+        "011.PNG",
+        "PNN_AR_DA_Page_25.jpg",
+        "007.PNG",
+        "009.PNG",
+        "005.PNG",
+        "006.PNG",
+        "001.PNG",
+        "003.PNG",
+        "002.PNG",
+        "012.PNG",
+        "013.PNG",
+        "014.PNG",
+        "PNN_AR_DA_Page_30.jpg",
+        "PNN_AR_DA_Page_34.jpg",
+        "PNN_AR_DA_Page_26.jpg",
+        "PNN_AR_DA_Page_27.jpg",
+        "PNN_AR_DA_Page_22.jpg",
+        "PNN_AR_DA_Page_33.jpg",
+        "PNN_AR_DA_Page_24.jpg",
+        "PNN_AR_DA_Page_18.jpg",
+        "PNN_AR_DA_Page_20.jpg",
+        "PNN_AR_DA_Page_16.jpg",
+        "PNN_AR_DA_Page_15.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "slug": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "title": "Jull Street Boundary Realignment",
+      "client": "MRA (Now DevelopmentWA)",
+      "category": "Civil / Urban Planning",
+      "discipline": "Civil, Urban Planning",
+      "status": "published",
+      "visibility": "public",
+      "year": "2016",
+      "dateLabel": "March 2016",
+      "featured": false,
+      "role": null,
+      "summary": "General arrangement and amalgamation plan showing the proposed boundary re-alignment of Lot 1 at 234 Jull Street, Armadale. Includes existing and proposed lot boundaries, easements, reserves,...",
+      "description": "General arrangement and amalgamation plan showing the proposed boundary re-alignment of Lot 1 at 234 Jull Street, Armadale. Includes existing and proposed lot boundaries, easements, reserves, surface contours, services, and surrounding road context such as Commerce Ave, Fourth Rd, Jull St, and Armadale Station. The drawing identifies consolidation of the right-of-way, total area calculations, and the proposed WAPC application area.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Jull Street Boundary Realignment.jpg"
+      ],
+      "documentPath": "Jull Street Boundary Realignment.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "tags": [
+        "Boundary re-alignment and amalgamation works",
+        "Civil",
+        "Urban Planning"
+      ],
+      "studio": [
+        "DC Design Studio"
+      ],
+      "software": [
+        "AutoCAD",
+        "QGIS"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Jull Street Boundary Realignment.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "curtin-creative-quarter-misc-details",
+      "slug": "curtin-creative-quarter-misc-details",
+      "title": "Curtin Creative Quarter",
+      "client": "Curtin University",
+      "category": "Landscape / Architectural",
+      "discipline": "Landscape, Architectural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2017",
+      "dateLabel": "March 2017",
+      "featured": true,
+      "role": null,
+      "summary": "A detailed set of architectural and landscape construction drawings for the Curtin Creative Quarter. The documentation includes sections, elevations, footing plans, canopy details, deck structures, timber...",
+      "description": "A detailed set of architectural and landscape construction drawings for the Curtin Creative Quarter. The documentation includes sections, elevations, footing plans, canopy details, deck structures, timber seating, trellis screens, study pod components, container gallery details, garden bed and planting details, paving layouts, and sports court/deck interface details. The drawings provide fabrication notes, structural connections, material specifications, and construction requirements for built landscape elements across the precinct.",
+      "heroImage": "/media/portfolio/curtin-creative-quarter.png",
+      "thumbnailPath": "/media/portfolio/curtin-creative-quarter.png",
+      "galleryPaths": [
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_03.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_24.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_25.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_23.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_22.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_21.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_20.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_19.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_18.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_14.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_17.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_16.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_15.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_11.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_13.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_12.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_09.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_10.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_08.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_07.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_05.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_06.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_01.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_02.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_04.jpg",
+        "Curtin Creative Quarter_Page_29.jpg",
+        "Curtin Creative Quarter_Page_02.jpg",
+        "Curtin Creative Quarter_Page_39.jpg",
+        "Curtin Creative Quarter_Page_01.jpg",
+        "Curtin Creative Quarter_Page_38.jpg",
+        "Curtin Creative Quarter_Page_37.jpg",
+        "Curtin Creative Quarter_Page_36.jpg",
+        "Curtin Creative Quarter_Page_35.jpg",
+        "Curtin Creative Quarter_Page_34.jpg",
+        "Curtin Creative Quarter_Page_32.jpg",
+        "Curtin Creative Quarter_Page_33.jpg",
+        "Curtin Creative Quarter_Page_31.jpg",
+        "Curtin Creative Quarter_Page_30.jpg",
+        "Curtin Creative Quarter_Page_28.jpg"
+      ],
+      "documentPath": "Curtin Creative Quarter.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/curtin-creative-quarter-misc-details",
+      "tags": [
+        "Public realm landscape structures and amenities",
+        "Landscape",
+        "Architectural"
+      ],
+      "studio": [
+        "Place Laboratory"
+      ],
+      "software": [
+        "AutoCAD",
+        "Revit",
+        "Sketchup"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_03.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_24.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_25.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_23.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_22.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_21.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_20.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_19.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_18.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_14.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_17.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_16.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_15.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_11.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_13.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_12.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_09.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_10.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_08.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_07.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_05.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_06.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_01.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_02.jpg",
+        "CURTIN CREATIVE QUARTER - MISC DETAILS_Page_04.jpg",
+        "Curtin Creative Quarter_Page_29.jpg",
+        "Curtin Creative Quarter_Page_02.jpg",
+        "Curtin Creative Quarter_Page_39.jpg",
+        "Curtin Creative Quarter_Page_01.jpg",
+        "Curtin Creative Quarter_Page_38.jpg",
+        "Curtin Creative Quarter_Page_37.jpg",
+        "Curtin Creative Quarter_Page_36.jpg",
+        "Curtin Creative Quarter_Page_35.jpg",
+        "Curtin Creative Quarter_Page_34.jpg",
+        "Curtin Creative Quarter_Page_32.jpg",
+        "Curtin Creative Quarter_Page_33.jpg",
+        "Curtin Creative Quarter_Page_31.jpg",
+        "Curtin Creative Quarter_Page_30.jpg",
+        "Curtin Creative Quarter_Page_28.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "lot-500-eighth-road-land-resumption",
+      "slug": "lot-500-eighth-road-land-resumption",
+      "title": "Eighth Road Land Resumption",
+      "client": "MRA (Now DevelopmentWA)",
+      "category": "Civil / Urban Planning",
+      "discipline": "Civil, Urban Planning",
+      "status": "published",
+      "visibility": "public",
+      "year": "2016",
+      "dateLabel": "January 2016",
+      "featured": false,
+      "role": null,
+      "summary": "General arrangement plan illustrating the proposed land resumption area for Lot 500 on Eighth Road. Includes boundary extents, resumption area measurements, building footprint, and contextual location...",
+      "description": "General arrangement plan illustrating the proposed land resumption area for Lot 500 on Eighth Road. Includes boundary extents, resumption area measurements, building footprint, and contextual location plan prepared for informational purposes only.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Eighth Road Land Resumption.jpg"
+      ],
+      "documentPath": "Eighth Road Land Resumption.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/lot-500-eighth-road-land-resumption",
+      "tags": [
+        "Land resumption works",
+        "Civil",
+        "Urban Planning"
+      ],
+      "studio": [
+        "DC Design Studio"
+      ],
+      "software": [
+        "AutoCAD",
+        "QGIS"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Eighth Road Land Resumption.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "cockburn-coast",
+      "slug": "cockburn-coast",
+      "title": "Cockburn Coast Streetscapes",
+      "client": "LandCorp (Now DevelopmentWA)",
+      "category": "Landscape / Civil",
+      "discipline": "Landscape, Civil",
+      "status": "published",
+      "visibility": "public",
+      "year": "2015",
+      "dateLabel": "March 2015",
+      "featured": true,
+      "role": null,
+      "summary": "Technical landscape and civil documentation showing streetscape layouts, tree planting, paving treatments, verge works and boundary fence details for the Cockburn Coast development area. Drawings include...",
+      "description": "Technical landscape and civil documentation showing streetscape layouts, tree planting, paving treatments, verge works and boundary fence details for the Cockburn Coast development area. Drawings include multiple stage extents, planting layouts, and detailed fence plan and elevation.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Cockburn Coast_Page_1.jpg",
+        "Cockburn Coast_Page_3.jpg",
+        "Cockburn Coast_Page_2.jpg",
+        "Cockburn Coast_Page_5.jpg",
+        "Cockburn Coast_Page_4.jpg",
+        "Cockburn Coast_Page_6.jpg",
+        "Cockburn Coast_Page_7.jpg",
+        "Cockburn Coast_Page_09.jpg",
+        "Cockburn Coast_Page_08.jpg",
+        "Cockburn Coast_Page_10.jpg",
+        "Cockburn Coast_Page_11.jpg"
+      ],
+      "documentPath": "Cockburn Coast.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/cockburn-coast",
+      "tags": [
+        "Public-realm streetscape works",
+        "Landscape",
+        "Civil"
+      ],
+      "studio": [
+        "Urbis"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Cockburn Coast_Page_1.jpg",
+        "Cockburn Coast_Page_3.jpg",
+        "Cockburn Coast_Page_2.jpg",
+        "Cockburn Coast_Page_5.jpg",
+        "Cockburn Coast_Page_4.jpg",
+        "Cockburn Coast_Page_6.jpg",
+        "Cockburn Coast_Page_7.jpg",
+        "Cockburn Coast_Page_09.jpg",
+        "Cockburn Coast_Page_08.jpg",
+        "Cockburn Coast_Page_10.jpg",
+        "Cockburn Coast_Page_11.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "spratt-residence-proposed-addition",
+      "slug": "spratt-residence-proposed-addition",
+      "title": "Spratt Residence - Proposed Addition",
+      "client": "C & J Spratt",
+      "category": "Architectural",
+      "discipline": "Architectural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2012",
+      "dateLabel": "July 2012",
+      "featured": false,
+      "role": null,
+      "summary": "Architectural drawings for a residential extension to the Spratt home in Thornlie WA. The set includes a site plan new living and alfresco layouts roof plan...",
+      "description": "Architectural drawings for a residential extension to the Spratt home in Thornlie WA. The set includes a site plan new living and alfresco layouts roof plan structural notes and material specifications. Sections A and B illustrate the connection between the new addition and the existing structure while detail sheets show footing conditions retaining wall interfaces slab details new trusses steelwork and wall junction construction. The drawings document modifications to roof geometry new sliding doors and windows alfresco areas and structural upgrades required for the addition.",
+      "heroImage": "/media/portfolio/spratt-residence.jpg",
+      "thumbnailPath": "/media/portfolio/spratt-residence.jpg",
+      "galleryPaths": [
+        "Spratt Residence_Page_1.jpg",
+        "Spratt Residence_Page_2.jpg",
+        "Spratt Residence_Page_3.jpg"
+      ],
+      "documentPath": "Spratt Residence.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/spratt-residence-proposed-addition",
+      "tags": [
+        "Residential building extension",
+        "Architectural"
+      ],
+      "studio": [
+        "DC Design Studio"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Spratt Residence_Page_1.jpg",
+        "Spratt Residence_Page_2.jpg",
+        "Spratt Residence_Page_3.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "upss-homebush-nsw",
+      "slug": "upss-homebush-nsw",
+      "title": "UPSS Homebush, NSW",
+      "client": "Ampol Australia Petroleum Pty Ltd",
+      "category": "Civil",
+      "discipline": "Civil",
+      "status": "published",
+      "visibility": "public",
+      "year": "2021",
+      "dateLabel": "March 2021",
+      "featured": false,
+      "role": null,
+      "summary": "Civil engineering drawings for an Ampol service station located at the corner of Parramatta Road and Courallie Ave, Homebush. The set includes existing site layout, proposed...",
+      "description": "Civil engineering drawings for an Ampol service station located at the corner of Parramatta Road and Courallie Ave, Homebush. The set includes existing site layout, proposed underground fuel storage tanks, proposed fuel system configuration, tanker vehicle swept-path analysis, and a preliminary KDR assessment. The drawings document modifications to site infrastructure, access points, canopy areas, underground tank locations, and fuel distribution elements.",
+      "heroImage": "/media/portfolio/upss-homebush.jpg",
+      "thumbnailPath": "/media/portfolio/upss-homebush.jpg",
+      "galleryPaths": [
+        "UPSS HOMEBUSH(C)_Page_2.jpg",
+        "UPSS HOMEBUSH(C)_Page_1.jpg",
+        "UPSS HOMEBUSH(C)_Page_3.jpg",
+        "UPSS HOMEBUSH(C)_Page_4.jpg"
+      ],
+      "documentPath": "UPSS HOMEBUSH(C).pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/upss-homebush-nsw",
+      "tags": [
+        "Service station fuel system upgrade",
+        "Civil"
+      ],
+      "studio": [
+        "Richmond+Ross"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "UPSS HOMEBUSH(C)_Page_2.jpg",
+        "UPSS HOMEBUSH(C)_Page_1.jpg",
+        "UPSS HOMEBUSH(C)_Page_3.jpg",
+        "UPSS HOMEBUSH(C)_Page_4.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "wungong-urban-water-master-plan",
+      "slug": "wungong-urban-water-master-plan",
+      "title": "Wungong Urban Water Master Plan",
+      "client": "MRA (Now DevelopmentWA)",
+      "category": "Urban Planning / Landscape / Civil",
+      "discipline": "Urban Planning, Landscape, Civil",
+      "status": "published",
+      "visibility": "public",
+      "year": "2016",
+      "dateLabel": "April 2016",
+      "featured": true,
+      "role": null,
+      "summary": "A master planning drawing for the Wungong Urban Water project in Haynes WA. The sheet presents an annotated master plan including road hierarchy land use zoning...",
+      "description": "A master planning drawing for the Wungong Urban Water project in Haynes WA. The sheet presents an annotated master plan including road hierarchy land use zoning wetlands waterways living streams floodplain extents buffers conservation areas Aboriginal heritage sites schools community facilities activity centres and infrastructure reserves. The plan incorporates multiple gazetted amendments and includes a detailed legend outlining planning categories environmental constraints development areas and interface treatments.",
+      "heroImage": "/media/portfolio/wungong-master-plan.jpg",
+      "thumbnailPath": "/media/portfolio/wungong-master-plan.jpg",
+      "galleryPaths": [
+        "Wungong%20Urban%20Water%20Master%20Plan.jpg"
+      ],
+      "documentPath": "16010-GA-101 WUNGONG URBAN WATER MATER PLAN - REV D.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/wungong-urban-water-master-plan",
+      "tags": [
+        "Urban water master planning",
+        "Urban Planning",
+        "Landscape",
+        "Civil"
+      ],
+      "studio": [
+        "DC Design Studio"
+      ],
+      "software": [
+        "AutoCAD",
+        "QGIS"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Wungong%20Urban%20Water%20Master%20Plan.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "upss-beacon-hill-nsw",
+      "slug": "upss-beacon-hill-nsw",
+      "title": "UPSS Beacon Hill, NSW",
+      "client": "Ampol Australia Petroleum Pty Ltd",
+      "category": "Civil",
+      "discipline": "Civil",
+      "status": "published",
+      "visibility": "public",
+      "year": "2021",
+      "dateLabel": "March 2021",
+      "featured": false,
+      "role": null,
+      "summary": "Civil engineering layout and assessment drawings for an Ampol service station at the corner of Warringah Rd and Cornish Ave, Beacon Hill. The set documents the...",
+      "description": "Civil engineering layout and assessment drawings for an Ampol service station at the corner of Warringah Rd and Cornish Ave, Beacon Hill. The set documents the existing site layout, proposed underground fuel storage tanks and associated fuel system, tanker vehicle tracking, temporary shoring, and a preliminary kiosk and canopy redevelopment arrangement, supporting UPSS and KDR assessments.",
+      "heroImage": "/media/portfolio/upss-beacon-hill.jpg",
+      "thumbnailPath": "/media/portfolio/upss-beacon-hill.jpg",
+      "galleryPaths": [
+        "UPSS BEACON HILL(C)_Page_1.jpg",
+        "UPSS BEACON HILL(C)_Page_2.jpg",
+        "UPSS BEACON HILL(C)_Page_4.jpg",
+        "UPSS BEACON HILL(C)_Page_3.jpg"
+      ],
+      "documentPath": "UPSS BEACON HILL(C).pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/upss-beacon-hill-nsw",
+      "tags": [
+        "Service station fuel system upgrade",
+        "Civil"
+      ],
+      "studio": [
+        "Richmond+Ross"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "UPSS BEACON HILL(C)_Page_1.jpg",
+        "UPSS BEACON HILL(C)_Page_2.jpg",
+        "UPSS BEACON HILL(C)_Page_4.jpg",
+        "UPSS BEACON HILL(C)_Page_3.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "henry-street-residence-structural-documentation",
+      "slug": "henry-street-residence-structural-documentation",
+      "title": "Henry Street Residence - Structural Documentation",
+      "client": "KTAP Construction",
+      "category": "Structural",
+      "discipline": "Structural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2013",
+      "dateLabel": "April 2013",
+      "featured": false,
+      "role": null,
+      "summary": "A structural engineering drawing set for a multi-unit residential development on Henry Street in Fremantle WA. The package includes ground slab and footing layouts suspended slab...",
+      "description": "A structural engineering drawing set for a multi-unit residential development on Henry Street in Fremantle WA. The package includes ground slab and footing layouts suspended slab plans roof steel framing layouts and various structural details including screen walls brick piers slab steps anchor details steel post connections and wall junction sections. The drawings include structural notes material specifications reinforcement details and stair sections.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Henry Street Residence_Page_3.jpg",
+        "Henry Street Residence_Page_1.jpg",
+        "Henry Street Residence_Page_6.jpg",
+        "Henry Street Residence_Page_2.jpg",
+        "Henry Street Residence_Page_4.jpg",
+        "Henry Street Residence_Page_5.jpg"
+      ],
+      "documentPath": "Henry Street Residence.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/henry-street-residence-structural-documentation",
+      "tags": [
+        "Residential multi-unit structural slab and footing design",
+        "Structural"
+      ],
+      "studio": [
+        "ACCE"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Henry Street Residence_Page_3.jpg",
+        "Henry Street Residence_Page_1.jpg",
+        "Henry Street Residence_Page_6.jpg",
+        "Henry Street Residence_Page_2.jpg",
+        "Henry Street Residence_Page_4.jpg",
+        "Henry Street Residence_Page_5.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "slug": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "title": "Lake Joondalup Baptist College",
+      "client": "Buchan Group",
+      "category": "Structural",
+      "discipline": "Structural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2013",
+      "dateLabel": "August 2013",
+      "featured": true,
+      "role": null,
+      "summary": "Structural engineering drawings for a new arts building including footing and ground slab plans, strip footings, pad footings, retaining walls, control joints, stair and ramp details,...",
+      "description": "Structural engineering drawings for a new arts building including footing and ground slab plans, strip footings, pad footings, retaining walls, control joints, stair and ramp details, prestressed Deltacore suspended slab layout, roof steel layout, structural sections, and steel connection details. Documentation provides reinforcement notes, typical sections, and structural coordination for the new campus facility.",
+      "heroImage": "/media/portfolio/lake-joondalup-baptist-college.jpg",
+      "thumbnailPath": "/media/portfolio/lake-joondalup-baptist-college.jpg",
+      "galleryPaths": [
+        "Lake Joondalup Baptist College_Page_4.jpg",
+        "Lake Joondalup Baptist College_Page_3.jpg",
+        "Lake Joondalup Baptist College_Page_1.jpg",
+        "Lake Joondalup Baptist College_Page_2.jpg",
+        "Lake Joondalup Baptist College_Page_5.jpg"
+      ],
+      "documentPath": "Lake Joondalup Baptist College.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "tags": [
+        "Educational building structural works",
+        "Structural"
+      ],
+      "studio": [
+        "ACCE"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Lake Joondalup Baptist College_Page_4.jpg",
+        "Lake Joondalup Baptist College_Page_3.jpg",
+        "Lake Joondalup Baptist College_Page_1.jpg",
+        "Lake Joondalup Baptist College_Page_2.jpg",
+        "Lake Joondalup Baptist College_Page_5.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "cottesloe-beach-house-landscape-design",
+      "slug": "cottesloe-beach-house-landscape-design",
+      "title": "Cottesloe Beach House - Landscape Design",
+      "client": "Minderoo Foundation",
+      "category": "Landscape / Architectural",
+      "discipline": "Landscape, Architectural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2017",
+      "dateLabel": "August 2017",
+      "featured": true,
+      "role": null,
+      "summary": "Comprehensive landscape architecture documentation for the redevelopment of the Cottesloe Beach House at 1 Rosendo Street. The package includes general notes lower ground ground and first...",
+      "description": "Comprehensive landscape architecture documentation for the redevelopment of the Cottesloe Beach House at 1 Rosendo Street. The package includes general notes lower ground ground and first floor landscape plans detailed levels and grading softscape layouts tree pit construction rooftop planting systems and extensive tree transplanting specifications. Sections and elevations illustrate retaining structures design levels heritage interfaces and the relationship between planting beds and architectural elements.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Cottesloe Beach House_Page_8.jpg",
+        "Cottesloe Beach House_Page_3.jpg",
+        "Cottesloe Beach House_Page_2.jpg",
+        "Cottesloe Beach House_Page_4.jpg",
+        "Cottesloe Beach House_Page_7.jpg",
+        "Cottesloe Beach House_Page_6.jpg",
+        "Cottesloe Beach House_Page_5.jpg"
+      ],
+      "documentPath": "Cottesloe Beach House.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/cottesloe-beach-house-landscape-design",
+      "tags": [
+        "Residential landscape redevelopment",
+        "Landscape",
+        "Architectural"
+      ],
+      "studio": [
+        "Place Laboratory"
+      ],
+      "software": [
+        "AutoCAD",
+        "Revit",
+        "Sketchup"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Cottesloe Beach House_Page_8.jpg",
+        "Cottesloe Beach House_Page_3.jpg",
+        "Cottesloe Beach House_Page_2.jpg",
+        "Cottesloe Beach House_Page_4.jpg",
+        "Cottesloe Beach House_Page_7.jpg",
+        "Cottesloe Beach House_Page_6.jpg",
+        "Cottesloe Beach House_Page_5.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "upss-wyoming-nsw",
+      "slug": "upss-wyoming-nsw",
+      "title": "UPSS Wyoming, NSW",
+      "client": "Ampol Australia Petroleum Pty Ltd",
+      "category": "Civil",
+      "discipline": "Civil",
+      "status": "published",
+      "visibility": "public",
+      "year": "2021",
+      "dateLabel": "March 2021",
+      "featured": false,
+      "role": null,
+      "summary": "Civil engineering drawings for an Ampol service station located at the intersection of Pacific Highway and Henry Parry Drive in Wyoming. The set includes existing site...",
+      "description": "Civil engineering drawings for an Ampol service station located at the intersection of Pacific Highway and Henry Parry Drive in Wyoming. The set includes existing site layout, proposed underground fuel storage tanks, redesigned vehicle circulation, tanker vehicle tracking paths, and a preliminary kiosk/canopy redevelopment arrangement. Documentation covers UPSS assessment, proposed fuel system layout, fill points, canopy areas, and vehicle entry/exit configurations.",
+      "heroImage": "/media/portfolio/upss-wyoming.jpg",
+      "thumbnailPath": "/media/portfolio/upss-wyoming.jpg",
+      "galleryPaths": [
+        "UPSS WYOMING(C)_Page_4.jpg",
+        "UPSS WYOMING(C)_Page_3.jpg",
+        "UPSS WYOMING(C)_Page_1.jpg"
+      ],
+      "documentPath": "UPSS WYOMING(C).pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/upss-wyoming-nsw",
+      "tags": [
+        "Service station fuel system upgrade",
+        "Civil"
+      ],
+      "studio": [
+        "Richmond+Ross"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "UPSS WYOMING(C)_Page_4.jpg",
+        "UPSS WYOMING(C)_Page_3.jpg",
+        "UPSS WYOMING(C)_Page_1.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    },
+    {
+      "id": "geraldton-fire-station-structural-documentation",
+      "slug": "geraldton-fire-station-structural-documentation",
+      "title": "Geraldton Fire Station - Structural Documentation",
+      "client": "FESA (Now Department of Fire and Emergency Services)",
+      "category": "Structural",
+      "discipline": "Structural",
+      "status": "published",
+      "visibility": "public",
+      "year": "2012",
+      "dateLabel": "August 2012",
+      "featured": false,
+      "role": null,
+      "summary": "A detailed structural engineering documentation package for the Geraldton Fire Station including mezzanine beam plans roof framing layouts pad footings structural bracing block screen walls and...",
+      "description": "A detailed structural engineering documentation package for the Geraldton Fire Station including mezzanine beam plans roof framing layouts pad footings structural bracing block screen walls and various roof and slab connection details. The drawings include structural notes design loads steelwork details flybrace arrangements bracing specifications and cross sections required for new works and retrofits.",
+      "heroImage": null,
+      "thumbnailPath": null,
+      "galleryPaths": [
+        "Geraldton Fire Station_Page_3.jpg",
+        "Geraldton Fire Station_Page_2.jpg",
+        "Geraldton Fire Station_Page_1.jpg",
+        "Geraldton Fire Station_Page_4.jpg"
+      ],
+      "documentPath": "Geraldton Fire Station.pdf",
+      "documentationUrl": "https://dcdesignstudio-my.sharepoint.com/:f:/g/personal/daniel_brainstream_media/IgArejgfpFc-S7Wgd3Hkvg9gAWsmaO1USKdtnKHzXlz3LLA?e=UO9Etz",
+      "livePage": "/portfolio/geraldton-fire-station-structural-documentation",
+      "tags": [
+        "Fire station structural upgrades and extensions",
+        "Structural"
+      ],
+      "studio": [
+        "ACCE"
+      ],
+      "software": [
+        "AutoCAD"
+      ],
+      "sourceFolder": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceFiles": [
+        "Geraldton Fire Station_Page_3.jpg",
+        "Geraldton Fire Station_Page_2.jpg",
+        "Geraldton Fire Station_Page_1.jpg",
+        "Geraldton Fire Station_Page_4.jpg"
+      ],
+      "sourceConfidence": "Medium",
+      "sourceUpdatedAt": null,
+      "updatedAt": null
+    }
+  ]
+}

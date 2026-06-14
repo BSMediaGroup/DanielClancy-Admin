@@ -16,6 +16,8 @@
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
+  const PROJECTS_BASELINE_URL = "/assets/data/public-projects-baseline.json";
+  const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
   const ALERTS_STORAGE_KEY = "danielclancy-admin.alerts.scaffold.v1";
   const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
@@ -58,6 +60,19 @@
     { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1", envSecret: "DC_ADMIN_SECRET_1" },
     { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2", envSecret: "DC_ADMIN_SECRET_2" }
   ];
+  const projectBaselineState = {
+    loaded: false,
+    protected: false,
+    partialKvMerged: false,
+    baselineCount: 0,
+    kvCount: 0,
+    mergedCount: 0,
+    adminCreatedCount: 0,
+    source: "loading",
+    message: "Loading protected public-site baseline...",
+    meta: null,
+    projects: []
+  };
   const projectState = {
     projects: loadProjects(),
     search: "",
@@ -66,7 +81,7 @@
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local scaffold data loaded. Changes stay in this browser only.",
+    message: "Local project data loaded. Protected public-site baseline will be merged when available.",
     storage: cmsStorageState.projects
   };
   const mediaState = {
@@ -140,8 +155,78 @@
       sourceFiles: arrayFromValue(raw?.sourceFiles || []),
       sourceConfidence: String(raw?.sourceConfidence || "Medium"),
       internalNotes: String(raw?.internalNotes || raw?.internalSourceNote || ""),
-      updatedAt: String(raw?.updatedAt || new Date().toISOString())
+      updatedAt: String(raw?.updatedAt || new Date().toISOString()),
+      baselineProtected: Boolean(raw?.baselineProtected || raw?._baselineProtected),
+      baselineVersion: String(raw?.baselineVersion || ""),
+      source: String(raw?.source || "")
     };
+  }
+
+  function projectIdentity(project) {
+    return String(project?.id || project?.slug || "").trim().toLowerCase();
+  }
+
+  function projectBaselineIds() {
+    return new Set(projectBaselineState.projects.map(projectIdentity).filter(Boolean));
+  }
+
+  function isBaselineProject(project) {
+    return Boolean(project?.baselineProtected) || projectBaselineIds().has(projectIdentity(project));
+  }
+
+  function mergeProjectsWithBaseline(items, options = {}) {
+    const normalizedItems = Array.isArray(items) ? items.map(normalizeProject) : [];
+    const baselineItems = projectBaselineState.projects.map((item) =>
+      normalizeProject({
+        ...item,
+        baselineProtected: true,
+        baselineVersion: PROJECTS_BASELINE_VERSION,
+        source: "public_baseline"
+      })
+    );
+    if (!baselineItems.length) {
+      return normalizedItems;
+    }
+
+    const baselineIds = new Set(baselineItems.map(projectIdentity).filter(Boolean));
+    const overlays = new Map();
+    const adminCreated = [];
+
+    normalizedItems.forEach((item) => {
+      const id = projectIdentity(item);
+      if (baselineIds.has(id)) {
+        overlays.set(id, item);
+      } else {
+        adminCreated.push({
+          ...item,
+          baselineProtected: false,
+          source: item.source || "admin_created"
+        });
+      }
+    });
+
+    const mergedBaseline = baselineItems.map((baselineProject) => {
+      const overlay = overlays.get(projectIdentity(baselineProject)) || {};
+      return normalizeProject({
+        ...baselineProject,
+        ...overlay,
+        id: baselineProject.id,
+        slug: baselineProject.slug,
+        livePage: overlay.livePage || baselineProject.livePage,
+        sourceFolder: baselineProject.sourceFolder,
+        baselineProtected: true,
+        baselineVersion: PROJECTS_BASELINE_VERSION,
+        source: overlay.source || "public_baseline"
+      });
+    });
+    projectBaselineState.baselineCount = baselineItems.length;
+    projectBaselineState.kvCount = Number.isFinite(options.kvCount) ? options.kvCount : normalizedItems.length;
+    projectBaselineState.mergedCount = mergedBaseline.length + adminCreated.length;
+    projectBaselineState.adminCreatedCount = adminCreated.length;
+    projectBaselineState.partialKvMerged =
+      baselineItems.length > 0 && normalizedItems.length > 0 && normalizedItems.length < baselineItems.length;
+    projectBaselineState.protected = true;
+    return [...mergedBaseline, ...adminCreated];
   }
 
   function arrayFromValue(value) {
@@ -177,19 +262,32 @@
       }
 
       const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : null;
+      if (!rows) {
         return seed;
       }
 
-      return parsed.map(normalizeProject);
+      return rows.map(normalizeProject);
     } catch {
       return seed;
     }
   }
 
   function persistProjects() {
-    window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectState.projects, null, 2));
+    window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsStoragePayload(), null, 2));
     persistCmsCollection("projects");
+  }
+
+  function projectsStoragePayload() {
+    return {
+      collection: "projects",
+      mode: "baseline_overlay",
+      baselineVersion: PROJECTS_BASELINE_VERSION,
+      updatedAt: new Date().toISOString(),
+      items: projectState.projects,
+      adminCreatedItems: projectState.projects.filter((project) => !isBaselineProject(project)),
+      hiddenBaselineIds: []
+    };
   }
 
   function normalizeMediaItem(raw) {
@@ -401,11 +499,28 @@
         markCmsStorage(collection, "not-configured", "DC_ADMIN_KV is not configured. Using local browser fallback.", {
           source: payload.source || "local_fallback_unavailable"
         });
-      } else if (payload.source === "kv" && Array.isArray(payload.items)) {
+      } else if (Array.isArray(payload.items) && (payload.source === "kv" || collection === "projects")) {
+        if (collection === "projects") {
+          Object.assign(projectBaselineState, {
+            loaded: true,
+            protected: Boolean(payload.meta?.baselineProtected),
+            partialKvMerged: Boolean(payload.meta?.partialKvMerged),
+            baselineCount: Number(payload.meta?.baselineCount || projectBaselineState.baselineCount || 0),
+            kvCount: Number(payload.meta?.kvCount || 0),
+            mergedCount: Number(payload.meta?.mergedCount || payload.items.length),
+            adminCreatedCount: Number(payload.meta?.adminCreatedCount || 0),
+            source: payload.source || "baseline_plus_kv",
+            message: payload.meta?.message || "Loaded from protected public-site baseline with admin storage overlay.",
+            meta: payload.meta?.baseline || projectBaselineState.meta
+          });
+        }
         config.setItems(payload.items);
-        window.localStorage.setItem(config.storageKey, JSON.stringify(config.getItems(), null, 2));
-        markCmsStorage(collection, "connected", "Loaded from admin storage.", {
-          source: "kv",
+        window.localStorage.setItem(
+          config.storageKey,
+          JSON.stringify(collection === "projects" ? projectsStoragePayload() : config.getItems(), null, 2)
+        );
+        markCmsStorage(collection, "connected", collection === "projects" ? "Loaded from protected public-site baseline with admin storage overlay." : "Loaded from admin storage.", {
+          source: payload.source || "kv",
           lastLoaded: payload.meta?.updatedAt || new Date().toISOString()
         });
       } else {
@@ -437,7 +552,7 @@
         method: "PUT",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ items: config.getItems() })
+        body: JSON.stringify(collection === "projects" ? projectsStoragePayload() : { items: config.getItems() })
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
@@ -445,8 +560,21 @@
         const status = error === "storage_not_configured" ? "not-configured" : "fallback";
         markCmsStorage(collection, status, storageFallbackMessage(error), { source: "local" });
       } else {
+        if (collection === "projects" && payload.meta) {
+          Object.assign(projectBaselineState, {
+            loaded: true,
+            protected: Boolean(payload.meta.baselineProtected),
+            partialKvMerged: Boolean(payload.meta.partialKvMerged),
+            baselineCount: Number(payload.meta.baselineCount || projectBaselineState.baselineCount || 0),
+            kvCount: Number(payload.meta.kvCount || config.getItems().length),
+            mergedCount: Number(payload.meta.mergedCount || config.getItems().length),
+            adminCreatedCount: Number(payload.meta.adminCreatedCount || 0),
+            source: payload.source || "baseline_overlay_saved",
+            message: "Saved reconciled Projects baseline overlay to admin storage."
+          });
+        }
         markCmsStorage(collection, "connected", "Saved to admin storage.", {
-          source: "kv",
+          source: payload.source || "kv",
           lastSaved: payload.meta?.updatedAt || new Date().toISOString()
         });
       }
@@ -469,6 +597,41 @@
 
   function hydrateCmsCollections() {
     ["projects", "media", "alerts"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
+  }
+
+  async function hydrateProjectBaseline(renderAfter = false) {
+    try {
+      const response = await fetch(PROJECTS_BASELINE_URL, { cache: "no-store" });
+      const payload = await response.json();
+      const baselineProjects = Array.isArray(payload?.projects) ? payload.projects : [];
+      if (!response.ok || !baselineProjects.length) {
+        throw new Error("baseline_unavailable");
+      }
+      Object.assign(projectBaselineState, {
+        loaded: true,
+        protected: true,
+        source: "public_baseline_asset",
+        message: "Protected public-site Projects baseline loaded.",
+        meta: payload.meta || null,
+        projects: baselineProjects.map(normalizeProject),
+        baselineCount: baselineProjects.length
+      });
+      projectState.projects = mergeProjectsWithBaseline(projectState.projects);
+      window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsStoragePayload(), null, 2));
+      if (projectState.projects.length > (data.projects || []).length) {
+        projectState.message = "Loaded from protected public-site baseline with local/admin storage overlay.";
+      }
+    } catch {
+      Object.assign(projectBaselineState, {
+        loaded: false,
+        protected: false,
+        source: "baseline_unavailable",
+        message: "Public baseline asset is unavailable in this browser context; using existing local fallback rows."
+      });
+    }
+    if (renderAfter && activePageIs("projects")) {
+      renderProjects();
+    }
   }
 
   function normalizeAccountAccess(raw) {
@@ -992,22 +1155,25 @@
     app.innerHTML = `
       <div class="page projects-page">
         ${pageHeader(
-          "Projects CMS scaffold",
+          "Projects CMS",
           "Projects",
-          "Manage portfolio listing metadata. Admin storage is used when available; local browser fallback remains available for static/dev views.",
+          "Loaded from protected public-site baseline with admin storage overlay. Changes here do not publish to DanielClancy.net until the public export/hydration bridge is wired.",
           `<button class="button" type="button" data-project-action="create">Create Project</button>
            <button class="button button-secondary" type="button" data-project-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-project-action="import-json">Import JSON</button>
-           <button class="button button-secondary" type="button" data-project-action="reset">Reset seed</button>`
+           <button class="button button-secondary" type="button" data-project-action="reconcile">Reconcile with public site baseline</button>
+           <button class="button button-secondary" type="button" data-project-action="reset">Reset baseline</button>`
         )}
 
         ${cmsStatusMarkup("projects", "project-action")}
 
         ${panel(
-          "CMS status",
-          "Field completeness is checked locally only. Public-site publishing and external asset checks are still separate future work.",
+          "Baseline and storage status",
+          "Existing public projects are protected. Admin storage stores edits, metadata, hidden/archived posture, and admin-created additions as an overlay.",
           metricCards([
-            { label: "Projects", value: String(projectState.projects.length), note: projectState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
+            { label: "Public baseline", value: String(projectBaselineState.baselineCount || projectBaselineState.projects.length), note: projectBaselineState.protected ? "Protected public-site project records." : projectBaselineState.message, tone: projectBaselineState.protected ? "success" : "warn" },
+            { label: "Admin storage rows", value: String(projectBaselineState.kvCount || projectState.projects.length), note: projectState.storage.status === "connected" ? "KV overlay/manifest rows." : "Browser-local fallback overlay.", tone: projectState.storage.status === "connected" ? "success" : "warn" },
+            { label: "Merged projects", value: String(projectBaselineState.mergedCount || projectState.projects.length), note: projectBaselineState.partialKvMerged ? "Partial legacy/scaffold data merged with baseline." : "Baseline protection active when available.", tone: projectBaselineState.partialKvMerged ? "warn" : "success" },
             { label: "Published", value: String(publishedCount), note: "Local visibility metadata only.", tone: "warn" },
             { label: "Featured", value: String(featuredCount), note: "Local homepage/archive flag only.", tone: "warn" },
             { label: "Asset issues", value: String(issueCount), note: "Missing-field checks only; links are not externally verified.", tone: issueCount ? "warn" : "" }
@@ -1605,13 +1771,13 @@
         <div class="cms-toolbar-summary">
           ${badge(`${visibleCount} visible`, "warn")}
           ${badge(`${projectState.selected.size} selected`, selectedVisible ? "success" : "warn")}
-          ${badge("Browser local only", "warn")}
+          ${badge(projectBaselineState.protected ? "Baseline protection active" : "Browser-local fallback", projectBaselineState.protected ? "success" : "warn")}
         </div>
       </div>
       <div class="bulk-panel ${projectState.bulkMode ? "is-open" : ""}">
         <div>
           <strong>Bulk editing mode</strong>
-          <p class="muted">Selected-row actions update localStorage only after confirmation for destructive changes.</p>
+          <p class="muted">Baseline rows are protected. Delete archives/hides public baseline records and hard-deletes only admin-created rows.</p>
         </div>
         <div class="toolbar">
           <button class="button button-secondary" type="button" data-project-action="toggle-bulk">${projectState.bulkMode ? "Close bulk mode" : "Open bulk mode"}</button>
@@ -1674,10 +1840,11 @@
   function renderProjectRow(project) {
     const issues = projectAssetIssues(project);
     const issueLabel = issues.length ? issues.join(", ") : "complete fields";
+    const baseline = isBaselineProject(project);
     return `
       <tr>
         <td><input type="checkbox" aria-label="Select ${escapeHtml(project.title)}" data-project-select="${escapeHtml(project.id)}" ${projectState.selected.has(project.id) ? "checked" : ""} /></td>
-        <td><strong>${escapeHtml(project.title)}</strong><br><span>${escapeHtml(project.client || "No client field")}</span></td>
+        <td><strong>${escapeHtml(project.title)}</strong><br><span>${escapeHtml(project.client || "No client field")}</span><br>${baseline ? badge("Protected baseline", "success") : badge("Admin-created", "warn")}</td>
         <td><code>${escapeHtml(project.slug)}</code></td>
         <td>${escapeHtml(project.category || project.discipline || "Uncategorized")}</td>
         <td>${badge(project.status, projectStatusTone(project.status))}<br>${badge(project.visibility, project.visibility === "public" ? "success" : "warn")}</td>
@@ -1695,7 +1862,7 @@
           <div class="row-actions">
             <button class="button button-secondary" type="button" data-project-action="detail" data-project-id="${escapeHtml(project.id)}">Detail</button>
             <button class="button button-secondary" type="button" data-project-action="edit" data-project-id="${escapeHtml(project.id)}">Edit</button>
-            <button class="button button-danger" type="button" data-project-action="delete" data-project-id="${escapeHtml(project.id)}">Delete</button>
+            <button class="button button-danger" type="button" data-project-action="delete" data-project-id="${escapeHtml(project.id)}">${baseline ? "Archive" : "Delete"}</button>
           </div>
         </td>
       </tr>
@@ -1706,15 +1873,16 @@
     const project = modal.project;
     const readOnly = modal.mode === "detail";
     const issues = projectAssetIssues(project);
-    const title = modal.mode === "create" ? "Create project scaffold" : modal.mode === "detail" ? "Project detail" : "Edit project scaffold";
+    const title = modal.mode === "create" ? "Create admin project" : modal.mode === "detail" ? "Project detail" : "Edit project overlay";
+    const baseline = isBaselineProject(project);
     return `
       <div class="modal-backdrop" data-project-modal-backdrop>
         <section class="modal project-modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
           <header class="modal-header">
             <div>
-              <span class="section-kicker">Local scaffold editor</span>
+              <span class="section-kicker">${baseline ? "Protected baseline record" : "Admin-created record"}</span>
               <h2 id="project-modal-title">${escapeHtml(title)}</h2>
-              <p>Save writes only to ${escapeHtml(PROJECTS_STORAGE_KEY)} in this browser.</p>
+              <p>Save writes to admin overlay storage when available and to ${escapeHtml(PROJECTS_STORAGE_KEY)} as browser-local fallback. Public-site publishing remains future work.</p>
             </div>
             <button class="icon-close" type="button" aria-label="Close project editor" data-project-action="close-modal">x</button>
           </header>
@@ -1766,7 +1934,7 @@
             </aside>
             <footer class="modal-footer">
               <button class="button button-secondary" type="button" data-project-action="close-modal">Cancel</button>
-              ${readOnly ? `<button class="button" type="button" data-project-action="edit" data-project-id="${escapeHtml(project.id)}">Edit</button>` : `<button class="button" type="submit">Save local scaffold</button>`}
+              ${readOnly ? `<button class="button" type="button" data-project-action="edit" data-project-id="${escapeHtml(project.id)}">Edit</button>` : `<button class="button" type="submit">Save overlay</button>`}
             </footer>
           </form>
         </section>
@@ -2565,6 +2733,8 @@
       copyProjectsJson();
     } else if (action === "import-json") {
       importProjectsJson();
+    } else if (action === "reconcile") {
+      reconcileProjects();
     } else if (action === "reset") {
       resetProjects();
     } else if (action === "sync-cms") {
@@ -2642,9 +2812,11 @@
     }
 
     const originalId = formValue(form, "originalId");
+    const originalProject = projectState.projects.find((project) => project.id === originalId);
+    const protectedBaseline = originalProject && isBaselineProject(originalProject);
     const saved = normalizeProject({
-      id: slug,
-      slug,
+      id: protectedBaseline ? originalProject.id : slug,
+      slug: protectedBaseline ? originalProject.slug : slug,
       title,
       client: formValue(form, "client"),
       category: formValue(form, "category"),
@@ -2659,7 +2831,7 @@
       documentPath: formValue(form, "documentPath"),
       documentationUrl: formValue(form, "documentationUrl"),
       livePage: formValue(form, "livePage") || `/portfolio/${slug}`,
-      sourceFolder: formValue(form, "sourceFolder"),
+      sourceFolder: protectedBaseline ? originalProject.sourceFolder : formValue(form, "sourceFolder"),
       summary: formValue(form, "summary"),
       description: formValue(form, "description"),
       galleryPaths: textareaArray(formValue(form, "galleryPaths")),
@@ -2667,7 +2839,10 @@
       studio: textareaArray(formValue(form, "studio")),
       software: textareaArray(formValue(form, "software")),
       internalNotes: formValue(form, "internalNotes"),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      baselineProtected: protectedBaseline,
+      baselineVersion: protectedBaseline ? PROJECTS_BASELINE_VERSION : "",
+      source: protectedBaseline ? "admin_overlay" : "admin_created"
     });
 
     const existingIndex = projectState.projects.findIndex((project) => project.id === originalId);
@@ -2809,14 +2984,35 @@
     const project = projectState.projects.find((item) => item.id === id);
     if (!project) return;
 
-    if (!window.confirm(`Delete local scaffold project "${project.title}"? This will not affect DanielClancy.net.`)) {
+    if (isBaselineProject(project)) {
+      if (!window.confirm(`Archive protected public-site baseline project "${project.title}"? Baseline records cannot be hard-deleted here; this will mark the admin overlay as archived/hidden instead.`)) {
+        return;
+      }
+      projectState.projects = projectState.projects.map((item) =>
+        item.id === id
+          ? normalizeProject({
+              ...item,
+              status: "archived",
+              visibility: "hidden",
+              updatedAt: new Date().toISOString(),
+              internalNotes: `${item.internalNotes ? `${item.internalNotes}\n` : ""}Protected baseline row archived from DanielClancy-Admin.`
+            })
+          : item
+      );
+      projectState.selected.delete(id);
+      persistProjects();
+      projectState.message = `Archived protected baseline project: ${project.title}.`;
+      renderProjects();
       return;
     }
 
+    if (!window.confirm(`Delete admin-created project "${project.title}"? This removes only the admin overlay row and does not hard-delete public baseline records.`)) {
+      return;
+    }
     projectState.projects = projectState.projects.filter((item) => item.id !== id);
     projectState.selected.delete(id);
     persistProjects();
-    projectState.message = `Deleted local scaffold row: ${project.title}.`;
+    projectState.message = `Deleted admin-created row: ${project.title}.`;
     renderProjects();
   }
 
@@ -2931,14 +3127,28 @@
   function bulkDelete() {
     const count = projectState.selected.size;
     if (!count) return;
-    if (!window.confirm(`Delete ${count} selected local scaffold project row(s)? This will not affect DanielClancy.net.`)) {
+    const selectedProjects = projectState.projects.filter((project) => projectState.selected.has(project.id));
+    const baselineCount = selectedProjects.filter(isBaselineProject).length;
+    const adminCreatedCount = selectedProjects.length - baselineCount;
+    if (!window.confirm(`Apply delete/archive to ${count} selected project row(s)? ${baselineCount} protected baseline row(s) will be archived/hidden, and ${adminCreatedCount} admin-created row(s) will be hard-deleted.`)) {
       return;
     }
 
-    projectState.projects = projectState.projects.filter((project) => !projectState.selected.has(project.id));
+    projectState.projects = projectState.projects
+      .map((project) =>
+        projectState.selected.has(project.id) && isBaselineProject(project)
+          ? normalizeProject({
+              ...project,
+              status: "archived",
+              visibility: "hidden",
+              updatedAt: new Date().toISOString()
+            })
+          : project
+      )
+      .filter((project) => !projectState.selected.has(project.id) || isBaselineProject(project));
     projectState.selected.clear();
     persistProjects();
-    projectState.message = `Deleted ${count} local scaffold row(s).`;
+    projectState.message = `Archived ${baselineCount} protected baseline row(s) and deleted ${adminCreatedCount} admin-created row(s).`;
     renderProjects();
   }
 
@@ -3025,29 +3235,36 @@
   }
 
   function importProjectsJson() {
-    const value = window.prompt("Paste a JSON array of project scaffold rows. This replaces local browser data only.");
+    const value = window.prompt("Paste a Projects JSON array or wrapper. Partial imports are treated as an overlay on the protected public-site baseline.");
     if (!value) return;
 
     try {
       const parsed = JSON.parse(value);
-      if (!Array.isArray(parsed)) {
-        throw new Error("Expected a JSON array.");
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : null;
+      if (!rows) {
+        throw new Error("Expected a JSON array or wrapper with an items array.");
       }
 
-      const normalized = parsed.map(normalizeProject);
+      const normalized = rows.map(normalizeProject);
       const ids = new Set(normalized.map((project) => project.id));
       if (ids.size !== normalized.length) {
         throw new Error("Project slug/id values must be unique.");
       }
 
-      if (!window.confirm(`Import ${normalized.length} project scaffold row(s) into local browser storage?`)) {
+      const baselineIds = projectBaselineIds();
+      const overlapCount = normalized.filter((project) => baselineIds.has(projectIdentity(project))).length;
+      const partialImport = projectBaselineState.baselineCount && normalized.length < projectBaselineState.baselineCount;
+      const confirmMessage = partialImport
+        ? `Import ${normalized.length} row(s) as an overlay? This is smaller than the ${projectBaselineState.baselineCount} protected baseline records, so it will merge instead of replacing the baseline. ${overlapCount} imported row(s) overlap baseline IDs.`
+        : `Import ${normalized.length} project row(s) and reconcile with the protected public-site baseline? ${overlapCount} imported row(s) overlap baseline IDs.`;
+      if (!window.confirm(confirmMessage)) {
         return;
       }
 
-      projectState.projects = normalized;
+      projectState.projects = mergeProjectsWithBaseline(normalized);
       projectState.selected.clear();
       persistProjects();
-      projectState.message = "Imported project scaffold JSON into local browser storage.";
+      projectState.message = "Imported Projects JSON as a protected-baseline overlay.";
       renderProjects();
     } catch (error) {
       projectState.message = `Import failed: ${error.message}`;
@@ -3119,14 +3336,30 @@
   }
 
   function resetProjects() {
-    if (!window.confirm("Reset Projects CMS scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
+    if (!window.confirm("Reset Projects CMS to the protected public-site baseline? Local/admin overlay edits will be replaced, but existing public baseline records remain protected.")) {
       return;
     }
 
-    projectState.projects = (data.projects || []).map(normalizeProject);
+    projectState.projects = projectBaselineState.projects.length
+      ? mergeProjectsWithBaseline([])
+      : (data.projects || []).map(normalizeProject);
     projectState.selected.clear();
     persistProjects();
-    projectState.message = "Projects CMS scaffold reset to repo seed data.";
+    projectState.message = "Projects CMS reset to the protected public-site baseline.";
+    renderProjects();
+  }
+
+  function reconcileProjects() {
+    if (!projectBaselineState.projects.length) {
+      projectState.message = "Public baseline asset is not loaded yet; using current local fallback rows.";
+      renderProjects();
+      return;
+    }
+    projectState.projects = mergeProjectsWithBaseline(projectState.projects);
+    projectState.selected.clear();
+    persistCmsCollection("projects", true, true);
+    window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projectsStoragePayload(), null, 2));
+    projectState.message = "Reconciled Projects with the protected public-site baseline.";
     renderProjects();
   }
 
@@ -3167,5 +3400,6 @@
   } else {
     render();
   }
+  hydrateProjectBaseline(activePageIs("projects"));
   hydrateCmsCollections();
 })();
