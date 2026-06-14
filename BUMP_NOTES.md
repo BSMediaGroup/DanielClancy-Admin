@@ -1,5 +1,55 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Auth/login foundation milestone
+
+### Technical Notes
+
+- Added Cloudflare Pages-compatible auth endpoints at `functions/api/auth/[[path]].js` for session, login, logout, and OAuth start/callback scaffolds.
+- Manual email/password master admin login compares `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1` and `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2` server-side only, then issues an HMAC-signed HttpOnly session cookie using `DC_AUTH_SESSION_SECRET`.
+- Added the admin session gate in `assets/js/admin-auth.js`; unauthenticated users see login, non-admin sessions see an admin-required state, and verified admin sessions can view dashboard routes.
+- Added a clearly labelled local scaffold unlock for file/localhost/Pages-preview smoke testing only. It is not a production credential.
+- Added Settings account-access scaffold storage under `danielclancy-admin.accounts.scaffold.v1`.
+- Updated Accounts scaffold rows with account type/provider/identifier fields for consistency.
+- Documented OAuth env vars, callback URIs, future allowlist vars, and the Cloudflare setup checkpoint.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin now has an admin login/session gate instead of an always-open static shell.
+- Manual email/password env-backed master admin accounts are the first production admin path:
+  - `mail@danielclancy.net` via `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1`
+  - `daniel@brainstream.media` via `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`
+- OAuth login methods require Cloudflare env vars and provider redirect URI setup before live testing.
+- OAuth users are not automatically master admins unless explicitly allowlisted or promoted through the future durable account-role system.
+- Public session-aware content remains future work.
+- Alerts page remains future work.
+- Cloudflare Pages/DNS setup checkpoint is now approaching and should be completed before real OAuth production testing.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `index.html`
+- `package.json`
+- `functions/api/auth/[[path]].js`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `assets/js/scaffold-data.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check functions/api/auth/[[path]].js`, `node --check assets/js/admin-auth.js`, `node --check assets/js/scaffold-data.js`, and `node --check assets/js/admin-app.js`.
+- Run `git diff --check`.
+- `package.json` exists only for module syntax parsing and has no npm lint/typecheck/build scripts yet.
+- Smoke test unauthenticated gate, local scaffold unlock, Settings account-access scaffold, OAuth button URLs, and mobile viewport sanity.
+
+### Risks / Follow-Ups
+
+- Live OAuth cannot be verified until Cloudflare Pages, DNS/custom domain, provider OAuth apps, callback URLs, and env vars are configured.
+- The Settings account-type controls are local scaffold storage only and are not production account authority.
+- Durable account-role persistence requires a future backend/export/storage layer.
+
 ## Media CMS Local Scaffold
 
 ### Technical Notes

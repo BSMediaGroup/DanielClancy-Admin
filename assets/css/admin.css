@@ -73,6 +73,18 @@ body {
   line-height: 1.55;
 }
 
+body.auth-pending .admin-shell,
+body.auth-required .admin-shell,
+body.auth-denied .admin-shell {
+  filter: blur(2px);
+  pointer-events: none;
+  user-select: none;
+}
+
+body.auth-allowed .admin-auth-gate {
+  display: none;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -407,6 +419,141 @@ a {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.045);
   color: var(--muted);
+}
+
+.environment-pill-success {
+  color: var(--success);
+  border-color: rgba(168, 208, 186, 0.34);
+}
+
+.auth-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 4, 5, 0.74);
+  backdrop-filter: blur(12px);
+}
+
+.auth-card {
+  width: min(100%, 460px);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(18, 21, 24, 0.98), rgba(7, 8, 10, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.auth-card-header {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-family: "Recharge", "Sui Generis", sans-serif;
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.auth-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.auth-provider-grid,
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-form label,
+.scaffold-account-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.auth-form input,
+.scaffold-account-form input,
+.scaffold-account-form select,
+.scaffold-account-form textarea {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  padding: 8px 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.scaffold-account-form textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.auth-message,
+.auth-note {
+  padding: 10px;
+  border: 1px solid rgba(226, 193, 111, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(226, 193, 111, 0.06);
+  color: var(--warn);
+}
+
+.account-access-list {
+  display: grid;
+  gap: 10px;
+}
+
+.account-access-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.account-access-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.account-access-meta strong,
+.account-access-meta span {
+  overflow-wrap: anywhere;
+}
+
+.scaffold-account-form {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-divider {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 14px 0;
 }
 
 .badge-success {
@@ -973,6 +1120,10 @@ body.nav-collapsed .nav-link {
 
   .modal-footer .button {
     width: 100%;
+  }
+
+  .account-access-row {
+    grid-template-columns: 1fr;
   }
 
   .map-shell {

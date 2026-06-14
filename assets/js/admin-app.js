@@ -16,6 +16,11 @@
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
+  const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
+  const MASTER_ADMIN_ACCOUNTS = [
+    { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1", envSecret: "DC_ADMIN_SECRET_1" },
+    { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2", envSecret: "DC_ADMIN_SECRET_2" }
+  ];
   const projectState = {
     projects: loadProjects(),
     search: "",
@@ -36,6 +41,10 @@
     bulkMode: false,
     modal: null,
     message: "Local media scaffold loaded. Changes stay in this browser only."
+  };
+  const accountAccessState = {
+    accounts: loadAccountAccessScaffold(),
+    message: "Local account access scaffold loaded. Changes stay in this browser only."
   };
 
   function escapeHtml(value) {
@@ -185,6 +194,43 @@
 
   function persistMediaItems() {
     window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
+  }
+
+  function normalizeAccountAccess(raw) {
+    const provider = String(raw?.provider || "github").toLowerCase();
+    const identifier = String(raw?.identifier || raw?.email || raw?.username || "").trim();
+    const fallbackId = createSlug(`${provider}-${identifier || raw?.id || Date.now()}`);
+    const accountType = String(raw?.accountType || raw?.account_type || "regular").toLowerCase() === "admin" ? "admin" : "regular";
+    return {
+      id: String(raw?.id || fallbackId),
+      provider: ["github", "google", "twitter", "password", "scaffold"].includes(provider) ? provider : "github",
+      identifier,
+      accountType,
+      notes: String(raw?.notes || ""),
+      updatedAt: String(raw?.updatedAt || new Date().toISOString())
+    };
+  }
+
+  function loadAccountAccessScaffold() {
+    try {
+      const stored = window.localStorage.getItem(ACCOUNT_ACCESS_STORAGE_KEY);
+      if (!stored) {
+        return [];
+      }
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed.map(normalizeAccountAccess);
+    } catch {
+      return [];
+    }
+  }
+
+  function persistAccountAccessScaffold() {
+    window.localStorage.setItem(ACCOUNT_ACCESS_STORAGE_KEY, JSON.stringify(accountAccessState.accounts, null, 2));
   }
 
   function projectAssetIssues(project) {
@@ -584,7 +630,7 @@
         ${pageHeader(
           "Admin workspace",
           "Accounts",
-          "Reference-style account list using scaffold identities only. Authentication, real user records, and public login widget wiring are not connected.",
+          "Reference-style account list using scaffold identities only. Authentication now uses the admin session gate; these rows remain local planning data.",
           badge("Scaffold accounts", "warn")
         )}
 
@@ -594,7 +640,7 @@
           `<div class="table-wrap">
             <table class="table">
               <thead>
-                <tr><th>Account</th><th>Role</th><th>Access</th><th>Status</th><th>Detail</th></tr>
+                <tr><th>Account</th><th>Type</th><th>Provider</th><th>Access</th><th>Status</th><th>Detail</th></tr>
               </thead>
               <tbody>
                 ${data.accounts
@@ -602,7 +648,8 @@
                     (account) => `
                       <tr>
                         <td><strong>${escapeHtml(account.name)}</strong><br><span>${escapeHtml(account.email)}</span></td>
-                        <td>${escapeHtml(account.role)}</td>
+                        <td>${escapeHtml(account.accountType || "regular")}</td>
+                        <td>${escapeHtml(account.provider || "scaffold")}</td>
                         <td>${escapeHtml(account.access)}</td>
                         <td>${escapeHtml(account.status)}</td>
                         <td><a class="row-link" href="#/accounts/${encodeURIComponent(account.id)}">Open detail</a></td>
@@ -617,8 +664,8 @@
 
         ${panel(
           "Access boundary",
-          "No real authentication or account mutation controls are implemented in this foundation.",
-          `<div class="empty-state">Future account authority must come from a real admin/auth API. This page currently proves layout, routing, and detail presentation only.</div>`
+          "Local scaffold rows are not production account authority.",
+          `<div class="empty-state">Manual master admin authentication is server-side via Cloudflare env vars. Account promotion/demotion here remains a Settings scaffold until durable storage exists.</div>`
         )}
       </div>
     `;
@@ -1260,6 +1307,9 @@
             descriptionRows([
               ["Email", account.email],
               ["Display role", account.role],
+              ["Account type", account.accountType || "regular"],
+              ["Provider", account.provider || "scaffold"],
+              ["Identifier", account.identifier || account.email],
               ["Last seen", account.lastSeen]
             ])
           )}
@@ -1292,6 +1342,81 @@
     `;
   }
 
+  function renderMasterAdminRows() {
+    return MASTER_ADMIN_ACCOUNTS.map(
+      (account) => `
+        <article class="account-access-row">
+          <div class="account-access-meta">
+            <strong>${escapeHtml(account.email)}</strong>
+            <span class="muted">Env-backed master admin: ${escapeHtml(account.envEmail)} / ${escapeHtml(account.envSecret)}</span>
+          </div>
+          ${badge("Not removable", "success")}
+        </article>
+      `
+    ).join("");
+  }
+
+  function renderAccountAccessScaffold() {
+    const rows = accountAccessState.accounts.length
+      ? accountAccessState.accounts
+          .map(
+            (account) => `
+              <article class="account-access-row">
+                <div class="account-access-meta">
+                  <strong>${escapeHtml(account.identifier || "(missing identifier)")}</strong>
+                  <span class="muted">${escapeHtml(account.provider)} · ${escapeHtml(account.accountType)} · Local scaffold only</span>
+                  ${account.notes ? `<span>${escapeHtml(account.notes)}</span>` : ""}
+                </div>
+                <button class="button button-secondary" type="button" data-account-access-action="remove" data-account-access-id="${escapeHtml(account.id)}">
+                  Remove local row
+                </button>
+              </article>
+            `
+          )
+          .join("")
+      : `<div class="empty-state">No OAuth/public account rows have been added to local scaffold storage yet.</div>`;
+
+    return `
+      <div class="account-access-list">
+        ${renderMasterAdminRows()}
+      </div>
+      <hr class="panel-divider" />
+      <div class="account-access-list">
+        ${rows}
+      </div>
+      <form class="scaffold-account-form" data-account-access-form>
+        <div class="form-grid">
+          <label>
+            <span>Provider</span>
+            <select name="provider">
+              <option value="github">GitHub</option>
+              <option value="google">Google</option>
+              <option value="twitter">Twitter/X</option>
+              <option value="password">Password</option>
+            </select>
+          </label>
+          <label>
+            <span>Account type</span>
+            <select name="accountType">
+              <option value="regular">Regular</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          <span>Identifier / email / username</span>
+          <input name="identifier" type="text" placeholder="Verified provider subject, email, or username" required />
+        </label>
+        <label>
+          <span>Notes</span>
+          <textarea name="notes" placeholder="Why this account should be regular/admin later"></textarea>
+        </label>
+        <button class="button" type="submit">Save local scaffold row</button>
+      </form>
+      <p class="auth-message">${escapeHtml(accountAccessState.message)}</p>
+    `;
+  }
+
   function renderSettings() {
     routeTitle.textContent = "Settings";
     app.innerHTML = `
@@ -1312,10 +1437,16 @@
             </div>
             <div class="card">
               <h3>Deferred integrations</h3>
-              <p class="muted">Projects CMS is local scaffold-only. Media CMS, public login widget wiring, API/export pipeline work, and Cloudflare/DNS setup remain future tasks.</p>
+              <p class="muted">Projects CMS and Media CMS are local scaffold-only. Public login wiring and the admin session gate now have an auth foundation, while API/export pipeline work and Cloudflare/DNS setup remain pending.</p>
             </div>
           </div>
         </section>
+
+        ${panel(
+          "Account access",
+          "Manual master admins are env-backed and non-removable. OAuth/public account type rows below are browser-local scaffold data only.",
+          renderAccountAccessScaffold()
+        )}
 
         ${panel(
           "Settings sections",
@@ -1342,8 +1473,9 @@
           "Truthful static deployment posture for the current foundation.",
           descriptionRows([
             ["Runtime requirement", "No request-time Node runtime"],
-            ["Secrets", "None in frontend logic"],
-            ["Cloudflare Pages", "Static-compatible fallback added"],
+            ["Secrets", "Manual admin passwords stay in Cloudflare Pages Function env vars only"],
+            ["Cloudflare Pages", "Functions auth endpoints added"],
+            ["OAuth redirect URIs", "Provider setup required before live testing"],
             ["DNS / live deployment", "Not completed by this task"]
           ])
         )}
@@ -1545,6 +1677,12 @@
       return;
     }
 
+    if (form.matches("[data-account-access-form]")) {
+      event.preventDefault();
+      saveAccountAccessFromForm(form);
+      return;
+    }
+
     if (!form.matches("[data-project-form]")) return;
 
     event.preventDefault();
@@ -1552,13 +1690,20 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop]");
+    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-account-access-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const mediaAction = target.getAttribute("data-media-action");
+    const accountAccessAction = target.getAttribute("data-account-access-action");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
+    const accountAccessId = target.getAttribute("data-account-access-id");
+
+    if (accountAccessAction === "remove") {
+      removeAccountAccess(accountAccessId);
+      return;
+    }
 
     if (!action && !mediaAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]"))) {
       return;
@@ -1661,6 +1806,46 @@
       renderProjects();
     }
   });
+
+  function saveAccountAccessFromForm(form) {
+    const identifier = formValue(form, "identifier");
+    if (!identifier) {
+      accountAccessState.message = "Identifier, email, username, or provider subject is required.";
+      renderSettings();
+      return;
+    }
+    const saved = normalizeAccountAccess({
+      provider: formValue(form, "provider"),
+      accountType: formValue(form, "accountType"),
+      identifier,
+      notes: formValue(form, "notes"),
+      updatedAt: new Date().toISOString()
+    });
+    const existingIndex = accountAccessState.accounts.findIndex(
+      (account) => account.provider === saved.provider && account.identifier.toLowerCase() === saved.identifier.toLowerCase()
+    );
+    if (existingIndex >= 0) {
+      accountAccessState.accounts[existingIndex] = saved;
+      accountAccessState.message = "Updated local account access scaffold row. This is not production authority.";
+    } else {
+      accountAccessState.accounts.unshift(saved);
+      accountAccessState.message = "Saved local account access scaffold row. This is not production authority.";
+    }
+    persistAccountAccessScaffold();
+    renderSettings();
+  }
+
+  function removeAccountAccess(id) {
+    const account = accountAccessState.accounts.find((item) => item.id === id);
+    if (!account) return;
+    if (!window.confirm(`Remove local scaffold row for "${account.identifier}"? This does not affect production auth.`)) {
+      return;
+    }
+    accountAccessState.accounts = accountAccessState.accounts.filter((item) => item.id !== id);
+    persistAccountAccessScaffold();
+    accountAccessState.message = "Removed local account access scaffold row.";
+    renderSettings();
+  }
 
   function saveProjectFromForm(form) {
     const title = formValue(form, "title");
