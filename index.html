@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      name="description"
+      content="Static admin dashboard foundation for the DanielClancy.net professional portfolio ecosystem."
+    />
+    <meta name="theme-color" content="#050607" />
+    <title>DanielClancy.net Admin</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./assets/css/admin.css" />
+  </head>
+  <body>
+    <div class="admin-shell" id="admin-shell">
+      <aside class="sidebar" aria-label="Admin navigation">
+        <a class="brand" href="#/overview" aria-label="DanielClancy.net Admin overview">
+          <img src="./assets/logos/logomattesilver.webp" alt="" />
+          <span>
+            <strong>DanielClancy.net</strong>
+            <small>Admin</small>
+          </span>
+        </a>
+
+        <nav class="sidebar-nav" id="sidebar-nav"></nav>
+
+        <div class="sidebar-note">
+          <span class="status-dot status-dot-warn" aria-hidden="true"></span>
+          Static foundation. No live admin API connected.
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <button class="icon-button" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="topbar-title">
+            <span class="eyebrow">Professional Portfolio Administration</span>
+            <strong id="route-title">Overview</strong>
+          </div>
+          <div class="topbar-actions">
+            <span class="environment-pill">Scaffold data</span>
+            <a class="button button-secondary" href="https://danielclancy.net" rel="noreferrer">Public site</a>
+          </div>
+        </header>
+
+        <main class="content" id="app" tabindex="-1"></main>
+
+        <footer class="footer">
+          <span>DanielClancy.net Admin Foundation</span>
+          <span>Projects CMS, Media CMS, login wiring, and Cloudflare/DNS setup are pending.</span>
+        </footer>
+      </div>
+    </div>
+
+    <script src="./assets/js/scaffold-data.js"></script>
+    <script src="./assets/js/admin-app.js"></script>
+  </body>
+</html>
