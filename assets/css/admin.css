@@ -80,7 +80,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -418,6 +419,11 @@ a {
   border-color: rgba(226, 193, 111, 0.34);
 }
 
+.badge-danger {
+  color: var(--danger);
+  border-color: rgba(220, 143, 132, 0.38);
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -435,6 +441,12 @@ a {
   border-color: var(--line);
   background: rgba(255, 255, 255, 0.035);
   color: var(--muted);
+}
+
+.button-danger {
+  border-color: rgba(220, 143, 132, 0.38);
+  background: rgba(220, 143, 132, 0.1);
+  color: #f1c5bf;
 }
 
 .button:hover,
@@ -493,6 +505,225 @@ a {
 
 .row-link {
   color: var(--accent-strong);
+}
+
+.input {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(3, 4, 5, 0.42);
+  color: var(--text);
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(219, 201, 166, 0.54);
+  box-shadow: 0 0 0 2px rgba(219, 201, 166, 0.1);
+}
+
+.input:disabled,
+.input[readonly],
+.textarea[readonly] {
+  color: var(--muted);
+  opacity: 0.76;
+}
+
+.input-compact {
+  max-width: 180px;
+}
+
+.textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.field > span,
+.checkbox-field span {
+  color: var(--soft);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 36px;
+}
+
+.cms-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(160px, 220px) minmax(160px, 220px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.cms-toolbar-summary,
+.chip-row,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.bulk-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.bulk-panel.is-open {
+  border-color: rgba(219, 201, 166, 0.3);
+  background: rgba(219, 201, 166, 0.06);
+}
+
+.project-message {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.project-table {
+  min-width: 1280px;
+}
+
+.project-table th:first-child,
+.project-table td:first-child {
+  width: 44px;
+}
+
+.project-table code,
+.path-text {
+  font-family: "SUSE Mono", Consolas, monospace;
+  font-size: 11px;
+}
+
+.path-text {
+  display: block;
+  max-width: 240px;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-table small {
+  color: var(--soft);
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(12px);
+}
+
+.modal {
+  width: min(1120px, 96vw);
+  max-height: min(860px, 92vh);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: rgba(12, 15, 18, 0.98);
+  box-shadow: var(--shadow);
+}
+
+.modal-header,
+.modal-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-family: "Recharge", "Sui Generis", sans-serif;
+  letter-spacing: 0.045em;
+}
+
+.modal-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.modal-body {
+  max-height: calc(92vh - 132px);
+  overflow: auto;
+  padding: 16px;
+}
+
+.modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.icon-close {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.project-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.asset-status-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed rgba(226, 193, 111, 0.34);
+  border-radius: var(--radius-sm);
+  background: rgba(226, 193, 111, 0.055);
+}
+
+.asset-status-box h3,
+.bulk-panel strong {
+  margin: 0;
+  font-family: "Recharge", "Sui Generis", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.asset-status-box p,
+.bulk-panel p {
+  margin: 0;
 }
 
 .detail-hero {
@@ -703,6 +934,36 @@ body.nav-collapsed .nav-link {
   }
 
   .topbar-actions {
+    width: 100%;
+  }
+
+  .cms-toolbar,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input-compact,
+  .cms-toolbar-summary {
+    max-width: none;
+    width: 100%;
+  }
+
+  .modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal-header,
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer .button {
     width: 100%;
   }
 

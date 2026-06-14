@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible static dashboard shell with scaffold data only. Projects CMS, Media CMS, public login widget wiring, and live Cloudflare/DNS setup are intentionally deferred.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible static dashboard shell with scaffold data only. Projects CMS editing is browser-local scaffold persistence only; Media CMS, public login widget wiring, real API/export pipeline work, and live Cloudflare/DNS setup are intentionally deferred.
 
 ## Local Use
 
@@ -38,6 +38,7 @@ DanielClancy-Admin/
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Projects, and Settings pages.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Disabled future navigation entries for Projects and Media.
+- Projects CMS scaffold with localStorage persistence, table editing, create/edit/detail modal, bulk actions, reset, and JSON copy/import controls.
+- Disabled future navigation entry for Media.
