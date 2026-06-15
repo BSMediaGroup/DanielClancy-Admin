@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth scaffolding and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS pages use KV when configured and retain browser-local fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows. Durable account-role storage is still pending.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS and account pages use KV when configured and retain clearly labelled browser-local fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows.
 
 ## Local Use
 
@@ -12,7 +12,7 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js` and CMS endpoints under `functions/api/admin/cms/[[collection]].js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, and CMS endpoints under `functions/api/admin/cms/[[collection]].js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -66,6 +66,14 @@ Optional dev/test Turnstile bypass:
 
 `DC_TURNSTILE_SITE_KEY` is exposed only through the safe `/api/turnstile/config` Pages Function response. `DC_TURNSTILE_SECRET_KEY` must remain server-side only; missing production secrets fail protected auth actions closed. A simple static/file server cannot run Pages Functions, so local static views may show a Turnstile unavailable state until served through a Pages-compatible runtime with env bindings.
 
+`DANIELCLANCY_ALERT_INGEST_SECRET` is a generated shared secret, not a value found in Cloudflare. Generate it with:
+
+```sh
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Use the same value only in server/runtime environments that need to verify or send DanielClancy alert ingest events, including the StreamSuites runtime/API environment hosting `POST /api/alerts/danielclancy` and a future DanielClancy/DanielClancy-Admin sender environment once alert posting is wired. Never expose this value in frontend code or display it in the UI.
+
 OAuth env vars:
 
 - `GITHUB_CLIENT_ID`
@@ -94,13 +102,36 @@ Required OAuth redirect URIs:
 - Google: `https://admin.danielclancy.net/api/auth/oauth/google/callback`
 - Twitter/X: `https://admin.danielclancy.net/api/auth/oauth/twitter/callback`
 
-## Account Access Scaffold
+## Accounts API And Registry
 
-Settings includes an Account access section:
+Implemented endpoints:
 
-- The two manual master admin accounts are shown as env-backed, production-authoritative, and non-removable.
-- OAuth/public account rows can be marked `regular` or `admin` in local scaffold storage under `danielclancy-admin.accounts.scaffold.v1`.
-- Local account-type edits are not production authority and do not auto-promote signed-in OAuth users. Durable account-role persistence requires a future backend/export/storage layer.
+- `GET /api/admin/accounts`
+- `POST /api/admin/accounts/promote`
+- `POST /api/admin/accounts/demote`
+- `POST /api/admin/accounts/disable`
+- `POST /api/admin/accounts/enable`
+- `POST /api/admin/accounts/update`
+- `PATCH /api/admin/accounts/:id`
+
+The account registry uses Cloudflare KV binding `DC_ADMIN_KV` with key `accounts:registry`. The stored wrapper is `collection: "accounts"`, `updatedAt`, and `accounts`. Account records store safe identity/role/status fields such as provider, provider subject, email, username, display name, avatar URL, account type, admin level, status, first/last seen, last login, notes, source, and updated time. Passwords, OAuth access tokens, and OAuth refresh tokens are never stored.
+
+The two manual master admin accounts are always synthesized at runtime from env vars and shown as locked `env_master` rows:
+
+- `mail@danielclancy.net` via `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1`
+- `daniel@brainstream.media` via `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`
+
+Locked env-backed master admins cannot be deleted, disabled, demoted, or edited through the UI/API. OAuth callback registration creates or updates known regular accounts by default. OAuth users are not automatically promoted to admin; a master admin must promote a KV-backed account through the Accounts UI/API. Non-master admins can read the account list but cannot change roles, status, or notes.
+
+`GET /api/auth/session` resolves role from env-backed manual master sessions first, then `accounts:registry`, then the signed session fallback. The frontend local scaffold account rows are not production authority and cannot override the server-resolved role.
+
+## Overview Status API
+
+Implemented endpoint:
+
+- `GET /api/admin/status`
+
+The Overview page uses this endpoint to show signed-in admin identity, account registry status/count, Projects/Media/Alerts CMS storage status/counts, protected public project baseline count when the asset binding is available, Turnstile configured status, OAuth provider configured status, alert ingest secret presence, and last checked timestamp. It does not display secret values and does not invent analytics numbers or claim public publishing is complete.
 
 ## Admin CMS API
 
@@ -119,6 +150,7 @@ CMS endpoints are not Turnstile-gated because they are operational admin APIs be
 
 Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
 
+- `accounts:registry`
 - `cms:projects`
 - `cms:media`
 - `cms:alerts`
@@ -166,11 +198,15 @@ DanielClancy-Admin/
 │   └── logos/
 ├── functions/
 │   ├── _shared/
+│   │   ├── admin-accounts.js
 │   │   └── turnstile.js
 │   └── api/
 │       ├── admin/
-│       │   └── cms/
-│       │       └── [[collection]].js
+│       │   ├── accounts/
+│       │   │   └── [[path]].js
+│       │   ├── cms/
+│       │   │   └── [[collection]].js
+│       │   └── status.js
 │       ├── auth/
 │       │   └── [[path]].js
 │       └── turnstile/
@@ -186,6 +222,9 @@ DanielClancy-Admin/
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
 - Overview, Analytics, Accounts, Account Detail, Projects, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
+- Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins and master-only role/status/note actions.
+- Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
+- Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.

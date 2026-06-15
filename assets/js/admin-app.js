@@ -112,6 +112,21 @@
     accounts: loadAccountAccessScaffold(),
     message: "Local account access scaffold loaded. Changes stay in this browser only."
   };
+  const accountRegistryState = {
+    status: "checking",
+    message: "Checking account registry...",
+    accounts: [],
+    meta: null,
+    session: null,
+    storageConfigured: false,
+    lastChecked: ""
+  };
+  const overviewStatusState = {
+    status: "checking",
+    message: "Checking operational status...",
+    payload: null,
+    lastChecked: ""
+  };
 
   function escapeHtml(value) {
     return String(value)
@@ -408,6 +423,14 @@
     return `/api/admin/cms/${collection}`;
   }
 
+  function accountsEndpoint(path = "") {
+    return `/api/admin/accounts${path ? `/${path}` : ""}`;
+  }
+
+  function adminStatusEndpoint() {
+    return "/api/admin/status";
+  }
+
   function getCmsConfig(collection) {
     if (collection === "projects") {
       return {
@@ -461,6 +484,36 @@
     if (storage.status === "connected") return "success";
     if (storage.status === "checking" || storage.status === "saving") return "warn";
     return "warn";
+  }
+
+  function accountRegistryTone() {
+    if (accountRegistryState.status === "connected") return "success";
+    if (accountRegistryState.status === "checking" || accountRegistryState.status === "saving") return "warn";
+    return "warn";
+  }
+
+  function accountRegistryStatusText() {
+    if (accountRegistryState.status === "connected") return "Account registry: connected";
+    if (accountRegistryState.status === "checking") return "Account registry: checking...";
+    if (accountRegistryState.status === "saving") return "Account registry: saving...";
+    if (accountRegistryState.status === "not-configured") return "Account registry: storage not configured";
+    return "Account registry: unavailable";
+  }
+
+  function currentAdminSession() {
+    return window.DC_ADMIN_AUTH?.session || accountRegistryState.session || overviewStatusState.payload?.session || null;
+  }
+
+  function canManageAccounts() {
+    const session = currentAdminSession();
+    return Boolean(session?.is_master_admin);
+  }
+
+  function formatOperationalTimestamp(value) {
+    if (!value) return "Not recorded";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
   }
 
   function cmsStatusMarkup(collection, actionName) {
@@ -603,6 +656,103 @@
 
   function hydrateCmsCollections() {
     ["projects", "media", "alerts"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
+  }
+
+  async function hydrateAccountRegistry(renderAfter = false) {
+    accountRegistryState.status = "checking";
+    accountRegistryState.message = "Checking account registry...";
+    if (renderAfter && (activePageIs("accounts") || activePageIs("settings"))) render();
+    try {
+      const response = await fetch(accountsEndpoint(), { credentials: "include" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        const error = payload?.error || `http_${response.status}`;
+        Object.assign(accountRegistryState, {
+          status: error === "storage_not_configured" ? "not-configured" : "fallback",
+          message:
+            error === "storage_not_configured"
+              ? "DC_ADMIN_KV is not configured. Env master admins remain visible; local scaffold rows are non-authoritative."
+              : "Account registry API is unavailable or the session is not authorized.",
+          lastChecked: new Date().toISOString()
+        });
+      } else {
+        Object.assign(accountRegistryState, {
+          status: payload.storageConfigured ? "connected" : "not-configured",
+          message: payload.storageConfigured
+            ? "Loaded durable account registry from DC_ADMIN_KV."
+            : "DC_ADMIN_KV is not configured. Env master admins are synthesized only.",
+          accounts: Array.isArray(payload.accounts) ? payload.accounts : [],
+          meta: payload.meta || null,
+          session: payload.session || currentAdminSession(),
+          storageConfigured: Boolean(payload.storageConfigured),
+          lastChecked: new Date().toISOString()
+        });
+      }
+    } catch {
+      Object.assign(accountRegistryState, {
+        status: "fallback",
+        message: "Pages Functions are unavailable here. Local scaffold rows are shown only as non-authoritative reference.",
+        lastChecked: new Date().toISOString()
+      });
+    }
+    if (renderAfter && (activePageIs("accounts") || activePageIs("settings"))) render();
+  }
+
+  async function hydrateOverviewStatus(renderAfter = false) {
+    overviewStatusState.status = "checking";
+    overviewStatusState.message = "Checking operational status...";
+    if (renderAfter && activePageIs("overview")) renderOverview();
+    try {
+      const response = await fetch(adminStatusEndpoint(), { credentials: "include" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        overviewStatusState.status = "fallback";
+        overviewStatusState.message = payload?.error || `Status API unavailable (${response.status}).`;
+      } else {
+        overviewStatusState.status = "connected";
+        overviewStatusState.message = "Operational status loaded from admin APIs.";
+        overviewStatusState.payload = payload;
+        overviewStatusState.lastChecked = payload.checkedAt || new Date().toISOString();
+      }
+    } catch {
+      overviewStatusState.status = "fallback";
+      overviewStatusState.message = "Pages Functions are unavailable here. Overview cannot claim live operational status.";
+    }
+    if (renderAfter && activePageIs("overview")) renderOverview();
+  }
+
+  async function mutateAccountRegistry(action, id, body = {}) {
+    if (!id) return;
+    accountRegistryState.status = "saving";
+    accountRegistryState.message = `Applying account ${action}...`;
+    if (activePageIs("accounts") || activePageIs("settings")) render();
+    try {
+      const response = await fetch(accountsEndpoint(action), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, ...body })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        accountRegistryState.status = "fallback";
+        accountRegistryState.message = `Account action failed: ${payload?.error || response.status}`;
+      } else {
+        Object.assign(accountRegistryState, {
+          status: payload.storageConfigured ? "connected" : "not-configured",
+          message: `Account ${action} saved to durable registry.`,
+          accounts: Array.isArray(payload.accounts) ? payload.accounts : accountRegistryState.accounts,
+          meta: payload.meta || accountRegistryState.meta,
+          session: payload.session || accountRegistryState.session,
+          storageConfigured: Boolean(payload.storageConfigured),
+          lastChecked: new Date().toISOString()
+        });
+      }
+    } catch {
+      accountRegistryState.status = "fallback";
+      accountRegistryState.message = "Account action failed because Pages Functions are unavailable.";
+    }
+    if (activePageIs("accounts") || activePageIs("settings")) render();
   }
 
   async function hydrateProjectBaseline(renderAfter = false) {
@@ -943,27 +1093,120 @@
       .join("");
   }
 
+  function storageStatusCard(label, status, detail, tone = "warn") {
+    return `
+      <article class="card metric-card">
+        ${badge(label, tone)}
+        <strong>${escapeHtml(status)}</strong>
+        <p>${escapeHtml(detail)}</p>
+      </article>
+    `;
+  }
+
+  function boolStatus(value) {
+    return value ? "Configured" : "Missing";
+  }
+
+  function boolTone(value) {
+    return value ? "success" : "warn";
+  }
+
+  function accountIdentity(account) {
+    return account.email || account.username || account.providerSubject || account.id || "Unknown account";
+  }
+
+  function accountActions(account) {
+    if (account.locked || account.source === "env_master") return badge("Locked", "success");
+    if (!canManageAccounts()) return badge("View only");
+    const buttons = [];
+    if (account.accountType === "admin") {
+      buttons.push(`<button class="button button-secondary" type="button" data-account-action="demote" data-account-id="${escapeHtml(account.id)}">Demote</button>`);
+    } else {
+      buttons.push(`<button class="button" type="button" data-account-action="promote" data-account-id="${escapeHtml(account.id)}">Promote</button>`);
+    }
+    if (account.status === "disabled") {
+      buttons.push(`<button class="button button-secondary" type="button" data-account-action="enable" data-account-id="${escapeHtml(account.id)}">Enable</button>`);
+    } else {
+      buttons.push(`<button class="button button-danger" type="button" data-account-action="disable" data-account-id="${escapeHtml(account.id)}">Disable</button>`);
+    }
+    buttons.push(`<button class="button button-secondary" type="button" data-account-action="notes" data-account-id="${escapeHtml(account.id)}">Notes</button>`);
+    return `<div class="row-actions">${buttons.join("")}</div>`;
+  }
+
+  function accountRows(accounts) {
+    if (!accounts.length) {
+      return `<tr><td colspan="9"><div class="empty-state">No durable account records are available yet.</div></td></tr>`;
+    }
+    return accounts
+      .map(
+        (account) => `
+          <tr>
+            <td><strong>${escapeHtml(account.displayName || accountIdentity(account))}</strong><br><span>${escapeHtml(accountIdentity(account))}</span></td>
+            <td>${escapeHtml(account.provider || "unknown")}</td>
+            <td>${escapeHtml(account.providerSubject || "Not recorded")}</td>
+            <td>${escapeHtml(account.accountType || "regular")}</td>
+            <td>${escapeHtml(account.adminLevel || "none")}</td>
+            <td>${escapeHtml(account.status || "active")}</td>
+            <td>${escapeHtml(account.source || "unknown")}${account.locked ? "<br><span>Protected</span>" : ""}</td>
+            <td>${escapeHtml(formatOperationalTimestamp(account.lastLoginAt || account.lastSeenAt || account.firstSeenAt))}</td>
+            <td>${accountActions(account)}</td>
+          </tr>
+        `
+      )
+      .join("");
+  }
+
+  function registryFallbackReference() {
+    if (accountRegistryState.status !== "fallback" && accountRegistryState.status !== "not-configured") return "";
+    const rows = accountAccessState.accounts.length
+      ? accountAccessState.accounts
+          .map(
+            (account) => `
+              <article class="account-access-row">
+                <div class="account-access-meta">
+                  <strong>${escapeHtml(account.identifier || "(missing identifier)")}</strong>
+                  <span class="muted">${escapeHtml(account.provider)} · ${escapeHtml(account.accountType)} · Non-authoritative local reference</span>
+                  ${account.notes ? `<span>${escapeHtml(account.notes)}</span>` : ""}
+                </div>
+                ${badge("Local only", "warn")}
+              </article>
+            `
+          )
+          .join("")
+      : `<div class="empty-state">No local account reference rows are stored in this browser.</div>`;
+    return `
+      ${panel(
+        "Local reference fallback",
+        "These rows are old browser-local scaffold data. They are not production account authority and cannot promote OAuth users.",
+        `<div class="account-access-list">${rows}</div>`
+      )}
+    `;
+  }
+
   function renderOverview() {
+    const status = overviewStatusState.payload;
+    const session = status?.session || currentAdminSession() || {};
+    const cms = status?.cms || {};
     routeTitle.textContent = "Overview";
     app.innerHTML = `
       <div class="page">
         ${pageHeader(
           "Admin command overview",
           "Overview",
-          "Operational posture for the DanielClancy.net admin foundation. This page summarizes scaffold readiness without claiming live metrics or backend authority.",
-          badge(data.generatedLabel, "warn")
+          "Operational posture from signed admin APIs. Counts are shown only where a configured source reports them.",
+          badge(overviewStatusState.status === "connected" ? "API status" : "Status pending", overviewStatusState.status === "connected" ? "success" : "warn")
         )}
 
         <section class="panel">
           <div class="panel-body grid hero-grid">
             <div class="card">
-              <span class="section-kicker">Foundation milestone</span>
-              <h2>Professional portfolio administration shell</h2>
+              <span class="section-kicker">Signed-in admin</span>
+              <h2>${escapeHtml(session.display_name || session.email || "Session not resolved")}</h2>
               <p class="muted">
-                This first dashboard pass establishes the shared layout, route structure, status framing, and review-ready content areas for a clean employer-facing portfolio ecosystem.
+                ${escapeHtml(session.email || session.username || "No signed account details available")} · ${escapeHtml(session.provider || "unknown provider")} · ${escapeHtml(session.roleSource || "pending role source")}
               </p>
               <div class="toolbar">
-                <a class="button" href="#/analytics">Review Analytics</a>
+                <button class="button" type="button" data-account-action="refresh-overview">Refresh status</button>
                 <a class="button button-secondary" href="#/accounts">Review Accounts</a>
                 <a class="button button-secondary" href="#/settings">Open Settings</a>
               </div>
@@ -971,31 +1214,64 @@
             <div class="card">
               <h3>Authority boundary</h3>
               <p class="muted">
-                The dashboard does not own canonical portfolio content, real analytics, account state, auth sessions, or deployment state yet.
+                Accounts and CMS state resolve through Pages Functions and DC_ADMIN_KV where configured. Public-site publishing and alert posting remain separate future work.
               </p>
-              ${badge("No live API", "warn")}
+              ${badge(overviewStatusState.message, overviewStatusState.status === "connected" ? "success" : "warn")}
             </div>
           </div>
         </section>
 
         ${panel(
-          "Status summary",
-          "Scaffold-only status cards for the requested admin foundation.",
-          metricCards(data.overview.summary)
+          "Operational status",
+          `Last checked: ${escapeHtml(formatOperationalTimestamp(status?.checkedAt || overviewStatusState.lastChecked))}`,
+          `<div class="grid grid-4">
+            ${storageStatusCard(
+              "Account registry",
+              status?.accounts?.configured ? `${status.accounts.count} account(s)` : "Storage missing",
+              status?.accounts?.configured ? `Key ${status.accounts.key}; ${status.accounts.envMasterCount} env master row(s).` : "DC_ADMIN_KV is required for durable OAuth/admin roles.",
+              status?.accounts?.configured ? "success" : "warn"
+            )}
+            ${storageStatusCard(
+              "Projects CMS",
+              cms.projects?.configured ? `${cms.projects.count} KV row(s)` : "Storage missing",
+              cms.projects?.configured ? `Key ${cms.projects.key}; public baseline count shown separately.` : "Falls back to protected public baseline/local browser data when unavailable.",
+              cms.projects?.configured ? "success" : "warn"
+            )}
+            ${storageStatusCard(
+              "Media CMS",
+              cms.media?.configured ? `${cms.media.count} KV row(s)` : "Storage missing",
+              cms.media?.configured ? `Key ${cms.media.key}` : "No live media publishing is claimed.",
+              cms.media?.configured ? "success" : "warn"
+            )}
+            ${storageStatusCard(
+              "Alerts CMS",
+              cms.alerts?.configured ? `${cms.alerts.count} KV row(s)` : "Storage missing",
+              cms.alerts?.configured ? `Key ${cms.alerts.key}` : "Alert posting remains future bridge work.",
+              cms.alerts?.configured ? "success" : "warn"
+            )}
+          </div>`
         )}
 
         ${panel(
-          "Portfolio ecosystem readiness",
-          "Visible workstream posture without inventing shipped CMS or login capabilities.",
-          simpleCards(data.overview.readiness)
+          "Configuration readiness",
+          "Secret values are never displayed.",
+          `<div class="grid grid-4">
+            ${storageStatusCard("Public baseline", status?.publicProjectsBaseline?.count ? `${status.publicProjectsBaseline.count} project(s)` : "Unavailable", status?.publicProjectsBaseline?.source || "No baseline response yet", status?.publicProjectsBaseline?.count ? "success" : "warn")}
+            ${storageStatusCard("Turnstile", boolStatus(status?.turnstile?.siteKeyConfigured && status?.turnstile?.secretConfigured), `Site key: ${boolStatus(status?.turnstile?.siteKeyConfigured)}; secret: ${boolStatus(status?.turnstile?.secretConfigured)}`, boolTone(status?.turnstile?.siteKeyConfigured && status?.turnstile?.secretConfigured))}
+            ${storageStatusCard("OAuth providers", `${["github", "google", "twitter"].filter((name) => status?.oauth?.[`${name}Configured`]).length}/3 configured`, "GitHub, Google, and Twitter/X report configured status only.", boolTone(status?.oauth?.githubConfigured || status?.oauth?.googleConfigured || status?.oauth?.twitterConfigured))}
+            ${storageStatusCard("Alert ingest secret", boolStatus(status?.alerts?.ingestSecretConfigured), "DANIELCLANCY_ALERT_INGEST_SECRET is checked only as present/missing.", boolTone(status?.alerts?.ingestSecretConfigured))}
+          </div>`
         )}
 
         ${panel(
           "Implementation boundaries",
-          "Current constraints that should remain explicit until later milestones wire real authority.",
-          `<div class="grid grid-2">${data.overview.posture
-            .map((item) => `<article class="card">${badge("Boundary")}<p>${escapeHtml(item)}</p></article>`)
-            .join("")}</div>`
+          "Current constraints that should remain explicit.",
+          `<div class="grid grid-2">
+            <article class="card">${badge("Boundary")}<p>OAuth users register as regular accounts and are not auto-promoted to admin.</p></article>
+            <article class="card">${badge("Boundary")}<p>Env-backed manual master admins remain the protected root authority.</p></article>
+            <article class="card">${badge("Boundary")}<p>Projects, Media, and Alerts keep their existing KV CMS behavior.</p></article>
+            <article class="card">${badge("Boundary")}<p>Public publishing/hydration and alert event posting are not claimed complete.</p></article>
+          </div>`
         )}
       </div>
     `;
@@ -1103,38 +1379,48 @@
 
   function renderAccounts() {
     routeTitle.textContent = "Accounts";
+    const accounts = accountRegistryState.accounts;
     app.innerHTML = `
       <div class="page">
         ${pageHeader(
           "Admin workspace",
           "Accounts",
-          "Reference-style account list using scaffold identities only. Authentication now uses the admin session gate; these rows remain local planning data.",
-          badge("Scaffold accounts", "warn")
+          "Durable account registry backed by DC_ADMIN_KV when configured. Env-backed master admins are synthesized and locked.",
+          badge(accountRegistryStatusText(), accountRegistryTone())
         )}
 
         ${panel(
-          "Account access summary",
-          "Placeholder rows for future admin account review and detail routing.",
+          "Registry status",
+          accountRegistryState.message,
+          `<div class="cms-storage-status">
+            ${badge(accountRegistryStatusText(), accountRegistryTone())}
+            <span>${escapeHtml(accountRegistryState.meta?.key || "accounts:registry")} · Last checked: ${escapeHtml(formatOperationalTimestamp(accountRegistryState.lastChecked))}</span>
+            <button class="button button-secondary" type="button" data-account-action="refresh">Refresh accounts</button>
+          </div>`
+        )}
+
+        ${panel(
+          "Account registry",
+          canManageAccounts()
+            ? "Master admins can promote, demote, enable, disable, and edit notes on KV-backed accounts. Locked env master rows cannot be changed."
+            : "Signed-in admins can view accounts. Role changes require an env-backed master admin session.",
           `<div class="table-wrap">
-            <table class="table">
+            <table class="table accounts-table">
               <thead>
-                <tr><th>Account</th><th>Type</th><th>Provider</th><th>Access</th><th>Status</th><th>Detail</th></tr>
+                <tr>
+                  <th>Account</th>
+                  <th>Provider</th>
+                  <th>Provider subject</th>
+                  <th>Type</th>
+                  <th>Admin level</th>
+                  <th>Status</th>
+                  <th>Source</th>
+                  <th>Last login</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody>
-                ${data.accounts
-                  .map(
-                    (account) => `
-                      <tr>
-                        <td><strong>${escapeHtml(account.name)}</strong><br><span>${escapeHtml(account.email)}</span></td>
-                        <td>${escapeHtml(account.accountType || "regular")}</td>
-                        <td>${escapeHtml(account.provider || "scaffold")}</td>
-                        <td>${escapeHtml(account.access)}</td>
-                        <td>${escapeHtml(account.status)}</td>
-                        <td><a class="row-link" href="#/accounts/${encodeURIComponent(account.id)}">Open detail</a></td>
-                      </tr>
-                    `
-                  )
-                  .join("")}
+                ${accountRows(accounts)}
               </tbody>
             </table>
           </div>`
@@ -1142,9 +1428,15 @@
 
         ${panel(
           "Access boundary",
-          "Local scaffold rows are not production account authority.",
-          `<div class="empty-state">Manual master admin authentication is server-side via Cloudflare env vars. Account promotion/demotion here remains a Settings scaffold until durable storage exists.</div>`
+          "Production account authority rules.",
+          descriptionRows([
+            ["Root authority", "Manual env-backed master admins remain protected and locked"],
+            ["OAuth default", "OAuth users become regular known accounts only and are not auto-promoted"],
+            ["Durable store", "DC_ADMIN_KV key accounts:registry stores role/status/notes only"],
+            ["Secret safety", "No passwords, OAuth access tokens, or OAuth refresh tokens are stored"]
+          ])
         )}
+        ${registryFallbackReference()}
       </div>
     `;
   }
@@ -2166,64 +2458,43 @@
   }
 
   function renderAccountAccessScaffold() {
-    const rows = accountAccessState.accounts.length
-      ? accountAccessState.accounts
+    const session = currentAdminSession() || {};
+    const registryRows = accountRegistryState.accounts.length
+      ? accountRegistryState.accounts
           .map(
             (account) => `
               <article class="account-access-row">
                 <div class="account-access-meta">
-                  <strong>${escapeHtml(account.identifier || "(missing identifier)")}</strong>
-                  <span class="muted">${escapeHtml(account.provider)} · ${escapeHtml(account.accountType)} · Local scaffold only</span>
-                  ${account.notes ? `<span>${escapeHtml(account.notes)}</span>` : ""}
+                  <strong>${escapeHtml(account.displayName || accountIdentity(account))}</strong>
+                  <span class="muted">${escapeHtml(accountIdentity(account))} · ${escapeHtml(account.provider)} · ${escapeHtml(account.accountType)} / ${escapeHtml(account.adminLevel || "none")}</span>
+                  <span>${escapeHtml(account.source || "unknown")} · ${escapeHtml(account.status || "active")}${account.locked ? " · locked" : ""}</span>
                 </div>
-                <button class="button button-secondary" type="button" data-account-access-action="remove" data-account-access-id="${escapeHtml(account.id)}">
-                  Remove local row
-                </button>
+                ${account.locked ? badge("Protected", "success") : badge("KV managed", account.accountType === "admin" ? "success" : "warn")}
               </article>
             `
           )
           .join("")
-      : `<div class="empty-state">No OAuth/public account rows have been added to local scaffold storage yet.</div>`;
+      : `<div class="empty-state">No account registry rows are loaded yet.</div>`;
 
     return `
-      <div class="account-access-list">
-        ${renderMasterAdminRows()}
+      <div class="cms-storage-status">
+        ${badge(accountRegistryStatusText(), accountRegistryTone())}
+        <span>${escapeHtml(accountRegistryState.message)}</span>
+        <button class="button button-secondary" type="button" data-account-action="refresh">Refresh accounts</button>
       </div>
       <hr class="panel-divider" />
+      ${descriptionRows([
+        ["Current signed-in role", `${session.account_type || "unknown"} / ${session.admin_level || "none"} from ${session.roleSource || "pending"}`],
+        ["Manual master admins", "Env-backed, root-authoritative, locked, and not removable or downgradeable in the UI"],
+        ["OAuth users", "Registered as regular accounts unless a master admin promotes them"],
+        ["Durable account store", "DC_ADMIN_KV key accounts:registry stores role/status/notes; no passwords or OAuth tokens"],
+        ["Turnstile", "Auth gate login/signup and OAuth start flows remain Turnstile-protected"],
+        ["Alert ingest secret", "DANIELCLANCY_ALERT_INGEST_SECRET is a shared generated secret; Settings never displays the value"]
+      ])}
+      <hr class="panel-divider" />
       <div class="account-access-list">
-        ${rows}
+        ${registryRows}
       </div>
-      <form class="scaffold-account-form" data-account-access-form>
-        <div class="form-grid">
-          <label>
-            <span>Provider</span>
-            <select name="provider">
-              <option value="github">GitHub</option>
-              <option value="google">Google</option>
-              <option value="twitter">Twitter/X</option>
-              <option value="password">Password</option>
-            </select>
-          </label>
-          <label>
-            <span>Account type</span>
-            <select name="accountType">
-              <option value="regular">Regular</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
-        </div>
-        <label>
-          <span>Identifier / email / username</span>
-          <input name="identifier" type="text" placeholder="Verified provider subject, email, or username" required />
-        </label>
-        <label>
-          <span>Notes</span>
-          <textarea name="notes" placeholder="Why this account should be regular/admin later"></textarea>
-        </label>
-        <button class="button" type="submit">Save local scaffold row</button>
-      </form>
-      <p class="auth-note">Saving here does not promote a live OAuth/public account. It only records a local planning row until durable account-role storage exists.</p>
-      <p class="auth-message">${escapeHtml(accountAccessState.message)}</p>
     `;
   }
 
@@ -2234,20 +2505,20 @@
         ${pageHeader(
           "Control posture",
           "Settings",
-          "Settings layout scaffold for admin profile/display, site preferences, deployment notes, and access/auth readiness. Destructive controls are intentionally omitted.",
-          badge("Safe scaffold", "warn")
+          "Operational settings posture for auth, account registry, CMS storage, and environment readiness. Secret values are never displayed.",
+          badge("Operational settings", "success")
         )}
 
         <section class="panel">
           <div class="panel-body grid hero-grid">
             <div class="card">
               <span class="section-kicker">System posture</span>
-              <h2>Change boundaries stay visible</h2>
-              <p class="muted">This settings surface documents what can be reviewed now and what still requires a real admin contract before it can be changed.</p>
+              <h2>Account authority is server-side</h2>
+              <p class="muted">Manual master admins are env-backed and locked. OAuth users remain regular until a master admin promotes them through the durable registry.</p>
             </div>
             <div class="card">
-              <h3>Deferred integrations</h3>
-              <p class="muted">Projects, Media, and Alerts use admin CMS storage when the Cloudflare KV binding is configured. OAuth/public role persistence remains future durable storage work.</p>
+              <h3>Storage and security</h3>
+              <p class="muted">DC_ADMIN_KV stores CMS rows and account roles. Turnstile protects auth actions. Secrets stay server-only.</p>
             </div>
           </div>
         </section>
@@ -2259,13 +2530,13 @@
             ["CMS API", "Projects, Media, and Alerts call /api/admin/cms/<collection> when an admin session is available"],
             ["KV binding", "DC_ADMIN_KV is required for production persistence"],
             ["Fallback", "localStorage fallback is browser-local only and remains available for static/dev views"],
-            ["Account roles", "Durable account-role storage remains future work; OAuth users are not auto-promoted"]
+            ["Account roles", "DC_ADMIN_KV key accounts:registry stores durable account roles; OAuth users are not auto-promoted"]
           ])
         )}
 
         ${panel(
           "Account access",
-          "Manual master admins are env-backed and production-authoritative. OAuth/public account type rows below are browser-local scaffold data only until durable account-role storage exists.",
+          "Manual master admins are env-backed and production-authoritative. OAuth/public accounts are regular until promoted by a master admin.",
           renderAccountAccessScaffold()
         )}
 
@@ -2295,10 +2566,11 @@
           descriptionRows([
             ["Runtime requirement", "No request-time Node runtime"],
             ["Secrets", "Manual admin passwords stay in Cloudflare Pages Function env vars only"],
-            ["Cloudflare Pages", "Functions auth and CMS endpoints added"],
+            ["Cloudflare Pages", "Functions auth, account registry, status, and CMS endpoints added"],
             ["Admin CMS storage", "DC_ADMIN_KV required for production Projects, Media, and Alerts persistence"],
-            ["OAuth redirect URIs", "Provider redirects available; role promotion still future durable storage"],
-            ["DNS / live deployment", "Not completed by this task"]
+            ["Account registry", "accounts:registry is the durable KV key for known OAuth accounts and role/status notes"],
+            ["Alert ingest secret", "Generate DANIELCLANCY_ALERT_INGEST_SECRET with node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\" and reuse the same value only in server/runtime sender environments"],
+            ["DNS / live deployment", "Hosted Cloudflare bindings still need live environment confirmation"]
           ])
         )}
       </div>
@@ -2582,17 +2854,41 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action]");
+    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const mediaAction = target.getAttribute("data-media-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
+    const accountAction = target.getAttribute("data-account-action");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
     const alertId = target.getAttribute("data-alert-id");
     const accountAccessId = target.getAttribute("data-account-access-id");
+    const accountId = target.getAttribute("data-account-id");
+
+    if (accountAction === "refresh") {
+      hydrateAccountRegistry(true);
+      return;
+    }
+
+    if (accountAction === "refresh-overview") {
+      hydrateOverviewStatus(true);
+      return;
+    }
+
+    if (["promote", "demote", "disable", "enable"].includes(accountAction)) {
+      mutateAccountRegistry(accountAction, accountId);
+      return;
+    }
+
+    if (accountAction === "notes") {
+      const account = accountRegistryState.accounts.find((item) => item.id === accountId);
+      const notes = window.prompt("Update account notes. Do not enter secrets.", account?.notes || "");
+      if (notes !== null) mutateAccountRegistry("update", accountId, { notes });
+      return;
+    }
 
     if (accountAccessAction === "remove") {
       removeAccountAccess(accountAccessId);
@@ -3399,6 +3695,8 @@
   document.addEventListener("dc-admin-auth-status", (event) => {
     if (event.detail?.isAdmin) {
       hydrateCmsCollections();
+      hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
+      hydrateOverviewStatus(activePageIs("overview"));
     }
   });
 
@@ -3409,4 +3707,6 @@
   }
   hydrateProjectBaseline(activePageIs("projects"));
   hydrateCmsCollections();
+  hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
+  hydrateOverviewStatus(activePageIs("overview"));
 })();

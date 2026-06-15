@@ -1,3 +1,5 @@
+import { requireAdmin as resolveAdminSession } from "../../../_shared/admin-accounts.js";
+
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const JSON_HEADERS = {
@@ -145,14 +147,11 @@ function corsHeaders(request, env) {
 }
 
 async function requireAdmin(request, env) {
-  const session = sessionResponse(await readSession(request, env));
-  if (!session.authenticated) {
-    return { session, response: json({ ok: false, error: "unauthenticated" }, { status: 401 }) };
+  const admin = await resolveAdminSession(request, env);
+  if (admin.error) {
+    return { session: admin.session, response: json({ ok: false, error: admin.error }, { status: admin.status }) };
   }
-  if (!session.is_admin) {
-    return { session, response: json({ ok: false, error: "admin_required" }, { status: 403 }) };
-  }
-  return { session, response: null };
+  return { session: admin.session, response: null };
 }
 
 function collectionName(params) {

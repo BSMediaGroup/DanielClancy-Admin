@@ -1,4 +1,5 @@
 import { verifyTurnstileToken } from "../../_shared/turnstile.js";
+import { registerOAuthAccount, resolveSession } from "../../_shared/admin-accounts.js";
 
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -176,7 +177,7 @@ function corsHeaders(request, env) {
   return {
     "access-control-allow-origin": allowedOrigin(request, env),
     "access-control-allow-credentials": "true",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
     "access-control-allow-headers": "content-type"
   };
 }
@@ -185,8 +186,11 @@ function sessionResponse(session) {
   if (!session) {
     return {
       authenticated: false,
-      account_type: "anonymous",
-      is_admin: false
+    account_type: "anonymous",
+    admin_level: "none",
+    is_admin: false,
+    is_master_admin: false,
+    roleSource: "none"
     };
   }
   const accountType = String(session.account_type || "regular").toLowerCase();
@@ -194,9 +198,12 @@ function sessionResponse(session) {
     authenticated: true,
     email: session.email || "",
     provider: session.provider || "",
+    username: session.username || "",
     account_type: accountType,
-    admin_level: session.admin_level || null,
+    admin_level: session.admin_level || "none",
     is_admin: accountType === "admin",
+    is_master_admin: session.admin_level === "master",
+    roleSource: session.roleSource || "session",
     display_name: session.display_name || session.email || "DanielClancy account"
   };
 }
@@ -323,14 +330,165 @@ async function handleOAuthStart(request, env, provider) {
   return Response.redirect(endpoint.toString(), 302);
 }
 
-function handleOAuthCallback(request, env, provider) {
+async function exchangeOAuthToken(request, env, provider, code) {
+  const config = OAUTH_PROVIDERS[provider];
+  const redirectUri = buildCallbackUrl(request, env, provider);
+  if (provider === "github") {
+    const response = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        client_id: env[config.clientId],
+        client_secret: env[config.clientSecret],
+        redirect_uri: redirectUri,
+        code
+      })
+    });
+    return response.json();
+  }
+  if (provider === "google") {
+    const body = new URLSearchParams({
+      client_id: env[config.clientId],
+      client_secret: env[config.clientSecret],
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+      code
+    });
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body
+    });
+    return response.json();
+  }
+  const body = new URLSearchParams({
+    client_id: env[config.clientId],
+    redirect_uri: redirectUri,
+    grant_type: "authorization_code",
+    code,
+    code_verifier: "danielclancy-admin-oauth-scaffold"
+  });
+  const credentials = btoa(`${env[config.clientId]}:${env[config.clientSecret]}`);
+  const response = await fetch("https://api.twitter.com/2/oauth2/token", {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${credentials}`,
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+  return response.json();
+}
+
+async function fetchOAuthProfile(provider, tokenPayload) {
+  const accessToken = tokenPayload?.access_token;
+  if (!accessToken) return null;
+  if (provider === "github") {
+    const [userResponse, emailsResponse] = await Promise.all([
+      fetch("https://api.github.com/user", {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          accept: "application/vnd.github+json",
+          "user-agent": "DanielClancy-Admin"
+        }
+      }),
+      fetch("https://api.github.com/user/emails", {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          accept: "application/vnd.github+json",
+          "user-agent": "DanielClancy-Admin"
+        }
+      })
+    ]);
+    const user = await userResponse.json();
+    const emails = emailsResponse.ok ? await emailsResponse.json() : [];
+    const primary = Array.isArray(emails) ? emails.find((item) => item.primary && item.verified) || emails.find((item) => item.verified) : null;
+    return {
+      provider,
+      providerSubject: user?.id ? String(user.id) : "",
+      email: user?.email || primary?.email || "",
+      username: user?.login || "",
+      displayName: user?.name || user?.login || "",
+      avatarUrl: user?.avatar_url || ""
+    };
+  }
+  if (provider === "google") {
+    const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+      headers: { authorization: `Bearer ${accessToken}` }
+    });
+    const user = await response.json();
+    return {
+      provider,
+      providerSubject: user?.sub || "",
+      email: user?.email || "",
+      username: "",
+      displayName: user?.name || user?.email || "",
+      avatarUrl: user?.picture || ""
+    };
+  }
+  const response = await fetch("https://api.twitter.com/2/users/me?user.fields=profile_image_url", {
+    headers: { authorization: `Bearer ${accessToken}` }
+  });
+  const payload = await response.json();
+  const user = payload?.data || {};
+  return {
+    provider,
+    providerSubject: user?.id || "",
+    email: "",
+    username: user?.username || "",
+    displayName: user?.name || user?.username || "",
+    avatarUrl: user?.profile_image_url || ""
+  };
+}
+
+async function handleOAuthCallback(request, env, provider) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
   const adminOrigin = (env.DC_ADMIN_SITE_ORIGIN || "https://admin.danielclancy.net").replace(/\/+$/, "");
   const redirect = new URL(adminOrigin);
-  redirect.hash = error || !code ? "/login?oauth=not-ready" : `/login?oauth=${provider}-callback-received`;
-  return Response.redirect(redirect.toString(), 302);
+  if (error || !code) {
+    redirect.hash = "/login?oauth=not-ready";
+    return Response.redirect(redirect.toString(), 302);
+  }
+
+  try {
+    const tokenPayload = await exchangeOAuthToken(request, env, provider, code);
+    const profile = await fetchOAuthProfile(provider, tokenPayload);
+    if (!profile?.providerSubject) {
+      redirect.hash = `/login?oauth=${provider}-profile-unavailable`;
+      return Response.redirect(redirect.toString(), 302);
+    }
+    const registration = await registerOAuthAccount(env, profile);
+    const account = registration.account || {
+      provider,
+      providerSubject: profile.providerSubject,
+      email: profile.email || "",
+      username: profile.username || "",
+      displayName: profile.displayName || profile.username || profile.email || `${provider} account`,
+      accountType: "regular",
+      adminLevel: "none"
+    };
+    const cookie = await createSessionCookie(request, env, {
+      provider,
+      providerSubject: profile.providerSubject,
+      email: account.email || profile.email || "",
+      username: account.username || profile.username || "",
+      display_name: account.displayName || profile.displayName || "",
+      account_type: "regular",
+      admin_level: "none"
+    });
+    redirect.hash = registration.ok
+      ? `/login?oauth=${provider}-registered`
+      : `/login?oauth=${provider}-${registration.error || "storage_not_configured"}`;
+    return Response.redirect(redirect.toString(), 302, { headers: { "set-cookie": cookie } });
+  } catch {
+    redirect.hash = `/login?oauth=${provider}-callback-failed`;
+    return Response.redirect(redirect.toString(), 302);
+  }
 }
 
 export async function onRequest(context) {
@@ -342,7 +500,7 @@ export async function onRequest(context) {
   let response;
   try {
     if (path === "session" || path === "") {
-      response = json({ ok: true, session: sessionResponse(await readSession(request, env)) });
+      response = json({ ok: true, session: await resolveSession(request, env) });
     } else if (path === "login") {
       response = await handleLogin(request, env);
     } else if (path === "signup") {
@@ -356,7 +514,7 @@ export async function onRequest(context) {
       } else if (match[2] === "start") {
         response = await handleOAuthStart(request, env, match[1]);
       } else {
-        response = handleOAuthCallback(request, env, match[1]);
+        response = await handleOAuthCallback(request, env, match[1]);
       }
     }
   } catch (error) {

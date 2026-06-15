@@ -922,6 +922,10 @@ a {
   min-width: 1480px;
 }
 
+.accounts-table {
+  min-width: 1320px;
+}
+
 .project-table th:first-child,
 .project-table td:first-child {
   width: 44px;

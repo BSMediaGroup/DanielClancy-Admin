@@ -1,5 +1,62 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Operational Accounts, Settings, And Overview Hydration Milestone
+
+### Technical Notes
+
+- Added shared Pages Function account/session helpers for signed cookie reading, env-backed master admin synthesis, durable KV account registry access, OAuth account registration, and admin/master authorization checks.
+- `DC_ADMIN_KV` now backs the durable account role registry at key `accounts:registry`.
+- Env-backed manual master admins remain protected, locked, and synthesized at runtime from `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1` and `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`.
+- OAuth callback handling now registers known OAuth accounts as `regular` accounts by default when `DC_ADMIN_KV` is available.
+- OAuth users are still not auto-promoted to admin.
+- No passwords, OAuth access tokens, or OAuth refresh tokens are stored in KV.
+- Added `/api/admin/accounts` read and master-only promote/demote/enable/disable/update endpoints.
+- Added `/api/admin/status` so Overview can hydrate signed-in admin, account registry, CMS storage, public baseline, Turnstile, OAuth provider, and alert ingest-secret presence status without exposing secrets.
+- Updated CMS admin checks to resolve roles through env masters and the KV account registry instead of trusting only the raw session payload.
+- Accounts page can hydrate/manage roles through the admin API.
+- Settings account-access section now reflects the real registry status, current role source, Turnstile posture, and alert-secret handling.
+- Overview page now shows operational status from APIs.
+- Existing Projects/Media/Alerts KV CMS behavior remains intact.
+- Turnstile auth protection remains intact.
+- Manual email/password remains collapsed by default in the auth gate.
+- Public site publishing/hydration remains future work.
+- Alert posting from DanielClancy/Admin to StreamSuites remains future work unless implemented elsewhere.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- The admin dashboard now has the durable account foundation needed after OAuth login succeeds.
+- Master admins can review known OAuth accounts and promote/demote/enable/disable them from the Accounts UI.
+- Regular OAuth users remain blocked from the admin dashboard until explicitly promoted by a master admin.
+- Settings and Overview now report real operational readiness instead of presenting account access as a local-only scaffold.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/admin-accounts.js`
+- `functions/api/admin/accounts/[[path]].js`
+- `functions/api/admin/cms/[[collection]].js`
+- `functions/api/admin/status.js`
+- `functions/api/auth/[[path]].js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check` on changed frontend JS and Pages Function files.
+- Run `git diff --check`.
+- Package scripts are not available in this repo yet; validation is syntax/check focused unless served through a Pages-compatible runtime with `DC_ADMIN_KV`.
+- Cloudflare KV behavior still needs hosted/Pages-compatible smoke testing with real bindings.
+
+### Risks / Follow-Ups
+
+- Live OAuth profile/token exchange requires provider env vars and redirect URIs to be configured in Cloudflare Pages.
+- Live registry persistence requires `DC_ADMIN_KV` in the Pages environment.
+- Public-site publishing/hydration from admin CMS storage remains future work.
+- Alert event posting to the StreamSuites runtime remains future work.
+
 ## Alerts Runtime Contract Compatibility
 
 ### Technical Notes
