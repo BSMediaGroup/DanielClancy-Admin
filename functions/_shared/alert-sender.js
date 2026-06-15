@@ -24,6 +24,20 @@ function cleanTags(tags) {
     : [];
 }
 
+const RULE_DEFINITION_FIELDS = new Set([
+  "rules",
+  "alertRules",
+  "definitions",
+  "ruleDefinitions",
+  "replaceRules",
+  "fullManifest",
+]);
+
+function eventObjectOnly(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !RULE_DEFINITION_FIELDS.has(key)));
+}
+
 function configured(env) {
   const url = normalizeEnvValue(env?.DANIELCLANCY_ALERT_INGEST_URL, 1000);
   const secret = normalizeEnvValue(env?.DANIELCLANCY_ALERT_INGEST_SECRET, 500);
@@ -58,8 +72,8 @@ export async function postDanielClancyAlert(context, event) {
     request_method: context?.request?.method || "",
     client_ip: context?.request?.headers?.get("CF-Connecting-IP") || "",
     user_agent: cleanText(context?.request?.headers?.get("User-Agent"), 300),
-    payload: event.payload && typeof event.payload === "object" ? event.payload : {},
-    context: event.context && typeof event.context === "object" ? event.context : {},
+    payload: eventObjectOnly(event.payload),
+    context: eventObjectOnly(event.context),
   };
 
   try {

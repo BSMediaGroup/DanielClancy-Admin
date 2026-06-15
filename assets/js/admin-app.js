@@ -111,7 +111,7 @@
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local alert scaffold loaded. Rules are not live until a StreamSuites/runtime bridge and hosted env setup exist.",
+    message: "DanielClancy alert definitions are isolated to Admin storage. StreamSuites canonical alert rules remain authoritative.",
     storage: cmsStorageState.alerts
   };
   const accountAccessState = {
@@ -1891,7 +1891,7 @@
         ${pageHeader(
           "Alerts scaffold",
           "Alerts",
-          "Manage DanielClancy.net alert-rule drafts. Admin storage is used when available; local browser fallback remains available for static/dev views.",
+          "Manage DanielClancy.net alert-rule drafts stored only in DanielClancy-Admin storage. StreamSuites canonical alert rules are not edited here.",
           `<button class="button" type="button" data-alert-action="create">Create Alert Rule</button>
            <button class="button button-secondary" type="button" data-alert-action="copy-json">Copy JSON contract</button>
            <button class="button button-secondary" type="button" data-alert-action="import-json">Import JSON</button>
@@ -1913,7 +1913,7 @@
 
         ${panel(
           "Catchment contract",
-          "DanielClancy alert rules should be exported as a future runtime-owned contract, not treated as production delivery from this static page.",
+          "DanielClancy alert definitions stay local/Admin-KV only. Export is a manual non-destructive contract copy; live sender helpers post events only.",
           `<div class="grid grid-2">
             <article class="card">
               <span class="metric-label">Contract</span>
@@ -1923,7 +1923,7 @@
             <article class="card">
               <span class="metric-label">Delivery checkpoint</span>
               <h3>Not live</h3>
-              <p class="muted">Live delivery requires StreamSuites/runtime bridge/export/API work plus Cloudflare Pages, DNS, auth/session env vars, OAuth redirect URIs, and Pushover env/config where applicable.</p>
+              <p class="muted">Live delivery uses StreamSuites event ingest only. StreamSuites rule management remains authoritative in StreamSuites and StreamSuites-Dashboard.</p>
             </article>
           </div>`
         )}
@@ -1936,7 +1936,7 @@
 
         ${panel(
           "Alert rule table editor",
-          "Table-style rule editor for DanielClancy source surfaces and future StreamSuites desktop/Pushover routing.",
+          "Table-style local definition editor for DanielClancy source surfaces and future StreamSuites desktop/Pushover event routing.",
           renderAlertTable(visibleRules)
         )}
 
@@ -2077,7 +2077,7 @@
             <div>
               <span class="section-kicker">DanielClancy alert scaffold</span>
               <h2 id="alert-modal-title">${escapeHtml(title)}</h2>
-              <p>Save writes only to ${escapeHtml(ALERTS_STORAGE_KEY)}. Live desktop/Pushover delivery requires StreamSuites/runtime bridge and hosted env setup.</p>
+              <p>Save writes only to DanielClancy-Admin storage. StreamSuites canonical alert rules are managed outside this page.</p>
             </div>
             <button class="icon-close" type="button" aria-label="Close alert editor" data-alert-action="close-modal">x</button>
           </header>
@@ -2137,7 +2137,7 @@
             </div>
             <aside class="asset-status-box">
               <h3>Scaffold-only warning</h3>
-              <p>This editor does not send alerts, register desktop clients, write StreamSuites runtime rules, or contact Pushover. Export JSON for review and future bridge wiring.</p>
+              <p>This editor does not send rule definitions, register desktop clients, write StreamSuites runtime rules, or contact Pushover. Export JSON is manual and non-destructive.</p>
               <div class="chip-row">
                 ${badge("Project DanielClancy", "warn")}
                 ${badge("Namespace danielclancy", "warn")}
@@ -2444,7 +2444,7 @@
       storage_key: ALERTS_STORAGE_KEY,
       delivery_status: "scaffold_only",
       requirements: [
-        "StreamSuites/runtime export or API bridge must accept these rules before live delivery.",
+        "Manual non-destructive contract copy only. StreamSuites/runtime alert rules remain canonical and must be managed in StreamSuites.",
         "Cloudflare Pages project, admin.danielclancy.net DNS, auth/session env vars, and OAuth redirect URIs must be configured before live hosted testing.",
         "Pushover API/user env or routing config must be configured before DanielClancy Pushover delivery."
       ],
