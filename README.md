@@ -133,6 +133,22 @@ Implemented endpoint:
 
 The Overview page uses this endpoint to show signed-in admin identity, account registry status/count, Projects/Media/Alerts CMS storage status/counts, protected public project baseline count when the asset binding is available, Turnstile configured status, OAuth provider configured status, alert ingest secret presence, and last checked timestamp. It does not display secret values and does not invent analytics numbers or claim public publishing is complete.
 
+## Analytics Status API
+
+Implemented endpoint:
+
+- `GET /api/admin/analytics`
+
+The Analytics page hydrates from this admin-session-protected Pages Function. Unauthenticated requests return `unauthenticated`, signed-in non-admin users return `admin_required`, and secret values are never returned. When Cloudflare Analytics configuration is missing, the endpoint returns `configured: false`, a clear `cloudflare_analytics_not_configured` source, empty live metric panels, `lastChecked`, and a `requiredConfig` / `missingConfig` list containing env var names only.
+
+Optional future Cloudflare Analytics env vars:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_ZONE_ID_DANIELCLANCY`
+- `CLOUDFLARE_API_TOKEN_ANALYTICS`
+
+These env vars are not required for the dashboard to load. Until the Cloudflare Analytics API query contract is implemented and tested, the Analytics page keeps map/table scaffold data visible only as labelled sample/local fallback and does not claim live visitor, page-view, referrer, country, or region numbers.
+
 ## Admin CMS API
 
 Implemented endpoints:
@@ -173,6 +189,7 @@ After local smoke testing, stop for Cloudflare setup before real OAuth/live auth
 - Add any Pushover env/config needed before DanielClancy alerts can route through StreamSuites.
 - Confirm the hosted admin dashboard loads and OAuth callbacks return to the clean admin-required state for non-admin sessions.
 - Confirm cookies across `danielclancy.net` and `admin.danielclancy.net`.
+- Add Cloudflare Analytics env vars only when ready to wire and test the live query path; the dashboard currently reports missing config instead of fake analytics metrics.
 
 ## Repository Tree
 
@@ -204,6 +221,7 @@ DanielClancy-Admin/
 │       ├── admin/
 │       │   ├── accounts/
 │       │   │   └── [[path]].js
+│       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
 │       │   └── status.js
@@ -225,9 +243,11 @@ DanielClancy-Admin/
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins and master-only role/status/note actions.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
+- Analytics page hydrates Cloudflare readiness from `/api/admin/analytics`; missing Cloudflare Analytics config is reported clearly, and sample map/table rows remain labelled as fallback/demo data.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
+- Alerts includes `page_visit` / Page visit trigger support with optional page path and match type fields for DanielClancy public/admin page-visit rules. Page visit alert delivery still requires sender/tracking event wiring into the StreamSuites runtime ingest contract.
 - Alerts rows are not live runtime rules. Exported targets use the StreamSuites runtime destination names (`windows_client`, `pushover`); desktop app visibility, Pushover delivery, and hosted production testing require the StreamSuites/runtime bridge plus Cloudflare Pages/DNS/env setup for `admin.danielclancy.net`.

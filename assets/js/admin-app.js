@@ -23,9 +23,15 @@
   const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
   const ALERT_SURFACES = ["danielclancy.net", "admin.danielclancy.net"];
   const ALERT_SEVERITIES = ["info", "warning", "critical"];
+  const ALERT_MATCH_TYPES = ["exact", "starts_with", "contains"];
   const ALERT_TRIGGER_TYPES = [
     "contact_form",
     "auth_admin_login",
+    "auth_oauth_login",
+    "project_cms_update",
+    "media_cms_update",
+    "alerts_cms_update",
+    "page_visit",
     "portfolio_update",
     "media_watch_update",
     "deployment",
@@ -124,6 +130,12 @@
   const overviewStatusState = {
     status: "checking",
     message: "Checking operational status...",
+    payload: null,
+    lastChecked: ""
+  };
+  const analyticsStatusState = {
+    status: "checking",
+    message: "Checking analytics status...",
     payload: null,
     lastChecked: ""
   };
@@ -368,6 +380,7 @@
     const triggerType = String(raw?.triggerType || raw?.trigger_type || "manual_test").toLowerCase();
     const target = normalizeAlertChannelTarget(raw?.channelTarget || raw?.channel_target || "windows_client");
     const sourceSurface = String(raw?.sourceSurface || raw?.source_surface || raw?.domain || "danielclancy.net").toLowerCase();
+    const matchType = String(raw?.matchType || raw?.match_type || "exact").toLowerCase();
 
     return {
       id: createSlug(raw?.id || raw?.slug || fallbackId),
@@ -376,6 +389,8 @@
       severity: ALERT_SEVERITIES.includes(severity) ? severity : "info",
       sourceSurface: ALERT_SURFACES.includes(sourceSurface) ? sourceSurface : "danielclancy.net",
       triggerType: ALERT_TRIGGER_TYPES.includes(triggerType) ? triggerType : "manual_test",
+      pagePath: String(raw?.pagePath || raw?.page_path || ""),
+      matchType: ALERT_MATCH_TYPES.includes(matchType) ? matchType : "exact",
       channelTarget: ALERT_CHANNEL_TARGETS.includes(target) ? target : "windows_client",
       desktopEnabled: raw?.desktopEnabled === undefined ? target === "windows_client" || target === "both" : Boolean(raw.desktopEnabled),
       pushoverEnabled: raw?.pushoverEnabled === undefined ? target === "pushover" || target === "both" : Boolean(raw.pushoverEnabled),
@@ -429,6 +444,10 @@
 
   function adminStatusEndpoint() {
     return "/api/admin/status";
+  }
+
+  function adminAnalyticsEndpoint() {
+    return "/api/admin/analytics";
   }
 
   function getCmsConfig(collection) {
@@ -719,6 +738,31 @@
       overviewStatusState.message = "Pages Functions are unavailable here. Overview cannot claim live operational status.";
     }
     if (renderAfter && activePageIs("overview")) renderOverview();
+  }
+
+  async function hydrateAnalyticsStatus(renderAfter = false) {
+    analyticsStatusState.status = "checking";
+    analyticsStatusState.message = "Checking analytics status...";
+    if (renderAfter && activePageIs("analytics")) renderAnalytics();
+    try {
+      const response = await fetch(adminAnalyticsEndpoint(), { credentials: "include" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        analyticsStatusState.status = "fallback";
+        analyticsStatusState.message = payload?.error || `Analytics API unavailable (${response.status}).`;
+      } else {
+        analyticsStatusState.status = payload.configured ? "connected" : "not-configured";
+        analyticsStatusState.message = payload.configured
+          ? "Cloudflare Analytics configuration is present; live query implementation is still pending."
+          : "Cloudflare analytics not configured. Sample/local fallback rows are labelled below.";
+        analyticsStatusState.payload = payload;
+        analyticsStatusState.lastChecked = payload.lastChecked || new Date().toISOString();
+      }
+    } catch {
+      analyticsStatusState.status = "fallback";
+      analyticsStatusState.message = "Pages Functions are unavailable here. Analytics falls back to labelled local sample rows.";
+    }
+    if (renderAfter && activePageIs("analytics")) renderAnalytics();
   }
 
   async function mutateAccountRegistry(action, id, body = {}) {
@@ -1024,6 +1068,11 @@
     return `<span class="badge${toneClass}">${escapeHtml(text)}</span>`;
   }
 
+  function alertTriggerLabel(trigger) {
+    if (trigger === "page_visit") return "Page visit";
+    return String(trigger || "").replace(/_/g, " ");
+  }
+
   function pageHeader(kicker, title, copy, actions = "") {
     return `
       <header class="page-header">
@@ -1279,29 +1328,54 @@
 
   function renderAnalytics() {
     routeTitle.textContent = "Analytics";
+    const status = analyticsStatusState.payload;
+    const configured = Boolean(status?.configured);
+    const missingConfig = Array.isArray(status?.missingConfig) ? status.missingConfig : [];
+    const sourceLabel = status?.source || (analyticsStatusState.status === "fallback" ? "local_function_unavailable" : "checking");
+    const sampleMarkers = data.analytics.markers || [];
+    const sampleGeoRows = data.analytics.geoRows || [];
+    const sampleRouteRows = data.analytics.routeRows || [];
+    const operationalRows = [
+      ["Configured", configured ? "Yes" : "No"],
+      ["Source", sourceLabel],
+      ["Site origin", status?.site?.origin || "https://danielclancy.net"],
+      ["Admin origin", status?.site?.adminOrigin || "https://admin.danielclancy.net"],
+      ["Last checked", formatOperationalTimestamp(status?.lastChecked || analyticsStatusState.lastChecked)]
+    ];
     app.innerHTML = `
       <div class="page">
         ${pageHeader(
-          "Analytics scaffold",
+          "Analytics readiness",
           "Analytics",
-          "Map-led analytics layout adapted from the reference dashboard. All geography, route, and activity values are local placeholders until a real analytics source is wired.",
-          badge("Placeholder data", "warn")
+          "Cloudflare-ready analytics status surface. It reports configuration/readiness first and labels sample fallback data without inventing live visitor numbers.",
+          `${badge(configured ? "Cloudflare config present" : "Cloudflare analytics not configured", configured ? "success" : "warn")}
+           ${badge(`Source: ${sourceLabel}`, configured ? "success" : "warn")}`
+        )}
+
+        ${panel(
+          "Analytics API status",
+          analyticsStatusState.message,
+          `<div class="grid grid-2">
+            ${storageStatusCard("Cloudflare Analytics", configured ? "Configured" : "Not configured", configured ? "Required env vars are present; live API querying remains a future tested integration." : "Required env vars are missing, so no live metrics are returned.", configured ? "success" : "warn")}
+            ${storageStatusCard("Dashboard data mode", configured ? "Ready placeholder" : "Sample/local fallback", configured ? "Panels return explicit no-live-query placeholders." : "Scaffold cards and map rows remain visible only as labelled demo data.", configured ? "success" : "warn")}
+          </div>
+          ${descriptionRows(operationalRows)}`
         )}
 
         <section class="panel">
           <header class="panel-header">
             <div>
               <h2>Global Sessions Map</h2>
-              <p>Country and region marker layout placeholder. No visitor counts are real.</p>
+              <p>${escapeHtml(configured ? status?.map?.message || "Cloudflare config is present; live map query is pending." : "Cloudflare analytics not configured. Markers shown here are sample/local fallback only.")}</p>
             </div>
             <div class="panel-actions">
-              ${badge("Map scaffold", "warn")}
-              ${badge("No telemetry")}
+              ${badge(configured ? "Cloudflare-ready placeholder" : "Map sample", configured ? "success" : "warn")}
+              ${badge(configured ? "No live query yet" : "No live telemetry", "warn")}
             </div>
           </header>
           <div class="panel-body">
             <div class="map-shell" role="img" aria-label="Scaffold map-style analytics panel">
-              ${data.analytics.markers
+              ${sampleMarkers
                 .map(
                   (marker) => `
                     <span class="map-marker" style="--x: ${escapeHtml(marker.x)}; --y: ${escapeHtml(marker.y)};">
@@ -1317,14 +1391,14 @@
         <section class="grid analytics-grid">
           ${panel(
             "Geographic breakdown",
-            "Reference-style location table using scaffold rows only.",
+            configured ? "Cloudflare config is present, but live country/region query output is not enabled yet." : "Reference-style location table using labelled sample/local rows only.",
             `<div class="table-wrap">
               <table class="table">
                 <thead>
                   <tr><th>Location</th><th>Precision</th><th>Sessions</th><th>Source</th></tr>
                 </thead>
                 <tbody>
-                  ${data.analytics.geoRows
+                  ${sampleGeoRows
                     .map(
                       (row) => `
                         <tr>
@@ -1341,24 +1415,29 @@
             </div>`
           )}
           ${panel(
-            "Analytics readiness notes",
-            "Explicit non-live status for this foundation milestone.",
-            `<div class="grid">${data.analytics.notes
-              .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
-              .join("")}</div>`
+            "Analytics readiness",
+            "Missing setup is listed by env var name only; no values or tokens are exposed.",
+            `<div class="grid">
+              ${(status?.requiredConfig || ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID_DANIELCLANCY", "CLOUDFLARE_API_TOKEN_ANALYTICS"])
+                .map((name) => `<article class="card">${badge(missingConfig.includes(name) ? "Missing" : "Present", missingConfig.includes(name) ? "warn" : "success")}<p><strong>${escapeHtml(name)}</strong></p></article>`)
+                .join("")}
+              ${(status?.notes || data.analytics.notes)
+                .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
+                .join("")}
+            </div>`
           )}
         </section>
 
         ${panel(
           "Top routes / resources",
-          "Static route table matching the admin shell pages established in this task.",
+          configured ? "Top-page API output is still pending; route rows below are sample/admin shell references." : "Static route table shown as sample/local fallback only.",
           `<div class="table-wrap">
             <table class="table">
               <thead>
                 <tr><th>Route</th><th>Surface</th><th>Status</th></tr>
               </thead>
               <tbody>
-                ${data.analytics.routeRows
+                ${sampleRouteRows
                   .map(
                     (row) => `
                       <tr>
@@ -1944,7 +2023,7 @@
         <td>${badge(rule.enabled ? "Enabled" : "Disabled", rule.enabled ? "success" : "warn")}</td>
         <td>${badge(rule.severity, rule.severity === "critical" ? "danger" : rule.severity === "warning" ? "warn" : "")}</td>
         <td>${badge(rule.sourceSurface)}</td>
-        <td>${escapeHtml(rule.triggerType.replace(/_/g, " "))}</td>
+        <td>${escapeHtml(alertTriggerLabel(rule.triggerType))}</td>
         <td>${badge(rule.channelTarget, rule.channelTarget === "muted" ? "warn" : "")}</td>
         <td>${badge(`Desktop ${rule.desktopEnabled ? "on" : "off"}`, rule.desktopEnabled ? "success" : "warn")} ${badge(`Pushover ${rule.pushoverEnabled ? "on" : "off"}`, rule.pushoverEnabled ? "success" : "warn")}</td>
         <td><strong>${escapeHtml(rule.titleTemplate || "No title template")}</strong><br><span>${escapeHtml(rule.messageTemplate || "No message template")}</span></td>
@@ -1997,7 +2076,15 @@
               <label class="field">
                 <span>Trigger type</span>
                 <select class="input" name="triggerType" ${readOnly ? "disabled" : ""}>
-                  ${ALERT_TRIGGER_TYPES.map((trigger) => `<option value="${trigger}"${rule.triggerType === trigger ? " selected" : ""}>${trigger.replace(/_/g, " ")}</option>`).join("")}
+                  ${ALERT_TRIGGER_TYPES.map((trigger) => `<option value="${trigger}"${rule.triggerType === trigger ? " selected" : ""}>${alertTriggerLabel(trigger)}</option>`).join("")}
+                </select>
+                <small>Page visit: Alert when a tracked public/admin page visit event is received.</small>
+              </label>
+              ${field("Page path", "pagePath", rule.pagePath, "text", false, readOnly)}
+              <label class="field">
+                <span>Page path match</span>
+                <select class="input" name="matchType" ${readOnly ? "disabled" : ""}>
+                  ${ALERT_MATCH_TYPES.map((matchType) => `<option value="${matchType}"${rule.matchType === matchType ? " selected" : ""}>${matchType.replace(/_/g, " ")}</option>`).join("")}
                 </select>
               </label>
               <label class="field">
@@ -2293,6 +2380,8 @@
       severity: "info",
       sourceSurface: "danielclancy.net",
       triggerType: "manual_test",
+      pagePath: "",
+      matchType: "exact",
       channelTarget: "windows_client",
       desktopEnabled: true,
       pushoverEnabled: false,
@@ -3248,6 +3337,8 @@
       severity: formValue(form, "severity"),
       sourceSurface: formValue(form, "sourceSurface"),
       triggerType: formValue(form, "triggerType"),
+      pagePath: formValue(form, "pagePath"),
+      matchType: formValue(form, "matchType"),
       channelTarget: formValue(form, "channelTarget"),
       desktopEnabled: Boolean(form.querySelector("[name='desktopEnabled']")?.checked),
       pushoverEnabled: Boolean(form.querySelector("[name='pushoverEnabled']")?.checked),
@@ -3697,6 +3788,7 @@
       hydrateCmsCollections();
       hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
       hydrateOverviewStatus(activePageIs("overview"));
+      hydrateAnalyticsStatus(activePageIs("analytics"));
     }
   });
 
@@ -3709,4 +3801,5 @@
   hydrateCmsCollections();
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));
+  hydrateAnalyticsStatus(activePageIs("analytics"));
 })();

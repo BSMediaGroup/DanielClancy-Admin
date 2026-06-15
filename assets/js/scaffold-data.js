@@ -262,6 +262,25 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       updatedAt: "2026-06-15T00:00:00Z"
     },
     {
+      id: "public-page-visit-watch",
+      name: "Public page visit watch",
+      enabled: false,
+      severity: "info",
+      sourceSurface: "danielclancy.net",
+      triggerType: "page_visit",
+      pagePath: "/",
+      matchType: "starts_with",
+      channelTarget: "windows_client",
+      desktopEnabled: true,
+      pushoverEnabled: false,
+      titleTemplate: "DanielClancy page visit",
+      messageTemplate: "A tracked public/admin page visit event was received for DanielClancy.",
+      tags: ["analytics", "page-visit"],
+      notes: "Scaffold-only page_visit rule. Live delivery requires sender/tracking event wiring into the StreamSuites runtime ingest endpoint.",
+      health: "scaffold",
+      updatedAt: "2026-06-15T00:00:00Z"
+    },
+    {
       id: "deployment-watch",
       name: "Deployment watch",
       enabled: false,

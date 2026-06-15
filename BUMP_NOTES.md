@@ -1,5 +1,42 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics Foundation And Page Visit Alerts Milestone
+
+### Technical Notes
+
+- Added admin-session-protected `GET /api/admin/analytics` as a Cloudflare Pages-compatible analytics readiness endpoint.
+- The analytics endpoint returns `configured`, `source`, site/admin origin details, empty live metric panel placeholders, map placeholder status, `lastChecked`, and required/missing Cloudflare Analytics env var names without exposing values.
+- Analytics UI now hydrates from `/api/admin/analytics` when available and clearly reports `Cloudflare analytics not configured` instead of inventing live page-view, referrer, country, region, or map numbers.
+- Existing scaffold/sample analytics cards remain available only as labelled fallback/demo data.
+- Added `page_visit` / Page visit trigger support to the DanielClancy-Admin Alerts selector and exported alert rule contract.
+- Page-visit rules can carry optional page path and exact/starts_with/contains match type fields while preserving existing localStorage/KV CMS alert behavior.
+- Existing auth, manual env-backed master admin access, OAuth non-admin behavior, Turnstile checks, account registry, Projects, Media, and Alerts CMS storage behavior remain intact.
+- No MCP browser tests or Playwright MCP checks were run; validation stayed to cheap static checks.
+
+### Human-Readable Notes
+
+- Analytics now has an operational status foundation for future Cloudflare wiring, but it still refuses to present fake live metrics when the Cloudflare Analytics env vars are missing.
+- DanielClancy alert planning can now define page visit rules using the stable `triggerType: "page_visit"` contract.
+- Live page visit alert delivery still needs sender/tracking event wiring into the StreamSuites runtime ingest path.
+
+### Files / Areas Changed
+
+- `functions/api/admin/analytics.js`
+- `assets/js/admin-app.js`
+- `assets/js/scaffold-data.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check assets/js/admin-app.js`, `node --check assets/js/scaffold-data.js`, and `node --check functions/api/admin/analytics.js`.
+- Run `git diff --check`.
+
+### Follow-Ups
+
+- Wire and test the Cloudflare Analytics API query path only after `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID_DANIELCLANCY`, and `CLOUDFLARE_API_TOKEN_ANALYTICS` are provisioned.
+- Add the actual DanielClancy page visit sender/tracking event path before treating page visit alerts as live.
+
 ## Operational Accounts, Settings, And Overview Hydration Milestone
 
 ### Technical Notes
