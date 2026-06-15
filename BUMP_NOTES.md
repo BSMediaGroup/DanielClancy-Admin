@@ -4,27 +4,30 @@
 
 ### Technical Notes
 
-- Confirmed DanielClancy-Admin Alerts definitions remain scoped to DanielClancy admin storage (`DC_ADMIN_KV` key `cms:alerts`) or the local scaffold key `danielclancy-admin.alerts.scaffold.v1`.
-- Hardened the shared alert sender so event payload/context objects strip rule-definition manifest fields before posting to StreamSuites ingest.
-- Updated Alerts page copy to state that StreamSuites canonical alert rules are not edited here and that export/copy JSON is manual and non-destructive.
+- Removed the Alerts rule editor from the main navigation and replaced direct `#/alerts` visits with a non-editable notice: “Alert rules are managed in StreamSuites-Dashboard only.”
+- Disabled the reachable create/edit/delete/bulk/import/reset/copy/sync rule-management controls by removing them from the Alerts route render path.
+- Hardened the shared alert sender so event payload/context objects recursively strip rule-definition manifest/configuration fields before posting to StreamSuites ingest.
+- DanielClancy-Admin may leave existing `cms:alerts` / `danielclancy-admin.alerts.scaffold.v1` data untouched, but the UI no longer surfaces an editor or sync/export controls for it.
 - Kept `page_visit` alert type support available for DanielClancy public/admin page visit events.
 
 ### Human-Readable Notes
 
 - DanielClancy-Admin sends alert events only when the ingest URL/secret are configured.
-- DanielClancy-Admin Alerts cannot overwrite StreamSuites canonical rules.
+- DanielClancy-Admin cannot manage, sync, export, replace, or overwrite StreamSuites canonical alert rule definitions.
 - StreamSuites rule management remains authoritative in StreamSuites and StreamSuites-Dashboard.
 
 ### Files / Areas Changed
 
 - `assets/js/admin-app.js`
 - `functions/_shared/alert-sender.js`
+- `tests/alerts-disabled.test.mjs`
 - `README.md`
 - `BUMP_NOTES.md`
 
 ### Validation
 
 - Run `node --check` on changed frontend JS and Pages Function/helper files.
+- Run `node --test tests/alerts-disabled.test.mjs`.
 - Run `git diff --check`.
 
 ## Emergency Turnstile Reliability And Live Alert Sender Wiring

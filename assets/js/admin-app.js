@@ -11,8 +11,7 @@
     { id: "accounts", label: "Accounts", icon: "AC", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "SE", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "PR", path: "#/projects" },
-    { id: "media", label: "Media", icon: "ME", path: "#/media" },
-    { id: "alerts", label: "Alerts", icon: "AL", path: "#/alerts" }
+    { id: "media", label: "Media", icon: "ME", path: "#/media" }
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
@@ -1879,68 +1878,31 @@
 
   function renderAlerts() {
     routeTitle.textContent = "Alerts";
-    const visibleRules = filteredAlertRules();
-    const selectedVisible = visibleRules.filter((rule) => alertsState.selected.has(rule.id)).length;
-    const enabledCount = alertsState.rules.filter((rule) => rule.enabled).length;
-    const desktopCount = alertsState.rules.filter((rule) => rule.desktopEnabled && rule.channelTarget !== "muted").length;
-    const pushoverCount = alertsState.rules.filter((rule) => rule.pushoverEnabled && rule.channelTarget !== "muted").length;
-    const mutedCount = alertsState.rules.filter((rule) => rule.channelTarget === "muted").length;
-
     app.innerHTML = `
       <div class="page alerts-page">
         ${pageHeader(
-          "Alerts scaffold",
+          "Alerts disabled",
           "Alerts",
-          "Manage DanielClancy.net alert-rule drafts stored only in DanielClancy-Admin storage. StreamSuites canonical alert rules are not edited here.",
-          `<button class="button" type="button" data-alert-action="create">Create Alert Rule</button>
-           <button class="button button-secondary" type="button" data-alert-action="copy-json">Copy JSON contract</button>
-           <button class="button button-secondary" type="button" data-alert-action="import-json">Import JSON</button>
-           <button class="button button-secondary" type="button" data-alert-action="reset">Reset seed</button>`
-        )}
-
-        ${cmsStatusMarkup("alerts", "alert-action")}
-
-        ${panel(
-          "CMS status",
-          "Routing fields are shaped for windows_client and Pushover delivery, but this page only edits local scaffold JSON.",
-          metricCards([
-            { label: "Rules", value: String(alertsState.rules.length), note: alertsState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
-            { label: "Enabled", value: String(enabledCount), note: "Local enabled flags only.", tone: "warn" },
-            { label: "Desktop targets", value: String(desktopCount), note: "Prepared for StreamSuites Alerts client catchment.", tone: "warn" },
-            { label: "Pushover targets", value: String(pushoverCount), note: "Requires runtime env/config before live delivery.", tone: pushoverCount ? "warn" : "" }
-          ])
+          "Alert rules are managed in StreamSuites-Dashboard only.",
+          ""
         )}
 
         ${panel(
-          "Catchment contract",
-          "DanielClancy alert definitions stay local/Admin-KV only. Export is a manual non-destructive contract copy; live sender helpers post events only.",
+          "Rule management moved",
+          "Alert rules are managed in StreamSuites-Dashboard only.",
           `<div class="grid grid-2">
             <article class="card">
-              <span class="metric-label">Contract</span>
-              <h3>danielclancy</h3>
-              <p class="muted">Project: DanielClancy; public origin: https://danielclancy.net; admin origin: https://admin.danielclancy.net; targets: windows_client, pushover.</p>
+              <span class="metric-label">Rules</span>
+              <h3>Disabled here</h3>
+              <p class="muted">DanielClancy-Admin cannot create, edit, delete, import, reset, reconcile, export, sync, or save StreamSuites alert rule definitions.</p>
             </article>
             <article class="card">
-              <span class="metric-label">Delivery checkpoint</span>
-              <h3>Not live</h3>
-              <p class="muted">Live delivery uses StreamSuites event ingest only. StreamSuites rule management remains authoritative in StreamSuites and StreamSuites-Dashboard.</p>
+              <span class="metric-label">Events</span>
+              <h3>Event-only</h3>
+              <p class="muted">DanielClancy-Admin may send alert events such as auth, CMS save, and page_visit metadata through the StreamSuites event ingest bridge.</p>
             </article>
           </div>`
         )}
-
-        ${panel(
-          "Filters and bulk controls",
-          "Search alert rules, select rows, and apply confirmed bulk changes to local scaffold rows.",
-          renderAlertControls(visibleRules.length, selectedVisible, mutedCount)
-        )}
-
-        ${panel(
-          "Alert rule table editor",
-          "Table-style local definition editor for DanielClancy source surfaces and future StreamSuites desktop/Pushover event routing.",
-          renderAlertTable(visibleRules)
-        )}
-
-        ${alertsState.modal ? renderAlertModal(alertsState.modal) : ""}
       </div>
     `;
   }

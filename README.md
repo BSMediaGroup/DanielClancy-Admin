@@ -232,6 +232,8 @@ DanielClancy-Admin/
 │       │   └── page-visit.js
 │       └── turnstile/
 │           └── config.js
+├── tests/
+│   └── alerts-disabled.test.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html
@@ -251,6 +253,6 @@ DanielClancy-Admin/
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
-- Alerts scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
-- Alerts includes `page_visit` / Page visit trigger support with optional page path and match type fields for DanielClancy public/admin page-visit rules. Admin page visits, successful manual/OAuth auth, and successful Projects/Media/Alerts CMS saves post DanielClancy alert events to the StreamSuites ingest bridge when `DANIELCLANCY_ALERT_INGEST_URL` and `DANIELCLANCY_ALERT_INGEST_SECRET` are configured.
-- Alerts rows are not live runtime rules and cannot overwrite StreamSuites canonical alert rules. Exported targets use the StreamSuites runtime destination names (`windows_client`, `pushover`); live delivery sends events only through StreamSuites ingest, while StreamSuites rule management remains authoritative in StreamSuites and StreamSuites-Dashboard.
+- Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.
+- Admin page visits, successful manual/OAuth auth, and successful Projects/Media/Alerts CMS saves may post DanielClancy alert events to the StreamSuites ingest bridge when `DANIELCLANCY_ALERT_INGEST_URL` and `DANIELCLANCY_ALERT_INGEST_SECRET` are configured. Event payload/context data is stripped of rule/configuration/manifest fields before sending.
+- DanielClancy-Admin cannot manage, sync, export, replace, or overwrite StreamSuites canonical alert rule definitions. StreamSuites-Dashboard is the only UI for alert rule definitions.

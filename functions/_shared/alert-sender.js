@@ -31,11 +31,35 @@ const RULE_DEFINITION_FIELDS = new Set([
   "ruleDefinitions",
   "replaceRules",
   "fullManifest",
+  "configuration",
+  "preferences",
+  "destination_defaults",
+  "schema_version",
+  "import",
+  "reset",
+  "seed",
+  "defaults",
+  "apply_configuration",
 ]);
 
 function eventObjectOnly(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !RULE_DEFINITION_FIELDS.has(key)));
+  const cleanNested = (nested) => {
+    if (Array.isArray(nested)) {
+      return nested
+        .map((item) => (item && typeof item === "object" ? eventObjectOnly(item) : item))
+        .filter((item) => !(item && typeof item === "object" && Object.keys(item).length === 0));
+    }
+    if (nested && typeof nested === "object") {
+      return eventObjectOnly(nested);
+    }
+    return nested;
+  };
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !RULE_DEFINITION_FIELDS.has(key))
+      .map(([key, nested]) => [key, cleanNested(nested)])
+  );
 }
 
 function configured(env) {
