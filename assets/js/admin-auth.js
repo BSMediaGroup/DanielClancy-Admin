@@ -16,7 +16,10 @@
   const authUiState = {
     mode: "signin",
     emailOpen: false,
+    email: "",
+    password: "",
     turnstileToken: "",
+    turnstileTokenIssuedAt: 0,
     turnstileMessage: "Loading security check...",
     turnstileController: null
   };
@@ -48,7 +51,7 @@
     return "OAuth did not unlock the admin dashboard. Admin access requires explicit admin authority.";
   }
 
-  function setStatus(status, session, message) {
+  function setStatus(status, session, message, options = {}) {
     sessionState.status = status;
     sessionState.session = session || null;
     sessionState.isAdmin = Boolean(session?.authenticated && session?.is_admin);
@@ -63,8 +66,18 @@
       logout
     };
     document.dispatchEvent(new CustomEvent("dc-admin-auth-status", { detail: window.DC_ADMIN_AUTH }));
-    renderGate();
-    renderTopbar();
+    if (options.render !== false) {
+      renderGate();
+      renderTopbar();
+    } else {
+      updateAuthMessage(message);
+    }
+  }
+
+  function updateAuthMessage(message) {
+    sessionState.message = message || sessionState.message || "";
+    const target = document.getElementById("admin-auth-message");
+    if (target) target.textContent = sessionState.message;
   }
 
   function renderTopbar() {
@@ -95,6 +108,7 @@
 
   function resetTurnstile() {
     authUiState.turnstileToken = "";
+    authUiState.turnstileTokenIssuedAt = 0;
     if (authUiState.turnstileController) {
       authUiState.turnstileController.reset();
     }
@@ -111,8 +125,9 @@
     authUiState.turnstileController = window.DCTurnstile.create({
       configUrl: turnstileConfigEndpoint(),
       actionLabel: authUiState.mode === "signup" ? "create an account" : "sign in",
-      onChange: function (token, message) {
+      onChange: function (token, message, issuedAt) {
         authUiState.turnstileToken = token || "";
+        authUiState.turnstileTokenIssuedAt = token ? issuedAt || Date.now() : 0;
         authUiState.turnstileMessage = message || "";
         if (messageTarget) messageTarget.textContent = authUiState.turnstileMessage;
       }
@@ -173,13 +188,13 @@
               ? `<form class="auth-form" data-auth-login>
                   <label>
                     <span>Email</span>
-                    <input name="email" type="email" autocomplete="email" required />
+                    <input name="email" type="email" autocomplete="email" required value="${escapeHtml(authUiState.email)}" />
                   </label>
                   <label>
                     <span>Password</span>
-                    <input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required />
+                    <input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required value="${escapeHtml(authUiState.password)}" />
                   </label>
-                  <button class="button" type="submit">${signup ? "Request email signup" : "Sign in with email"}</button>
+                  <button class="button" type="submit" ${authUiState.turnstileToken ? "" : "disabled"}>${signup ? "Request email signup" : "Sign in with email"}</button>
                   <p class="auth-note">${signup ? "Email signup is not available yet." : "Use an approved admin account."}</p>
                 </form>`
               : ""
@@ -196,6 +211,31 @@
       </section>
     `;
     mountTurnstile();
+  }
+
+  function updateAuthModeCopy() {
+    const signup = authUiState.mode === "signup";
+    const title = document.getElementById("admin-auth-title");
+    if (title && sessionState.status !== "denied") title.textContent = signup ? "Create account" : "Sign in";
+    document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      const active = button.getAttribute("data-auth-mode") === authUiState.mode;
+      button.classList.toggle("auth-mode-tab-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    document.querySelectorAll("[data-auth-oauth]").forEach((button) => {
+      if (!(button instanceof HTMLElement)) return;
+      const provider = PROVIDERS.find((item) => item.id === button.getAttribute("data-auth-oauth"));
+      const label = button.querySelector("span");
+      if (provider && label) label.textContent = `${signup ? "Sign up with" : "Continue with"} ${provider.label}`;
+    });
+    const emailToggle = document.querySelector("[data-auth-action='toggle-email'] span");
+    if (emailToggle) emailToggle.textContent = signup ? "Use email signup" : "Use email instead";
+    const password = document.querySelector("[data-auth-login] input[name='password']");
+    if (password instanceof HTMLInputElement) {
+      password.autocomplete = signup ? "new-password" : "current-password";
+    }
+    updateAuthMessage(signup ? "Create an account for DanielClancy.net." : "Sign in to continue.");
   }
 
   function escapeHtml(value) {
@@ -240,15 +280,17 @@
     const formData = new FormData(form);
     const email = String(formData.get("email") || "");
     const password = String(formData.get("password") || "");
+    authUiState.email = email;
+    authUiState.password = password;
     if (!email.trim() || !password) {
       setStatus("required", null, "Email and password are required.");
       return;
     }
-    if (!authUiState.turnstileToken) {
+    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
       setStatus("required", null, "Complete the security check before continuing.");
       return;
     }
-    setStatus("pending", null, "Checking server-side credentials...");
+    updateAuthMessage("Checking server-side credentials...");
     try {
       const response = await fetch(endpoint("login"), {
         method: "POST",
@@ -258,17 +300,19 @@
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.session) {
-        setStatus("required", null, "Sign in failed. Check credentials and try again.");
+        setStatus("required", null, payload?.message || "Sign in failed. Check credentials and try again.");
+        resetTurnstile();
         return;
       }
       if (!payload.session.is_admin) {
         setStatus("denied", payload.session, "Signed in, but this account is not marked as admin.");
+        resetTurnstile();
         return;
       }
+      authUiState.password = "";
       setStatus("allowed", payload.session, "Admin session verified.");
     } catch {
       setStatus("required", null, "Auth endpoint is not reachable yet.");
-    } finally {
       resetTurnstile();
     }
   }
@@ -276,15 +320,18 @@
   async function signup(form) {
     const formData = new FormData(form);
     const email = String(formData.get("email") || "");
+    const password = String(formData.get("password") || "");
+    authUiState.email = email;
+    authUiState.password = password;
     if (!email.trim()) {
       setStatus("required", sessionState.session, "Email is required before checking signup availability.");
       return;
     }
-    if (!authUiState.turnstileToken) {
+    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
       setStatus("required", sessionState.session, "Complete the security check before continuing.");
       return;
     }
-    setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Checking account creation availability...");
+    updateAuthMessage("Checking account creation availability...");
     try {
       const response = await fetch(endpoint("signup"), {
         method: "POST",
@@ -310,7 +357,7 @@
   }
 
   function startOAuth(provider) {
-    if (!authUiState.turnstileToken) {
+    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
       setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Complete the security check before continuing with OAuth.");
       return;
     }
@@ -360,6 +407,13 @@
     }
   });
 
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.closest("[data-auth-login]")) return;
+    if (target.name === "email") authUiState.email = target.value;
+    if (target.name === "password") authUiState.password = target.value;
+  });
+
   document.addEventListener("click", (event) => {
     const target = event.target.closest("[data-auth-oauth]");
     if (!(target instanceof HTMLElement)) return;
@@ -374,8 +428,7 @@
       authUiState.mode === "signup"
         ? "Create an account for DanielClancy.net."
         : "Sign in to continue.";
-    authUiState.turnstileToken = "";
-    renderGate();
+    updateAuthModeCopy();
   });
 
   document.addEventListener("DOMContentLoaded", refresh);

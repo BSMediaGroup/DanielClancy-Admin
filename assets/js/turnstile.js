@@ -30,20 +30,23 @@
     const state = {
       widgetId: null,
       token: "",
+      tokenIssuedAt: 0,
+      mountedElement: null,
       message: "Loading security check..."
     };
     const configUrl = options.configUrl;
-    const actionLabel = options.actionLabel || "continue";
     const onChange = typeof options.onChange === "function" ? options.onChange : function () {};
 
     function setToken(token, message) {
       state.token = token || "";
+      state.tokenIssuedAt = state.token ? Date.now() : 0;
       state.message = message || "";
-      onChange(state.token, state.message);
+      onChange(state.token, state.message, state.tokenIssuedAt);
     }
 
     async function mount(element) {
       if (!element) return;
+      if (state.widgetId && state.mountedElement === element) return;
       try {
         const response = await fetch(configUrl, { cache: "no-store", credentials: "include" });
         const config = await response.json().catch(() => null);
@@ -59,19 +62,20 @@
           state.widgetId = null;
         }
         element.innerHTML = "";
+        state.mountedElement = element;
         state.widgetId = window.turnstile.render(element, {
           sitekey: siteKey,
           callback: function (token) {
             setToken(token, "Security check complete.");
           },
           "expired-callback": function () {
-            setToken("", "Security check expired. Complete it again.");
+            setToken("", "Security check expired. Please try again.");
           },
           "error-callback": function () {
-            setToken("", "Security check failed to load. Refresh and try again.");
+            setToken("", "Security check failed. Retry.");
           }
         });
-        setToken("", `Complete the security check to ${actionLabel}.`);
+        setToken("", "Complete the security check to continue.");
       } catch (_error) {
         setToken("", "Turnstile unavailable in static dev.");
       }
@@ -81,7 +85,7 @@
       if (state.widgetId && window.turnstile) {
         window.turnstile.reset(state.widgetId);
       }
-      setToken("", `Complete the security check to ${actionLabel}.`);
+      setToken("", "Complete the security check to continue.");
     }
 
     function remove() {
@@ -89,6 +93,7 @@
         window.turnstile.remove(state.widgetId);
       }
       state.widgetId = null;
+      state.mountedElement = null;
       setToken("", "");
     }
 
@@ -98,6 +103,9 @@
       remove,
       getToken: function () {
         return state.token;
+      },
+      getTokenIssuedAt: function () {
+        return state.tokenIssuedAt;
       }
     };
   }

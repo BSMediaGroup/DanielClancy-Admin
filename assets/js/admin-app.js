@@ -139,6 +139,9 @@
     payload: null,
     lastChecked: ""
   };
+  const pageVisitState = {
+    lastPath: ""
+  };
 
   function escapeHtml(value) {
     return String(value)
@@ -448,6 +451,28 @@
 
   function adminAnalyticsEndpoint() {
     return "/api/admin/analytics";
+  }
+
+  function sendAdminPageVisit(path) {
+    if (!window.DC_ADMIN_AUTH?.isAdmin || pageVisitState.lastPath === path) return;
+    pageVisitState.lastPath = path;
+    const payload = JSON.stringify({
+      path,
+      title: document.title,
+      referrer: document.referrer
+    });
+    const blob = new Blob([payload], { type: "application/json" });
+    if (navigator.sendBeacon && navigator.sendBeacon("/api/track/page-visit", blob)) {
+      return;
+    }
+    fetch("/api/track/page-visit", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: payload,
+      keepalive: true
+    }).catch(() => {
+      // Page visit alert delivery must not affect dashboard navigation.
+    });
   }
 
   function getCmsConfig(collection) {
@@ -1263,7 +1288,7 @@
             <div class="card">
               <h3>Authority boundary</h3>
               <p class="muted">
-                Accounts and CMS state resolve through Pages Functions and DC_ADMIN_KV where configured. Public-site publishing and alert posting remain separate future work.
+                Accounts and CMS state resolve through Pages Functions and DC_ADMIN_KV where configured. Alert delivery uses the StreamSuites ingest bridge when configured.
               </p>
               ${badge(overviewStatusState.message, overviewStatusState.status === "connected" ? "success" : "warn")}
             </div>
@@ -1308,7 +1333,7 @@
             ${storageStatusCard("Public baseline", status?.publicProjectsBaseline?.count ? `${status.publicProjectsBaseline.count} project(s)` : "Unavailable", status?.publicProjectsBaseline?.source || "No baseline response yet", status?.publicProjectsBaseline?.count ? "success" : "warn")}
             ${storageStatusCard("Turnstile", boolStatus(status?.turnstile?.siteKeyConfigured && status?.turnstile?.secretConfigured), `Site key: ${boolStatus(status?.turnstile?.siteKeyConfigured)}; secret: ${boolStatus(status?.turnstile?.secretConfigured)}`, boolTone(status?.turnstile?.siteKeyConfigured && status?.turnstile?.secretConfigured))}
             ${storageStatusCard("OAuth providers", `${["github", "google", "twitter"].filter((name) => status?.oauth?.[`${name}Configured`]).length}/3 configured`, "GitHub, Google, and Twitter/X report configured status only.", boolTone(status?.oauth?.githubConfigured || status?.oauth?.googleConfigured || status?.oauth?.twitterConfigured))}
-            ${storageStatusCard("Alert ingest secret", boolStatus(status?.alerts?.ingestSecretConfigured), "DANIELCLANCY_ALERT_INGEST_SECRET is checked only as present/missing.", boolTone(status?.alerts?.ingestSecretConfigured))}
+            ${storageStatusCard("Alert ingest bridge", boolStatus(status?.alerts?.alertIngestConfigured), `URL: ${boolStatus(status?.alerts?.alertIngestUrlConfigured)}; secret: ${boolStatus(status?.alerts?.alertIngestSecretConfigured)}`, boolTone(status?.alerts?.alertIngestConfigured))}
           </div>`
         )}
 
@@ -1319,7 +1344,7 @@
             <article class="card">${badge("Boundary")}<p>OAuth users register as regular accounts and are not auto-promoted to admin.</p></article>
             <article class="card">${badge("Boundary")}<p>Env-backed manual master admins remain the protected root authority.</p></article>
             <article class="card">${badge("Boundary")}<p>Projects, Media, and Alerts keep their existing KV CMS behavior.</p></article>
-            <article class="card">${badge("Boundary")}<p>Public publishing/hydration and alert event posting are not claimed complete.</p></article>
+            <article class="card">${badge("Boundary")}<p>Alert sender failures are logged server-side and do not block auth, CMS saves, or navigation.</p></article>
           </div>`
         )}
       </div>
@@ -2678,6 +2703,7 @@
 
   function render() {
     const route = parseRoute();
+    sendAdminPageVisit(route.id ? `#/${route.page}/${route.id}` : `#/${route.page}`);
     const active = route.page === "accounts" ? "accounts" : route.page;
     renderNav(active);
 

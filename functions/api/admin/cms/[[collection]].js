@@ -1,4 +1,5 @@
 import { requireAdmin as resolveAdminSession } from "../../../_shared/admin-accounts.js";
+import { postDanielClancyAlert } from "../../../_shared/alert-sender.js";
 
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -14,6 +15,11 @@ const COLLECTIONS = {
 };
 const PROJECTS_BASELINE_PATH = "/assets/data/public-projects-baseline.json";
 const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
+const CMS_ALERT_TRIGGER_TYPES = {
+  projects: "project_cms_update",
+  media: "media_cms_update",
+  alerts: "alerts_cms_update"
+};
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -23,6 +29,12 @@ function json(payload, init = {}) {
       ...(init.headers || {})
     }
   });
+}
+
+function logAlertFailure(event, result) {
+  if (!result?.ok && result?.configured) {
+    console.error(JSON.stringify({ event, status: result.status || 0, error: result.error || "alert_failed" }));
+  }
 }
 
 function textBytes(value) {
@@ -424,7 +436,8 @@ async function readCollection(request, env, collection) {
   }
 }
 
-async function writeCollection(request, env, collection) {
+async function writeCollection(context, collection, session) {
+  const { request, env } = context;
   const binding = env.DC_ADMIN_KV;
   if (!binding || typeof binding.put !== "function") {
     return json(
@@ -486,6 +499,27 @@ async function writeCollection(request, env, collection) {
     collection === "projects"
       ? mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).items
       : items;
+  logAlertFailure(
+    "cms_alert_delivery_failed",
+    await postDanielClancyAlert(context, {
+      triggerType: CMS_ALERT_TRIGGER_TYPES[collection],
+      surface: "admin.danielclancy.net",
+      domain: "admin.danielclancy.net",
+      severity: "info",
+      title: `DanielClancy ${collection} CMS update`,
+      message: `${collection} CMS save accepted with ${items.length} item(s).`,
+      tags: ["cms", collection, "admin", "danielclancy"],
+      linkUrl: `https://admin.danielclancy.net/#/${collection}`,
+      payload: {
+        collection,
+        itemCount: items.length,
+        actorEmail: session?.email || "",
+        actorProvider: session?.provider || "",
+        updatedAt,
+      },
+    }),
+  );
+
   return json({
     ok: true,
     configured: true,
@@ -523,7 +557,7 @@ export async function onRequest(context) {
       } else if (request.method === "GET") {
         response = await readCollection(request, env, collection);
       } else if (request.method === "PUT") {
-        response = await writeCollection(request, env, collection);
+        response = await writeCollection(context, collection, admin.session);
       } else {
         response = json({ ok: false, error: "method_not_allowed" }, { status: 405 });
       }

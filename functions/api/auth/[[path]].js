@@ -1,4 +1,5 @@
 import { verifyTurnstileToken } from "../../_shared/turnstile.js";
+import { postDanielClancyAlert } from "../../_shared/alert-sender.js";
 import { registerOAuthAccount, resolveSession } from "../../_shared/admin-accounts.js";
 
 const COOKIE_NAME = "dc_auth_session";
@@ -28,6 +29,12 @@ const OAUTH_PROVIDERS = {
   }
 };
 const TURNSTILE_AUTH_MESSAGE = "Security check failed. Please refresh the challenge and try again.";
+
+function logAlertFailure(event, result) {
+  if (!result?.ok && result?.configured) {
+    console.error(JSON.stringify({ event, status: result.status || 0, error: result.error || "alert_failed" }));
+  }
+}
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -208,7 +215,8 @@ function sessionResponse(session) {
   };
 }
 
-async function handleLogin(request, env) {
+async function handleLogin(context) {
+  const { request, env } = context;
   if (request.method !== "POST") {
     return json({ ok: false, error: "method_not_allowed" }, { status: 405 });
   }
@@ -226,7 +234,7 @@ async function handleLogin(request, env) {
     remoteIp: request.headers.get("CF-Connecting-IP") || ""
   });
   if (!turnstileResult.ok) {
-    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
+    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
   }
   const candidates = [
     [env.DC_ADMIN_EMAIL_1, env.DC_ADMIN_SECRET_1],
@@ -245,6 +253,23 @@ async function handleLogin(request, env) {
     admin_level: "master",
     display_name: email
   });
+  logAlertFailure(
+    "admin_login_alert_delivery_failed",
+    await postDanielClancyAlert(context, {
+      triggerType: "auth_admin_login",
+      surface: "admin.danielclancy.net",
+      domain: "admin.danielclancy.net",
+      severity: "info",
+      title: "DanielClancy Admin login",
+      message: `Admin password login accepted for ${email}.`,
+      tags: ["auth", "admin", "danielclancy"],
+      linkUrl: "https://admin.danielclancy.net/#/overview",
+      payload: {
+        email,
+        provider: "password",
+      },
+    }),
+  );
   return json(
     {
       ok: true,
@@ -275,7 +300,7 @@ async function handleSignup(request, env) {
     remoteIp: request.headers.get("CF-Connecting-IP") || ""
   });
   if (!turnstileResult.ok) {
-    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
+    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
   }
   return json(
     {
@@ -302,7 +327,7 @@ async function handleOAuthStart(request, env, provider) {
     remoteIp: request.headers.get("CF-Connecting-IP") || ""
   });
   if (!turnstileResult.ok) {
-    return json({ ok: false, error: "auth_failed", message: TURNSTILE_AUTH_MESSAGE }, { status: 403 });
+    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
   }
   const clientId = String(env[config.clientId] || "").trim();
   const clientSecret = String(env[config.clientSecret] || "").trim();
@@ -444,7 +469,8 @@ async function fetchOAuthProfile(provider, tokenPayload) {
   };
 }
 
-async function handleOAuthCallback(request, env, provider) {
+async function handleOAuthCallback(context, provider) {
+  const { request, env } = context;
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
@@ -481,6 +507,26 @@ async function handleOAuthCallback(request, env, provider) {
       account_type: "regular",
       admin_level: "none"
     });
+    logAlertFailure(
+      "oauth_login_alert_delivery_failed",
+      await postDanielClancyAlert(context, {
+        triggerType: "auth_oauth_login",
+        surface: "admin.danielclancy.net",
+        domain: "admin.danielclancy.net",
+        severity: "info",
+        title: "DanielClancy OAuth login",
+        message: `OAuth login callback completed for ${provider}.`,
+        tags: ["auth", "oauth", "danielclancy"],
+        linkUrl: "https://admin.danielclancy.net/#/accounts",
+        payload: {
+          provider,
+          email: account.email || profile.email || "",
+          username: account.username || profile.username || "",
+          accountType: "regular",
+          registered: Boolean(registration.ok),
+        },
+      }),
+    );
     redirect.hash = registration.ok
       ? `/login?oauth=${provider}-registered`
       : `/login?oauth=${provider}-${registration.error || "storage_not_configured"}`;
@@ -502,7 +548,7 @@ export async function onRequest(context) {
     if (path === "session" || path === "") {
       response = json({ ok: true, session: await resolveSession(request, env) });
     } else if (path === "login") {
-      response = await handleLogin(request, env);
+      response = await handleLogin(context);
     } else if (path === "signup") {
       response = await handleSignup(request, env);
     } else if (path === "logout") {
@@ -514,7 +560,7 @@ export async function onRequest(context) {
       } else if (match[2] === "start") {
         response = await handleOAuthStart(request, env, match[1]);
       } else {
-        response = await handleOAuthCallback(request, env, match[1]);
+        response = await handleOAuthCallback(context, match[1]);
       }
     }
   } catch (error) {

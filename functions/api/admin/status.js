@@ -1,4 +1,5 @@
 import { loadAccountRegistry, requireAdmin } from "../../_shared/admin-accounts.js";
+import { alertIngestStatus } from "../../_shared/alert-sender.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -155,7 +156,8 @@ export async function onRequest(context) {
             twitterConfigured: hasEnv(env, "TWITTER_CLIENT_ID") && hasEnv(env, "TWITTER_CLIENT_SECRET")
           },
           alerts: {
-            ingestSecretConfigured: hasEnv(env, "DANIELCLANCY_ALERT_INGEST_SECRET")
+            ingestSecretConfigured: hasEnv(env, "DANIELCLANCY_ALERT_INGEST_SECRET"),
+            ...alertIngestStatus(env)
           }
         });
       }

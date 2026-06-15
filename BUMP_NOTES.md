@@ -1,5 +1,50 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Turnstile Reliability And Live Alert Sender Wiring
+
+### Technical Notes
+
+- Stabilized the admin Turnstile controller with token issue timestamps, per-controller reset/remove handling, and compact user-facing states.
+- Updated the admin auth gate so submit-time status updates do not rebuild the whole gate, which preserves the active widget and typed email/password values during retry paths.
+- Kept manual email/password collapsed by default and preserved OAuth callback behavior without Turnstile gating.
+- Added shared Cloudflare Pages alert sender helper using server-only `DANIELCLANCY_ALERT_INGEST_URL` and `DANIELCLANCY_ALERT_INGEST_SECRET`.
+- Wired successful manual admin login to `auth_admin_login` alerts and successful OAuth callbacks to `auth_oauth_login` alerts; OAuth users remain regular/non-admin unless explicitly promoted by authority.
+- Wired successful Projects, Media, and Alerts CMS saves to `project_cms_update`, `media_cms_update`, and `alerts_cms_update` alerts with safe metadata only.
+- Added `/api/track/page-visit` and route-deduped authenticated admin page visit posting for `page_visit` alerts.
+- Expanded `/api/admin/status` and Overview readiness cards to report alert bridge URL/secret configured/missing status without exposing values.
+- Updated `.env.example` and README docs for ingest URL/secret generation and non-blocking alert delivery.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- The admin login gate should no longer uncheck/reset Turnstile during normal login/OAuth attempts or status updates.
+- Admin auth, CMS save, and page visit alerts now post to the StreamSuites ingest route when configured.
+- Alert sender failures are logged server-side and do not block login, CMS saves, or navigation.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `assets/js/turnstile.js`
+- `functions/_shared/alert-sender.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `functions/api/admin/status.js`
+- `functions/api/auth/[[path]].js`
+- `functions/api/track/page-visit.js`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check` on changed frontend JS and Pages Function/helper files.
+- Run `git diff --check`.
+
+### Follow-Ups
+
+- Hosted Cloudflare Pages testing should confirm the configured alert ingest URL reaches the intended StreamSuites runtime/API host.
+- Hosted OAuth provider callbacks still depend on provider app/env/callback configuration.
+
 ## Analytics Foundation And Page Visit Alerts Milestone
 
 ### Technical Notes

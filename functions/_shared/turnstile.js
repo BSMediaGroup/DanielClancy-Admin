@@ -1,6 +1,7 @@
 const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-const SAFE_FAILURE_MESSAGE = "Security check failed. Please refresh the challenge and try again.";
+const MISSING_TOKEN_MESSAGE = "Complete the security check to continue.";
+const INVALID_TOKEN_MESSAGE = "Security check expired. Please try again.";
 const MISSING_CONFIG_MESSAGE = "Security check is unavailable. Please try again later.";
 
 function normalizeEnvValue(value, maxLength = 400) {
@@ -62,7 +63,7 @@ export async function verifyTurnstileToken({ env, token, remoteIp }) {
 
   const cleanToken = String(token || "").trim();
   if (!cleanToken) {
-    return { ok: false, code: "turnstile_token_missing", message: SAFE_FAILURE_MESSAGE };
+    return { ok: false, code: "turnstile_token_missing", message: MISSING_TOKEN_MESSAGE };
   }
 
   const form = new FormData();
@@ -84,7 +85,7 @@ export async function verifyTurnstileToken({ env, token, remoteIp }) {
           errorCodes: Array.isArray(result?.["error-codes"]) ? result["error-codes"] : [],
         }),
       );
-      return { ok: false, code: "turnstile_invalid", message: SAFE_FAILURE_MESSAGE };
+      return { ok: false, code: "turnstile_invalid", message: INVALID_TOKEN_MESSAGE };
     }
     return { ok: true, code: "turnstile_ok", message: "" };
   } catch (error) {

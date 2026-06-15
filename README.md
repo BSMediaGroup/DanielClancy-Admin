@@ -72,7 +72,7 @@ Optional dev/test Turnstile bypass:
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Use the same value only in server/runtime environments that need to verify or send DanielClancy alert ingest events, including the StreamSuites runtime/API environment hosting `POST /api/alerts/danielclancy` and a future DanielClancy/DanielClancy-Admin sender environment once alert posting is wired. Never expose this value in frontend code or display it in the UI.
+Set `DANIELCLANCY_ALERT_INGEST_URL` to the StreamSuites runtime/API `POST /api/alerts/danielclancy` endpoint. Use the same generated `DANIELCLANCY_ALERT_INGEST_SECRET` value only in server/runtime environments that need to verify or send DanielClancy alert ingest events, including the StreamSuites runtime/API environment hosting the receiver and this DanielClancy-Admin sender environment. Never expose this value in frontend code or display it in the UI. Alert delivery failures are logged server-side and do not block auth, CMS saves, or dashboard navigation.
 
 OAuth env vars:
 
@@ -131,7 +131,7 @@ Implemented endpoint:
 
 - `GET /api/admin/status`
 
-The Overview page uses this endpoint to show signed-in admin identity, account registry status/count, Projects/Media/Alerts CMS storage status/counts, protected public project baseline count when the asset binding is available, Turnstile configured status, OAuth provider configured status, alert ingest secret presence, and last checked timestamp. It does not display secret values and does not invent analytics numbers or claim public publishing is complete.
+The Overview page uses this endpoint to show signed-in admin identity, account registry status/count, Projects/Media/Alerts CMS storage status/counts, protected public project baseline count when the asset binding is available, Turnstile configured status, OAuth provider configured status, alert ingest bridge configured/missing status, and last checked timestamp. It does not display secret values and does not invent analytics numbers or claim public publishing is complete.
 
 ## Analytics Status API
 
@@ -216,6 +216,7 @@ DanielClancy-Admin/
 ├── functions/
 │   ├── _shared/
 │   │   ├── admin-accounts.js
+│   │   ├── alert-sender.js
 │   │   └── turnstile.js
 │   └── api/
 │       ├── admin/
@@ -227,6 +228,8 @@ DanielClancy-Admin/
 │       │   └── status.js
 │       ├── auth/
 │       │   └── [[path]].js
+│       ├── track/
+│       │   └── page-visit.js
 │       └── turnstile/
 │           └── config.js
 ├── BUMP_NOTES.md
@@ -249,5 +252,5 @@ DanielClancy-Admin/
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback under `danielclancy-admin.alerts.scaffold.v1`, table editing, create/edit/detail modal, bulk enable/disable/severity/target/tag/delete controls, reset, JSON import, and JSON contract export.
-- Alerts includes `page_visit` / Page visit trigger support with optional page path and match type fields for DanielClancy public/admin page-visit rules. Page visit alert delivery still requires sender/tracking event wiring into the StreamSuites runtime ingest contract.
-- Alerts rows are not live runtime rules. Exported targets use the StreamSuites runtime destination names (`windows_client`, `pushover`); desktop app visibility, Pushover delivery, and hosted production testing require the StreamSuites/runtime bridge plus Cloudflare Pages/DNS/env setup for `admin.danielclancy.net`.
+- Alerts includes `page_visit` / Page visit trigger support with optional page path and match type fields for DanielClancy public/admin page-visit rules. Admin page visits, successful manual/OAuth auth, and successful Projects/Media/Alerts CMS saves post DanielClancy alert events to the StreamSuites ingest bridge when `DANIELCLANCY_ALERT_INGEST_URL` and `DANIELCLANCY_ALERT_INGEST_SECRET` are configured.
+- Alerts rows are not live runtime rules. Exported targets use the StreamSuites runtime destination names (`windows_client`, `pushover`); desktop app visibility, Pushover delivery, and hosted production testing require the StreamSuites/runtime receiver plus Cloudflare Pages/DNS/env setup for `admin.danielclancy.net`.
