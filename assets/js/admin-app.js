@@ -32,7 +32,7 @@
     "analytics_threshold",
     "manual_test"
   ];
-  const ALERT_CHANNEL_TARGETS = ["desktop", "pushover", "both", "muted"];
+  const ALERT_CHANNEL_TARGETS = ["windows_client", "pushover", "both", "muted"];
   const cmsStorageState = {
     projects: {
       status: "checking",
@@ -351,7 +351,7 @@
     const fallbackId = createSlug(raw?.id || raw?.slug || raw?.name || `alert-${Date.now()}`);
     const severity = String(raw?.severity || "info").toLowerCase();
     const triggerType = String(raw?.triggerType || raw?.trigger_type || "manual_test").toLowerCase();
-    const target = String(raw?.channelTarget || raw?.channel_target || "desktop").toLowerCase();
+    const target = normalizeAlertChannelTarget(raw?.channelTarget || raw?.channel_target || "windows_client");
     const sourceSurface = String(raw?.sourceSurface || raw?.source_surface || raw?.domain || "danielclancy.net").toLowerCase();
 
     return {
@@ -361,8 +361,8 @@
       severity: ALERT_SEVERITIES.includes(severity) ? severity : "info",
       sourceSurface: ALERT_SURFACES.includes(sourceSurface) ? sourceSurface : "danielclancy.net",
       triggerType: ALERT_TRIGGER_TYPES.includes(triggerType) ? triggerType : "manual_test",
-      channelTarget: ALERT_CHANNEL_TARGETS.includes(target) ? target : "desktop",
-      desktopEnabled: raw?.desktopEnabled === undefined ? target === "desktop" || target === "both" : Boolean(raw.desktopEnabled),
+      channelTarget: ALERT_CHANNEL_TARGETS.includes(target) ? target : "windows_client",
+      desktopEnabled: raw?.desktopEnabled === undefined ? target === "windows_client" || target === "both" : Boolean(raw.desktopEnabled),
       pushoverEnabled: raw?.pushoverEnabled === undefined ? target === "pushover" || target === "both" : Boolean(raw.pushoverEnabled),
       titleTemplate: String(raw?.titleTemplate || raw?.title_template || raw?.title || ""),
       messageTemplate: String(raw?.messageTemplate || raw?.message_template || raw?.message || ""),
@@ -371,6 +371,12 @@
       health: String(raw?.health || raw?.status || "scaffold"),
       updatedAt: String(raw?.updatedAt || raw?.updated_at || new Date().toISOString())
     };
+  }
+
+  function normalizeAlertChannelTarget(value) {
+    const target = String(value || "windows_client").toLowerCase();
+    if (target === "desktop") return "windows_client";
+    return target;
   }
 
   function loadAlertRules() {
@@ -1500,7 +1506,7 @@
 
         ${panel(
           "CMS status",
-          "Routing fields are shaped for desktop and Pushover delivery, but this page only edits local scaffold JSON.",
+          "Routing fields are shaped for windows_client and Pushover delivery, but this page only edits local scaffold JSON.",
           metricCards([
             { label: "Rules", value: String(alertsState.rules.length), note: alertsState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
             { label: "Enabled", value: String(enabledCount), note: "Local enabled flags only.", tone: "warn" },
@@ -1516,7 +1522,7 @@
             <article class="card">
               <span class="metric-label">Contract</span>
               <h3>danielclancy</h3>
-              <p class="muted">Project: DanielClancy; public origin: https://danielclancy.net; admin origin: https://admin.danielclancy.net; targets: desktop, pushover.</p>
+              <p class="muted">Project: DanielClancy; public origin: https://danielclancy.net; admin origin: https://admin.danielclancy.net; targets: windows_client, pushover.</p>
             </article>
             <article class="card">
               <span class="metric-label">Delivery checkpoint</span>
@@ -1995,7 +2001,7 @@
       severity: "info",
       sourceSurface: "danielclancy.net",
       triggerType: "manual_test",
-      channelTarget: "desktop",
+      channelTarget: "windows_client",
       desktopEnabled: true,
       pushoverEnabled: false,
       titleTemplate: "DanielClancy alert",
@@ -2006,10 +2012,11 @@
   }
 
   function alignAlertTargetFlags(rule, target) {
+    target = normalizeAlertChannelTarget(target);
     if (target === "both") {
       return { ...rule, channelTarget: target, desktopEnabled: true, pushoverEnabled: true };
     }
-    if (target === "desktop") {
+    if (target === "windows_client") {
       return { ...rule, channelTarget: target, desktopEnabled: true, pushoverEnabled: false };
     }
     if (target === "pushover") {
@@ -2027,7 +2034,7 @@
       source_namespace: "danielclancy",
       public_origin: "https://danielclancy.net",
       admin_origin: "https://admin.danielclancy.net",
-      targets: ["desktop", "pushover"],
+      targets: ["windows_client", "pushover"],
       storage_key: ALERTS_STORAGE_KEY,
       delivery_status: "scaffold_only",
       requirements: [

@@ -1,5 +1,18 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Alerts Runtime Contract Compatibility
+
+### Technical Notes
+
+- Normalized the local Alerts scaffold target contract from the older `desktop` label to the StreamSuites runtime destination name `windows_client`, while still accepting legacy stored/imported `desktop` rows as an alias.
+- Updated the exported DanielClancy alert contract target list to `windows_client` and `pushover`.
+- Kept the existing localStorage/KV scaffold behavior intact; this does not make DanielClancy-Admin write live StreamSuites runtime rules or send alerts.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin alert exports now line up with the StreamSuites alert delivery contract for the desktop alerts client.
+- Live delivery still requires the StreamSuites runtime ingest bridge, hosted env setup, and signed event posting.
+
 ## Turnstile admin auth protection milestone
 
 ### Technical Notes
