@@ -1,5 +1,56 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Live Cloudflare Analytics And City Rollup Milestone
+
+### Technical Notes
+
+- Replaced the placeholder-only Analytics API with a Cloudflare Pages-compatible GraphQL query foundation using `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ZONE_ID_DANIELCLANCY`, and `CLOUDFLARE_API_TOKEN_ANALYTICS`.
+- The Analytics API now attempts conservative Cloudflare GraphQL sections for totals, top pages, referrers, countries, browsers, devices, and best-effort city rows, with safe per-section error summaries and no secret/token exposure.
+- Added bounded `DC_ADMIN_KV` page-visit analytics storage at `analytics:page_visits:recent` and `analytics:page_visits:rollup`.
+- Page-visit storage preserves safe request metadata including page path/title/referrer host and Cloudflare `request.cf` country/region/city/timezone/colo fields when available; raw client IP is not stored in analytics KV.
+- The combined analytics response prefers page-visit KV city rows, falls back to Cloudflare GraphQL city rows when available, and labels region/country fallback rows without pretending they are city-level data.
+- Updated the Analytics UI to show Cloudflare connected/error/missing config state, page-visit KV connected/unavailable state, last checked, source/precision labels, top pages, referrers, and browser/device cards.
+- Added the topbar loader strip and authenticated user dropdown with Accounts, Settings, Public Site, and Logout actions.
+- Updated `.env.example` to keep analytics env var names without sample secret/token values.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- Turnstile remains preserved.
+- Alerts rule editor remains removed/disabled.
+- StreamSuites repos and StreamSuites-Dashboard were not mutated.
+- No MCP browser tests or Playwright MCP checks were run; validation stayed to cheap static and mocked checks.
+
+### Human-Readable Notes
+
+- Analytics no longer gets stuck as scaffold-only when the three Cloudflare analytics vars are configured.
+- City detail is reported only when real page-visit request geo metadata or a supported Cloudflare dataset provides it.
+- Country-only rows are labelled as country precision, and the UI says “City detail unavailable from current data source” when city data is missing.
+- Sample fallback rows remain clearly labelled and are not presented as real visitor counts.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `index.html`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `functions/api/admin/analytics.js`
+- `functions/api/track/page-visit.js`
+- `tests/analytics-helpers.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check` on changed frontend JS and Pages Function files.
+- Run `node --test tests/analytics-helpers.test.mjs`.
+- Run `git diff --check`.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages verification is still required to confirm the configured token can access the DanielClancy zone analytics datasets.
+- Cloudflare GraphQL city dimensions may not be available for every account/plan/dataset; page-visit KV request geo remains the primary city-detail source.
+- Public-site page visits currently send path/title/referrer to their own endpoint; cross-surface public city rollup requires hosted routing/storage alignment if public events must land in the Admin KV namespace.
+
 ## Emergency Alert Rule Isolation Guard
 
 ### Technical Notes

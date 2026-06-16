@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, and first-pass admin CMS endpoints for Projects, Media, and Alerts. The CMS and account pages use KV when configured and retain clearly labelled browser-local fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, first-pass admin CMS endpoints for Projects, Media, and Alerts, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows.
 
 ## Local Use
 
@@ -139,15 +139,24 @@ Implemented endpoint:
 
 - `GET /api/admin/analytics`
 
-The Analytics page hydrates from this admin-session-protected Pages Function. Unauthenticated requests return `unauthenticated`, signed-in non-admin users return `admin_required`, and secret values are never returned. When Cloudflare Analytics configuration is missing, the endpoint returns `configured: false`, a clear `cloudflare_analytics_not_configured` source, empty live metric panels, `lastChecked`, and a `requiredConfig` / `missingConfig` list containing env var names only.
+The Analytics page hydrates from this admin-session-protected Pages Function. Unauthenticated requests return `unauthenticated`, signed-in non-admin users return `admin_required`, and secret values are never returned. When Cloudflare Analytics configuration is missing, the endpoint returns `configured: false`, a clear `cloudflare_analytics_not_configured` source, `lastChecked`, and a `requiredConfig` / `missingConfig` list containing env var names only.
 
-Optional future Cloudflare Analytics env vars:
+Cloudflare Analytics env vars:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_ZONE_ID_DANIELCLANCY`
 - `CLOUDFLARE_API_TOKEN_ANALYTICS`
 
-These env vars are not required for the dashboard to load. Until the Cloudflare Analytics API query contract is implemented and tested, the Analytics page keeps map/table scaffold data visible only as labelled sample/local fallback and does not claim live visitor, page-view, referrer, country, or region numbers.
+When all three env vars are present, `GET /api/admin/analytics` attempts real Cloudflare Analytics GraphQL requests against the configured DanielClancy zone. The endpoint uses conservative windows, currently a last-24-hours totals query and last-7-days grouped queries for pages, referrers, countries, browsers, devices, and a best-effort city query. Cloudflare GraphQL schema support can vary by dataset/account/plan, so per-section GraphQL errors are returned as safe summaries without exposing the token or IDs.
+
+The same endpoint merges Cloudflare metrics with bounded page-visit analytics stored in `DC_ADMIN_KV`:
+
+- `analytics:page_visits:recent` - latest recent page visit events, capped to a bounded list
+- `analytics:page_visits:rollup` - aggregate counts derived from the bounded recent list
+
+The page-visit endpoint stores non-secret metadata only: timestamp, surface, page path/url/title, referrer host, country, region, city, timezone, colo, browser, device, platform, and safe admin/authenticated flags. It does not store raw client IP addresses.
+
+City-level location detail comes first from page-visit KV rows enriched with Cloudflare `request.cf.city`, then from any Cloudflare GraphQL city dataset that is available. If only region/country rows are available, the API and UI mark those rows with `precision: "region"` or `precision: "country"` and show “City detail unavailable from current data source” instead of pretending country rows are city rows. Sample fallback rows remain visible only in a clearly labelled sample fallback state and must not be read as real visitor counts.
 
 ## Admin CMS API
 
@@ -189,7 +198,7 @@ After local smoke testing, stop for Cloudflare setup before real OAuth/live auth
 - Add any Pushover env/config needed before DanielClancy alerts can route through StreamSuites.
 - Confirm the hosted admin dashboard loads and OAuth callbacks return to the clean admin-required state for non-admin sessions.
 - Confirm cookies across `danielclancy.net` and `admin.danielclancy.net`.
-- Add Cloudflare Analytics env vars only when ready to wire and test the live query path; the dashboard currently reports missing config instead of fake analytics metrics.
+- Add Cloudflare Analytics env vars before relying on live Cloudflare totals. The dashboard reports missing/failed config safely and does not show fake analytics metrics as real data.
 
 ## Repository Tree
 
@@ -233,7 +242,8 @@ DanielClancy-Admin/
 │       └── turnstile/
 │           └── config.js
 ├── tests/
-│   └── alerts-disabled.test.mjs
+│   ├── alerts-disabled.test.mjs
+│   └── analytics-helpers.test.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html
@@ -248,7 +258,7 @@ DanielClancy-Admin/
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins and master-only role/status/note actions.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
-- Analytics page hydrates Cloudflare readiness from `/api/admin/analytics`; missing Cloudflare Analytics config is reported clearly, and sample map/table rows remain labelled as fallback/demo data.
+- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and sample map/table rows remain labelled as fallback/demo data.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.

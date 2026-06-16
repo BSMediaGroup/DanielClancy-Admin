@@ -4,6 +4,7 @@
   const nav = document.getElementById("sidebar-nav");
   const routeTitle = document.getElementById("route-title");
   const navToggle = document.getElementById("nav-toggle");
+  const topbarLoader = document.getElementById("topbar-loader");
 
   const routes = [
     { id: "overview", label: "Overview", icon: "OV", path: "#/overview" },
@@ -141,6 +142,7 @@
   const pageVisitState = {
     lastPath: ""
   };
+  let loadingCount = 0;
 
   function escapeHtml(value) {
     return String(value)
@@ -148,6 +150,16 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function startTopbarLoader() {
+    loadingCount += 1;
+    if (topbarLoader) topbarLoader.classList.add("is-active");
+  }
+
+  function stopTopbarLoader() {
+    loadingCount = Math.max(0, loadingCount - 1);
+    if (!loadingCount && topbarLoader) topbarLoader.classList.remove("is-active");
   }
 
   function normalizeProject(raw) {
@@ -767,6 +779,7 @@
   async function hydrateAnalyticsStatus(renderAfter = false) {
     analyticsStatusState.status = "checking";
     analyticsStatusState.message = "Checking analytics status...";
+    startTopbarLoader();
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
     try {
       const response = await fetch(adminAnalyticsEndpoint(), { credentials: "include" });
@@ -775,16 +788,21 @@
         analyticsStatusState.status = "fallback";
         analyticsStatusState.message = payload?.error || `Analytics API unavailable (${response.status}).`;
       } else {
-        analyticsStatusState.status = payload.configured ? "connected" : "not-configured";
+        const hasKvEvents = Number(payload?.pageVisits?.events || 0) > 0;
+        analyticsStatusState.status = payload.configured || hasKvEvents ? "connected" : "not-configured";
         analyticsStatusState.message = payload.configured
-          ? "Cloudflare Analytics configuration is present; live query implementation is still pending."
-          : "Cloudflare analytics not configured. Sample/local fallback rows are labelled below.";
+          ? `Cloudflare Analytics ${payload.cloudflare?.source?.includes("error") ? "returned an error" : "queried"}; page-visit storage is ${payload.pageVisits?.configured ? "connected" : "unavailable"}.`
+          : hasKvEvents
+            ? "Cloudflare analytics is not configured, but page-visit KV analytics are available."
+            : "Cloudflare analytics not configured. Sample/local fallback rows are labelled below.";
         analyticsStatusState.payload = payload;
         analyticsStatusState.lastChecked = payload.lastChecked || new Date().toISOString();
       }
     } catch {
       analyticsStatusState.status = "fallback";
       analyticsStatusState.message = "Pages Functions are unavailable here. Analytics falls back to labelled local sample rows.";
+    } finally {
+      stopTopbarLoader();
     }
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
   }
@@ -1350,51 +1368,121 @@
     `;
   }
 
+  function formatAnalyticsNumber(value) {
+    if (value === null || value === undefined || value === "") return "Unavailable";
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value);
+    return number.toLocaleString();
+  }
+
+  function hasRows(rows) {
+    return Array.isArray(rows) && rows.length > 0;
+  }
+
+  function metricValue(row) {
+    return row?.count ?? row?.visits ?? row?.requests ?? row?.events ?? null;
+  }
+
+  function sourceTone(source) {
+    const text = String(source || "");
+    if (text.includes("cloudflare") || text.includes("page_visit")) return "success";
+    return "warn";
+  }
+
+  function analyticsList(rows, labelKey, valueLabel = "Events") {
+    if (!hasRows(rows)) return `<div class="empty-state">No live rows available for this section.</div>`;
+    return `
+      <ul class="analytics-list">
+        ${rows
+          .slice(0, 8)
+          .map((row) => {
+            const label = row[labelKey] || row.path || row.host || row.browser || row.device || "Unavailable";
+            return `<li><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</strong><small>${escapeHtml(valueLabel)} · ${escapeHtml(row.source || "unknown")}</small></li>`;
+          })
+          .join("")}
+      </ul>
+    `;
+  }
+
+  function analyticsTable(headers, rows, rowMarkup, emptyText) {
+    if (!hasRows(rows)) return `<div class="empty-state">${escapeHtml(emptyText || "No live analytics rows available.")}</div>`;
+    return `
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>${rows.map(rowMarkup).join("")}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function renderAnalytics() {
     routeTitle.textContent = "Analytics";
     const status = analyticsStatusState.payload;
     const configured = Boolean(status?.configured);
     const missingConfig = Array.isArray(status?.missingConfig) ? status.missingConfig : [];
     const sourceLabel = status?.source || (analyticsStatusState.status === "fallback" ? "local_function_unavailable" : "checking");
+    const cloudflare = status?.cloudflare || {};
+    const pageVisits = status?.pageVisits || {};
+    const readiness = status?.readiness || {};
+    const totals = status?.totals || {};
+    const liveTopPages = hasRows(status?.topPages) ? status.topPages : [];
+    const liveReferrers = hasRows(status?.referrers) ? status.referrers : [];
+    const liveCities = hasRows(status?.cities) ? status.cities : [];
+    const liveBrowsers = hasRows(status?.browsers) ? status.browsers : [];
+    const liveDevices = hasRows(status?.devices) ? status.devices : [];
+    const hasLiveRows = hasRows(liveTopPages) || hasRows(liveReferrers) || hasRows(liveCities) || hasRows(liveBrowsers) || hasRows(liveDevices);
+    const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city && row.city !== "City detail unavailable from current data source");
     const sampleMarkers = data.analytics.markers || [];
     const sampleGeoRows = data.analytics.geoRows || [];
     const sampleRouteRows = data.analytics.routeRows || [];
     const operationalRows = [
-      ["Configured", configured ? "Yes" : "No"],
+      ["Cloudflare configured", configured ? "Yes" : "No"],
+      ["Page-visit KV", pageVisits.configured ? "Connected" : "Unavailable"],
       ["Source", sourceLabel],
-      ["Site origin", status?.site?.origin || "https://danielclancy.net"],
-      ["Admin origin", status?.site?.adminOrigin || "https://admin.danielclancy.net"],
+      ["Cloudflare result", cloudflare.lastResult || "Not checked"],
+      ["Page-visit storage", pageVisits.storage?.lastResult || "Not checked"],
       ["Last checked", formatOperationalTimestamp(status?.lastChecked || analyticsStatusState.lastChecked)]
     ];
     app.innerHTML = `
       <div class="page">
         ${pageHeader(
-          "Analytics readiness",
           "Analytics",
-          "Cloudflare-ready analytics status surface. It reports configuration/readiness first and labels sample fallback data without inventing live visitor numbers.",
-          `${badge(configured ? "Cloudflare config present" : "Cloudflare analytics not configured", configured ? "success" : "warn")}
-           ${badge(`Source: ${sourceLabel}`, configured ? "success" : "warn")}`
+          "Analytics",
+          "Live Cloudflare metrics and page-visit KV analytics are separated by source, with location precision labelled per row.",
+          `${badge(configured ? "Cloudflare Analytics connected" : "Cloudflare Analytics missing config", configured ? "success" : "warn")}
+           ${badge(pageVisits.configured ? "Page-visit KV connected" : "Page-visit KV unavailable", pageVisits.configured ? "success" : "warn")}
+           ${badge(`Source: ${sourceLabel}`, sourceTone(sourceLabel))}`
         )}
 
         ${panel(
-          "Analytics API status",
+          "Source status",
           analyticsStatusState.message,
           `<div class="grid grid-2">
-            ${storageStatusCard("Cloudflare Analytics", configured ? "Configured" : "Not configured", configured ? "Required env vars are present; live API querying remains a future tested integration." : "Required env vars are missing, so no live metrics are returned.", configured ? "success" : "warn")}
-            ${storageStatusCard("Dashboard data mode", configured ? "Ready placeholder" : "Sample/local fallback", configured ? "Panels return explicit no-live-query placeholders." : "Scaffold cards and map rows remain visible only as labelled demo data.", configured ? "success" : "warn")}
+            ${storageStatusCard("Cloudflare Analytics", configured ? "Connected" : "Missing config", configured ? `Last result: ${cloudflare.lastResult || "not checked"}` : `Missing: ${missingConfig.join(", ") || "unknown"}`, configured && !String(cloudflare.lastResult || "").includes("error") ? "success" : "warn")}
+            ${storageStatusCard("Page-visit event storage", pageVisits.configured ? "Connected" : "Unavailable", pageVisits.configured ? `${formatAnalyticsNumber(pageVisits.events || 0)} event(s); ${formatAnalyticsNumber(pageVisits.cityEvents || 0)} with city detail` : "DC_ADMIN_KV is required for request.cf city rollups.", pageVisits.configured ? "success" : "warn")}
           </div>
           ${descriptionRows(operationalRows)}`
         )}
 
+        <section class="grid grid-4">
+          ${storageStatusCard("Requests", formatAnalyticsNumber(totals.requests), "Cloudflare GraphQL total when available.", totals.requests === null || totals.requests === undefined ? "warn" : "success")}
+          ${storageStatusCard("Visits", formatAnalyticsNumber(totals.visits), "Cloudflare GraphQL visits when available.", totals.visits === null || totals.visits === undefined ? "warn" : "success")}
+          ${storageStatusCard("Bandwidth", formatAnalyticsNumber(totals.bandwidth), "Cloudflare edge response bytes when available.", totals.bandwidth === null || totals.bandwidth === undefined ? "warn" : "success")}
+          ${storageStatusCard("Page-visit events", formatAnalyticsNumber(totals.pageVisitEvents || 0), "KV event count from bounded recent storage.", pageVisits.configured ? "success" : "warn")}
+        </section>
+
         <section class="panel">
           <header class="panel-header">
             <div>
-              <h2>Global Sessions Map</h2>
-              <p>${escapeHtml(configured ? status?.map?.message || "Cloudflare config is present; live map query is pending." : "Cloudflare analytics not configured. Markers shown here are sample/local fallback only.")}</p>
+              <h2>Location Precision Panel</h2>
+              <p>${escapeHtml(cityUnavailable ? "City detail unavailable from current data source" : "City-level page-visit detail is available from request geo metadata.")}</p>
             </div>
             <div class="panel-actions">
-              ${badge(configured ? "Cloudflare-ready placeholder" : "Map sample", configured ? "success" : "warn")}
-              ${badge(configured ? "No live query yet" : "No live telemetry", "warn")}
+              ${badge(cityUnavailable ? "City unavailable" : "City precision", cityUnavailable ? "warn" : "success")}
+              ${badge(hasLiveRows ? "Live source rows" : "Sample fallback only", hasLiveRows ? "success" : "warn")}
             </div>
           </header>
           <div class="panel-body">
@@ -1409,42 +1497,40 @@
                 )
                 .join("")}
             </div>
+            <p class="muted">${escapeHtml(hasLiveRows ? "Map markers are visual placeholders; the table below is the source of truth for precision and counts." : "Sample markers are visible only because no live source rows are available.")}</p>
           </div>
         </section>
 
         <section class="grid analytics-grid">
           ${panel(
-            "Geographic breakdown",
-            configured ? "Cloudflare config is present, but live country/region query output is not enabled yet." : "Reference-style location table using labelled sample/local rows only.",
-            `<div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr><th>Location</th><th>Precision</th><th>Sessions</th><th>Source</th></tr>
-                </thead>
-                <tbody>
-                  ${sampleGeoRows
-                    .map(
-                      (row) => `
-                        <tr>
-                          <td><strong>${escapeHtml(row.location)}</strong></td>
-                          <td>${escapeHtml(row.precision)}</td>
-                          <td>${escapeHtml(row.sessions)}</td>
-                          <td>${escapeHtml(row.source)}</td>
-                        </tr>
-                      `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-            </div>`
+            "Location breakdown",
+            cityUnavailable ? "City detail unavailable from current data source" : "City rows are sourced from page-visit KV request geo metadata when available.",
+            analyticsTable(
+              ["City", "Region", "Country", "Visits/Events", "Precision", "Source"],
+              liveCities,
+              (row) => `
+                <tr>
+                  <td><strong>${escapeHtml(row.city || "City detail unavailable from current data source")}</strong></td>
+                  <td>${escapeHtml(row.region || "")}</td>
+                  <td>${escapeHtml(row.country || "")}</td>
+                  <td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td>
+                  <td>${badge(row.precision || "unavailable", row.precision === "city" ? "success" : "warn")}</td>
+                  <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
+                </tr>
+              `,
+              "City detail unavailable from current data source"
+            )
           )}
           ${panel(
             "Analytics readiness",
             "Missing setup is listed by env var name only; no values or tokens are exposed.",
             `<div class="grid">
               ${(status?.requiredConfig || ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID_DANIELCLANCY", "CLOUDFLARE_API_TOKEN_ANALYTICS"])
-                .map((name) => `<article class="card">${badge(missingConfig.includes(name) ? "Missing" : "Present", missingConfig.includes(name) ? "warn" : "success")}<p><strong>${escapeHtml(name)}</strong></p></article>`)
+                .map((name) => `<article class="card">${badge(readiness.cloudflare?.[name] ? "Configured" : "Missing", readiness.cloudflare?.[name] ? "success" : "warn")}<p><strong>${escapeHtml(name)}</strong></p></article>`)
                 .join("")}
+              <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>DC_ADMIN_KV</strong></p></article>
+              <article class="card">${badge("Cloudflare result", sourceTone(readiness.lastCloudflareQueryResult))}<p>${escapeHtml(readiness.lastCloudflareQueryResult || "Not checked")}</p></article>
+              <article class="card">${badge("Page-visit result", sourceTone(readiness.lastPageVisitStorageResult))}<p>${escapeHtml(readiness.lastPageVisitStorageResult || "Not checked")}</p></article>
               ${(status?.notes || data.analytics.notes)
                 .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
                 .join("")}
@@ -1452,30 +1538,50 @@
           )}
         </section>
 
-        ${panel(
-          "Top routes / resources",
-          configured ? "Top-page API output is still pending; route rows below are sample/admin shell references." : "Static route table shown as sample/local fallback only.",
-          `<div class="table-wrap">
-            <table class="table">
-              <thead>
-                <tr><th>Route</th><th>Surface</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                ${sampleRouteRows
-                  .map(
-                    (row) => `
-                      <tr>
-                        <td><strong>${escapeHtml(row.route)}</strong></td>
-                        <td>${escapeHtml(row.surface)}</td>
-                        <td>${escapeHtml(row.status)}</td>
-                      </tr>
-                    `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </div>`
-        )}
+        <section class="grid analytics-grid">
+          ${panel(
+            "Top pages",
+            hasRows(liveTopPages) ? "Live rows from page-visit KV or Cloudflare GraphQL." : "No live top-page rows available.",
+            analyticsTable(
+              ["Page", "Visits/Events", "Source"],
+              liveTopPages,
+              (row) => `<tr><td><strong>${escapeHtml(row.path || "/")}</strong><br><span>${escapeHtml(row.title || "")}</span></td><td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td><td>${badge(row.source || "unknown", sourceTone(row.source))}</td></tr>`,
+              "No live top pages available."
+            )
+          )}
+          ${panel(
+            "Referrers",
+            hasRows(liveReferrers) ? "Live referrer rows from page visits or Cloudflare." : "No live referrer rows available.",
+            analyticsList(liveReferrers, "host", "Events")
+          )}
+        </section>
+
+        <section class="grid grid-2">
+          ${panel("Browsers", hasRows(liveBrowsers) ? "Live browser data when available." : "No browser data available.", analyticsList(liveBrowsers, "browser", "Events"))}
+          ${panel("Devices", hasRows(liveDevices) ? "Live device data when available." : "No device data available.", analyticsList(liveDevices, "device", "Events"))}
+        </section>
+
+        ${!hasLiveRows
+          ? panel(
+              "Sample fallback",
+              "These rows are labelled sample data and are not real visitor counts.",
+              `<div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr><th>Route / Location</th><th>Precision</th><th>Value</th><th>Source</th></tr>
+                  </thead>
+                  <tbody>
+                    ${sampleGeoRows
+                      .map((row) => `<tr><td><strong>${escapeHtml(row.location)}</strong></td><td>${escapeHtml(row.precision)}</td><td>${escapeHtml(row.sessions)}</td><td>${escapeHtml(row.source)}</td></tr>`)
+                      .join("")}
+                    ${sampleRouteRows
+                      .map((row) => `<tr><td><strong>${escapeHtml(row.route)}</strong></td><td>${escapeHtml(row.surface)}</td><td>${escapeHtml(row.status)}</td><td>Sample fallback</td></tr>`)
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>`
+            )
+          : ""}
       </div>
     `;
   }

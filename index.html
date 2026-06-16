@@ -35,6 +35,9 @@
 
       <div class="workspace">
         <header class="topbar">
+          <div class="topbar-loader" id="topbar-loader" aria-hidden="true">
+            <span class="topbar-loader-track"><span class="topbar-loader-bar"></span></span>
+          </div>
           <button class="icon-button" id="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="true">
             <span></span>
             <span></span>
@@ -47,7 +50,7 @@
           <div class="topbar-actions">
             <span class="environment-pill">Scaffold data</span>
             <span id="auth-status" class="auth-status-pill"></span>
-            <a class="button button-secondary" href="https://danielclancy.net" rel="noreferrer">Public site</a>
+            <span id="topbar-user" class="topbar-user"></span>
           </div>
         </header>
 

@@ -82,15 +82,41 @@
 
   function renderTopbar() {
     const target = document.getElementById("auth-status");
+    const userTarget = document.getElementById("topbar-user");
     if (!target) return;
     if (sessionState.isAdmin) {
-      target.innerHTML = `
-        <span class="environment-pill environment-pill-success">Admin session</span>
-        <button class="button button-secondary" type="button" data-auth-action="logout">Logout</button>
-      `;
+      const session = sessionState.session || {};
+      const identity = session.email || session.username || session.display_name || "Admin";
+      const initials = String(identity)
+        .split(/[\s@._-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase() || "A";
+      target.innerHTML = `<span class="environment-pill environment-pill-success">Admin session</span>`;
+      if (userTarget) {
+        userTarget.innerHTML = `
+          <details class="topbar-user-menu">
+            <summary aria-label="Open user menu">
+              <span class="topbar-avatar">${escapeHtml(initials)}</span>
+              <span class="topbar-user-label">${escapeHtml(identity)}</span>
+            </summary>
+            <div class="topbar-user-popover">
+              <a href="#/accounts">Accounts</a>
+              <a href="#/settings">Settings</a>
+              <a href="https://danielclancy.net" rel="noreferrer">Public Site</a>
+              <button type="button" data-auth-action="logout">Logout</button>
+            </div>
+          </details>
+        `;
+      }
       return;
     }
     target.innerHTML = `<span class="environment-pill">Auth required</span>`;
+    if (userTarget) {
+      userTarget.innerHTML = `<a class="button button-secondary" href="https://danielclancy.net" rel="noreferrer">Public Site</a>`;
+    }
   }
 
   function providerLinks() {

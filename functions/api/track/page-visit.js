@@ -1,4 +1,5 @@
 import { postDanielClancyAlert } from "../../_shared/alert-sender.js";
+import { storePageVisitEvent } from "../admin/analytics.js";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -51,6 +52,14 @@ export async function onRequestPost(context) {
   }
 
   const pagePath = safePath(payload.path || payload.pagePath || payload.route);
+  const storage = await storePageVisitEvent(context, {
+    ...payload,
+    pagePath,
+    surface: "danielclancy_admin",
+    domain: "admin.danielclancy.net",
+    admin: true,
+    authenticated: true
+  });
   const result = await postDanielClancyAlert(context, {
     triggerType: "page_visit",
     surface: "admin.danielclancy.net",
@@ -71,6 +80,15 @@ export async function onRequestPost(context) {
   if (!result.ok && result.configured) {
     console.error(JSON.stringify({ event: "admin_page_visit_alert_delivery_failed", status: result.status || 0, error: result.error }));
   }
+  if (!storage.ok && storage.configured) {
+    console.error(JSON.stringify({ event: "admin_page_visit_analytics_storage_failed", error: storage.error }));
+  }
 
-  return json({ ok: true, delivered: Boolean(result.ok), configured: Boolean(result.configured) });
+  return json({
+    ok: true,
+    delivered: Boolean(result.ok),
+    configured: Boolean(result.configured),
+    stored: Boolean(storage.ok),
+    storageConfigured: Boolean(storage.configured)
+  });
 }
