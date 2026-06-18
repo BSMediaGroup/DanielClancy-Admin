@@ -9,7 +9,7 @@ import {
   reconcileRegistryCollection,
   registryStoragePayload,
   unpackRegistryStorage
-} from "../../functions/_shared/registry-reconciliation.js";
+} from "./registry-reconciliation.js";
 
 (function () {
   const data = window.DC_ADMIN_SCAFFOLD_DATA;

@@ -1,5 +1,28 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Static Module Load Hotfix
+
+### Technical Notes
+
+- Added `assets/js/registry-reconciliation.js` as the browser-served registry reconciliation helper.
+- Updated `assets/js/admin-app.js` to import reconciliation code from the static asset path instead of `functions/_shared`, because hosted/static routes can rewrite Function-source paths to `index.html` and fail strict module MIME checks.
+- Kept `functions/_shared/registry-reconciliation.js` in place for the Cloudflare Pages CMS Function.
+
+### Human-Readable Notes
+
+- The dashboard shell/sidebar can boot again in static/hosted mode instead of failing on a module MIME error before render.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `assets/js/registry-reconciliation.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check assets/js/admin-app.js`, `node --check assets/js/registry-reconciliation.js`, focused registry tests, and a local browser load check for `#/companies`.
+
 ## Emergency Registry Reconciliation And Stale Cache Repair Milestone
 
 ### Technical Notes

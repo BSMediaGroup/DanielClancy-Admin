@@ -260,6 +260,7 @@ DanielClancy-Admin/
 │   ├── js/
 │   │   ├── admin-auth.js
 │   │   ├── admin-app.js
+│   │   ├── registry-reconciliation.js
 │   │   ├── scaffold-data.js
 │   │   └── turnstile.js
 │   └── logos/
