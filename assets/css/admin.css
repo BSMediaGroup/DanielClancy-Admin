@@ -1602,11 +1602,13 @@ body.col-resizing-active {
 
 .live-map {
   margin-top: 14px;
+  min-height: 360px;
+  overflow: hidden;
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(0deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    radial-gradient(circle at 22% 38%, rgba(164, 108, 255, 0.1), transparent 0 18%),
-    radial-gradient(circle at 76% 54%, rgba(128, 167, 196, 0.12), transparent 0 20%),
+    radial-gradient(circle at 18% 42%, rgba(75, 108, 150, 0.12), transparent 0 19%),
+    radial-gradient(circle at 73% 51%, rgba(128, 167, 196, 0.12), transparent 0 22%),
     linear-gradient(180deg, rgba(9, 13, 18, 0.98), rgba(4, 6, 9, 0.96));
   background-size: 12.5% 25%, 12.5% 25%, auto, auto, auto;
 }
@@ -1620,6 +1622,9 @@ body.col-resizing-active {
   inset: 18px;
   border: 1px solid rgba(219, 201, 166, 0.12);
   border-radius: var(--radius-sm);
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(219, 201, 166, 0.12) 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 49.8%, rgba(219, 201, 166, 0.12) 50%, transparent 50.2%);
 }
 
 .map-world {
@@ -1648,11 +1653,12 @@ body.col-resizing-active {
   position: absolute;
   left: var(--x);
   top: var(--y);
-  width: 12px;
-  height: 12px;
+  width: var(--marker-size, 12px);
+  height: var(--marker-size, 12px);
   border-radius: 999px;
   background: var(--accent-strong);
   box-shadow: 0 0 0 8px rgba(219, 201, 166, 0.1), 0 0 28px rgba(219, 201, 166, 0.42);
+  transform: translate(-50%, -50%);
 }
 
 .map-marker.live {
@@ -1661,19 +1667,72 @@ body.col-resizing-active {
   box-shadow: 0 0 0 8px rgba(168, 208, 186, 0.15), 0 0 22px rgba(168, 208, 186, 0.32);
 }
 
-.map-marker span {
+.map-marker-label {
   position: absolute;
-  left: 16px;
-  top: -6px;
+  left: calc(var(--marker-size, 12px) + 8px);
+  top: -8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 180px;
+  padding: 4px 7px;
+  border: 1px solid rgba(219, 201, 166, 0.18);
+  border-radius: 999px;
+  background: rgba(6, 9, 13, 0.86);
   white-space: nowrap;
-  color: var(--muted);
+  color: var(--text);
   font-size: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
 .location-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+}
+
+.country-flag {
+  width: 18px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.country-cell,
+.location-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.location-chip {
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.location-chip span,
+.country-cell span,
+.map-marker-label span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.demo-fallback {
+  display: grid;
+  gap: 10px;
+}
+
+.demo-fallback summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .settings-control {

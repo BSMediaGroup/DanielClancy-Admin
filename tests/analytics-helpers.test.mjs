@@ -47,17 +47,24 @@ test("configured env attempts GraphQL and returns safe errors", async () => {
 test("page-visit rows aggregate city and country precision truthfully", () => {
   const rollup = aggregatePageVisitEvents([
     {
+      source: "page_visit_kv",
+      live: true,
       page_path: "/",
       referrer_host: "example.com",
       country: "AU",
+      country_code: "AU",
       region: "NSW",
       city: "Sydney",
       browser: "Safari",
       device: "Desktop"
     },
     {
+      source: "page_visit_kv",
+      live: true,
       page_path: "/work",
       country: "US",
+      country_code: "US",
+      precision: "country",
       browser: "Chrome",
       device: "Mobile"
     }

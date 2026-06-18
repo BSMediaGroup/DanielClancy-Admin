@@ -1,5 +1,54 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics Live Map / Source Integrity Milestone
+
+### Technical Notes
+
+- Repaired the Analytics API/page-visit storage contract so real ingest rows are tagged with `source: "page_visit_kv"`, `live: true`, `eventId`, `recordedAt`, `country_code`, and `precision`.
+- Recomputed page-visit rollups from live source-tagged rows only; explicit sample/fallback/demo/mock/test rows are isolated as `sampleRows`, and untagged legacy rows are held out as `staleRows`.
+- Added admin-session-protected `POST /api/admin/analytics` action `purge_non_live_fallback_rows` for clearing only explicitly tagged sample/fallback analytics rows.
+- Added Analytics response freshness metadata: last checked, last live page-visit event time, last Cloudflare GraphQL query time, and `sourceFreshnessState`.
+- Reworked the Analytics map panel to keep fake/sample markers out of live mode, show the intentional empty state, plot only exact known city/country coordinate matches, and list unknown city rows without inventing coordinates.
+- Added local SVG country flags for US, AU, GB, CA, NZ, plus a local fallback globe, and rendered flags in location table cells, city/region/country chips, map labels, and marker tooltip text where available.
+- Added `assets/data/geo-coordinate-lookup.json` documenting the limited verified built-in coordinate lookup for Los Angeles, Portland, and Sydney.
+- Added `tests/analytics-map-flags.test.mjs` and expanded ingest/API tests for source tags, sample/stale isolation, country-only precision, flag assets, coordinate lookup behavior, freshness metadata, and purge safety.
+- No fake/sample markers appear in live map mode.
+- Country-only data is not treated as city data.
+- No analytics counts or cities were invented.
+- Alerts editor remains removed/disabled.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Analytics now shows live page-visit geography only when real source-tagged rows exist.
+- Empty analytics renders a real dark map shell with “No live page-visit location events captured yet.” instead of demo locations.
+- Operators can refresh analytics manually and clear only tagged sample rows without deleting real page-visit data.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `assets/css/admin.css`
+- `assets/data/geo-coordinate-lookup.json`
+- `assets/icons/flags/*.svg`
+- `functions/_shared/analytics-store.js`
+- `functions/api/admin/analytics.js`
+- `tests/analytics-ingest-and-assets.test.mjs`
+- `tests/analytics-map-flags.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Run `node --check functions/_shared/analytics-store.js functions/api/admin/analytics.js assets/js/admin-app.js`.
+- Run `node --test tests/analytics-helpers.test.mjs`.
+- Run `node --test tests/analytics-ingest-and-assets.test.mjs`.
+- Run `node --test tests/analytics-map-flags.test.mjs`.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages validation is still needed to confirm the deployed env bindings and GraphQL schema return the expected live sections.
+- Existing untagged legacy KV rows are intentionally held out as stale rather than purged automatically; only rows explicitly tagged sample/fallback/demo/mock/test are removed by the repair action.
+
 ## Public Site-Data Export Milestone
 
 ### Technical Notes

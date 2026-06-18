@@ -2538,17 +2538,50 @@ import {
           ? `Cloudflare Analytics ${payload.cloudflare?.source?.includes("error") ? "returned an error" : "queried"}; page-visit storage is ${payload.pageVisits?.configured ? "connected" : "unavailable"}.`
           : hasKvEvents
             ? "Cloudflare analytics is not configured, but page-visit KV analytics are available."
-            : "Cloudflare analytics not configured. Sample/local fallback rows are labelled below.";
+            : "Cloudflare analytics not configured. No live analytics rows are shown until real source-tagged events exist.";
         analyticsStatusState.payload = payload;
         analyticsStatusState.lastChecked = payload.lastChecked || new Date().toISOString();
       }
     } catch {
       analyticsStatusState.status = "fallback";
-      analyticsStatusState.message = "Pages Functions are unavailable here. Analytics falls back to labelled local sample rows.";
+      analyticsStatusState.message = "Pages Functions are unavailable here. Live analytics cannot be loaded.";
     } finally {
       stopTopbarLoader();
     }
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
+  }
+
+  async function runAnalyticsAction(action) {
+    if (action === "refresh") {
+      await hydrateAnalyticsStatus(true);
+      return;
+    }
+    if (action !== "purge-sample") return;
+    if (!window.confirm("Clear only analytics rows explicitly tagged sample, fallback, demo, mock, or test? Live page_visit_kv rows will be kept.")) return;
+    analyticsStatusState.status = "saving";
+    analyticsStatusState.message = "Clearing explicitly tagged sample analytics rows...";
+    renderAnalytics();
+    try {
+      const response = await fetch(adminAnalyticsEndpoint(), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "purge_non_live_fallback_rows" })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok || !payload?.result?.ok) {
+        analyticsStatusState.status = "fallback";
+        analyticsStatusState.message = `Sample analytics purge failed: ${payload?.error || payload?.result?.error || response.status}`;
+        renderAnalytics();
+        return;
+      }
+      analyticsStatusState.message = `Cleared ${payload.result.removed || 0} sample/fallback analytics row(s).`;
+      await hydrateAnalyticsStatus(true);
+    } catch {
+      analyticsStatusState.status = "fallback";
+      analyticsStatusState.message = "Sample analytics purge failed because the Admin API is unavailable.";
+      renderAnalytics();
+    }
   }
 
   async function mutateAccountRegistry(action, id, body = {}) {
@@ -3174,8 +3207,12 @@ import {
   }
 
   const CITY_COORDINATES = {
+    "portland|oregon|us": { lat: 45.5152, lon: -122.6784 },
+    "portland|us": { lat: 45.5152, lon: -122.6784 },
     "sydney|australia": { lat: -33.8688, lon: 151.2093 },
     "sydney|au": { lat: -33.8688, lon: 151.2093 },
+    "sydney|new south wales|au": { lat: -33.8688, lon: 151.2093 },
+    "sydney|nsw|au": { lat: -33.8688, lon: 151.2093 },
     "perth|australia": { lat: -31.9523, lon: 115.8613 },
     "perth|au": { lat: -31.9523, lon: 115.8613 },
     "melbourne|australia": { lat: -37.8136, lon: 144.9631 },
@@ -3208,11 +3245,51 @@ import {
     "singapore|sg": { lat: 1.3521, lon: 103.8198 }
   };
 
+  const FLAG_ICON_PATHS = {
+    US: "/assets/icons/flags/us.svg",
+    AU: "/assets/icons/flags/au.svg",
+    GB: "/assets/icons/flags/gb.svg",
+    CA: "/assets/icons/flags/ca.svg",
+    NZ: "/assets/icons/flags/nz.svg"
+  };
+
+  function countryCode(value) {
+    const text = String(value || "").trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(text)) return text;
+    const lookup = {
+      AUSTRALIA: "AU",
+      "UNITED STATES": "US",
+      "UNITED STATES OF AMERICA": "US",
+      USA: "US",
+      "UNITED KINGDOM": "GB",
+      "GREAT BRITAIN": "GB",
+      CANADA: "CA",
+      "NEW ZEALAND": "NZ"
+    };
+    return lookup[text] || "";
+  }
+
+  function flagPath(row) {
+    const code = countryCode(row?.country_code || row?.countryCode || row?.country);
+    return FLAG_ICON_PATHS[code] || "/assets/icons/flags/_fallback.svg";
+  }
+
+  function flagIcon(row, label = "") {
+    const text = label || row?.country || row?.country_code || "Country unavailable";
+    return `<img class="country-flag" src="${escapeHtml(flagPath(row))}" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(text)}</span>`;
+  }
+
+  function locationChip(row, text) {
+    return `<span class="location-chip">${flagIcon(row, text)}</span>`;
+  }
+
   function cityCoordinate(row) {
     const city = String(row?.city || "").trim().toLowerCase();
     const country = String(row?.country || "").trim().toLowerCase();
+    const region = String(row?.region || "").trim().toLowerCase();
+    const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
     if (!city) return null;
-    return CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[city] || null;
+    return CITY_COORDINATES[`${city}|${region}|${code}`] || CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[`${city}|${code}`] || null;
   }
 
   function mapPointStyle(coord) {
@@ -3237,10 +3314,11 @@ import {
       ? plottedCities
           .map(({ row, coord }) => {
             const label = [row.city, row.region, row.country].filter(Boolean).join(", ");
-            const title = `${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - ${row.precision} - ${row.source || source}`;
+            const title = `${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - precision=${row.precision} - source=${row.source || source} - last seen=${row.lastSeen || row.last_seen || "unavailable"} - flag=${flagPath(row)}`;
+            const markerSize = Math.max(12, Math.min(28, 10 + Number(metricValue(row) || 0) * 2));
             return `
-              <span class="map-marker live" style="${mapPointStyle(coord)}" title="${escapeHtml(title)}">
-                <span>${escapeHtml(row.city)}</span>
+              <span class="map-marker live" style="${mapPointStyle(coord)} --marker-size: ${markerSize}px;" title="${escapeHtml(title)}">
+                <span class="map-marker-label">${flagIcon(row, row.city)}</span>
               </span>
             `;
           })
@@ -3255,6 +3333,7 @@ import {
           </div>
           <div class="panel-actions">
             ${badge(`Source: ${source}`, sourceTone(source))}
+            ${badge(location.freshnessState || status?.sourceFreshnessState || "no_live_events", sourceTone(location.freshnessState || status?.sourceFreshnessState))}
             ${badge(location.precision || (liveCities.length ? "city" : liveCountries.length ? "country" : "unavailable"), liveCities.length ? "success" : "warn")}
           </div>
         </header>
@@ -3265,6 +3344,7 @@ import {
             ${storageStatusCard("Country-only", formatAnalyticsNumber(countryOnlyCount), "Rows with country but no city.", countryOnlyCount ? "warn" : "success")}
             ${storageStatusCard("Mapped", formatAnalyticsNumber(plottedCities.length), "Exact built-in coordinate matches only.", plottedCities.length ? "success" : "warn")}
             ${storageStatusCard("Unmapped", formatAnalyticsNumber(unmappedLocationCount), "City rows without an exact coordinate lookup.", unmappedLocationCount ? "warn" : "success")}
+            ${storageStatusCard("Last live event", formatOperationalTimestamp(pageVisits.lastLiveEventTime || location.lastUpdated), "Periodic refresh; not realtime.", pageVisits.lastLiveEventTime ? "success" : "warn")}
           </div>
           <div class="map-shell live-map" role="img" aria-label="Live page-visit location map-style panel">
             <svg class="map-world" viewBox="0 0 1000 520" aria-hidden="true" focusable="false">
@@ -3298,13 +3378,20 @@ import {
     const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city);
     const sampleGeoRows = data.analytics.geoRows || [];
     const sampleRouteRows = data.analytics.routeRows || [];
+    const sampleRows = pageVisits.sampleRows || status?.location?.sampleRows || [];
+    const staleRows = pageVisits.staleRows || status?.location?.staleRows || [];
     const operationalRows = [
       ["Cloudflare configured", configured ? "Yes" : "No"],
       ["Page-visit KV", pageVisits.configured ? "Connected" : "Unavailable"],
       ["Source", sourceLabel],
+      ["Freshness", status?.sourceFreshnessState || "no_live_events"],
+      ["Last refreshed", formatOperationalTimestamp(status?.lastChecked || analyticsStatusState.lastChecked)],
+      ["Last live page-visit event", formatOperationalTimestamp(status?.lastLivePageVisitEventTime || pageVisits.lastLiveEventTime)],
+      ["Last Cloudflare GraphQL query", formatOperationalTimestamp(status?.lastCloudflareQueryTime || cloudflare.lastQueryTime)],
       ["Cloudflare result", cloudflare.lastResult || "Not checked"],
       ["Page-visit storage", pageVisits.storage?.lastResult || "Not checked"],
-      ["Last checked", formatOperationalTimestamp(status?.lastChecked || analyticsStatusState.lastChecked)]
+      ["Sample/fallback rows isolated", String(sampleRows.length || 0)],
+      ["Stale untagged rows held out", String(staleRows.length || 0)]
     ];
     app.innerHTML = `
       <div class="page">
@@ -3314,7 +3401,9 @@ import {
           "Live Cloudflare metrics and page-visit KV analytics are separated by source, with location precision labelled per row.",
           `${badge(configured ? "Cloudflare Analytics connected" : "Cloudflare Analytics missing config", configured ? "success" : "warn")}
            ${badge(pageVisits.configured ? "Page-visit KV connected" : "Page-visit KV unavailable", pageVisits.configured ? "success" : "warn")}
-           ${badge(`Source: ${sourceLabel}`, sourceTone(sourceLabel))}`
+           ${badge(`Freshness: ${status?.sourceFreshnessState || "no_live_events"}`, sourceTone(status?.sourceFreshnessState))}
+           <button class="button" type="button" data-analytics-action="refresh">Refresh analytics</button>
+           <button class="button button-secondary" type="button" data-analytics-action="purge-sample">Clear sample analytics rows</button>`
         )}
 
         ${panel(
@@ -3345,9 +3434,9 @@ import {
               liveCities,
               (row) => `
                 <tr>
-                  <td><strong>${escapeHtml(row.city || "City detail unavailable from current data source")}</strong></td>
-                  <td>${escapeHtml(row.region || "")}</td>
-                  <td>${escapeHtml(row.country || "")}</td>
+                  <td><strong>${locationChip(row, row.city || "City detail unavailable from current data source")}</strong></td>
+                  <td>${row.region ? locationChip(row, row.region) : ""}</td>
+                  <td>${locationChip(row, row.country || row.country_code || "Unavailable")}</td>
                   <td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td>
                   <td>${badge(row.precision || "unavailable", row.precision === "city" ? "success" : "warn")}</td>
                   <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
@@ -3380,7 +3469,7 @@ import {
             analyticsTable(
               ["Country", "Visits/Events", "Precision", "Source"],
               liveCountries,
-              (row) => `<tr><td><strong>${escapeHtml(row.country || "Unavailable")}</strong></td><td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td><td>${badge(row.precision || "country", "warn")}</td><td>${badge(row.source || "unavailable", sourceTone(row.source))}</td></tr>`,
+              (row) => `<tr><td><strong class="country-cell">${flagIcon(row, row.country || row.country_code || "Unavailable")}</strong></td><td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td><td>${badge(row.precision || "country", "warn")}</td><td>${badge(row.source || "unavailable", sourceTone(row.source))}</td></tr>`,
               pageVisits.emptyMessage || "No country precision rows available."
             )
           )}
@@ -3418,11 +3507,14 @@ import {
           ${panel("Devices", hasRows(liveDevices) ? "Live device data when available." : "No device data available.", analyticsList(liveDevices, "device", "Events"))}
         </section>
 
-        ${!hasLiveRows
+        ${!hasLiveRows || sampleRows.length || staleRows.length
           ? panel(
-              "Sample fallback",
-              "These rows are labelled sample data and are not real visitor counts.",
-              `<div class="table-wrap">
+              "Demo fallback data",
+              "Sample fallback only — not live analytics",
+              `<details class="demo-fallback">
+                <summary>Show isolated demo/stale rows</summary>
+                <p>These rows are excluded from the live map, tables, cards, and totals.</p>
+                <div class="table-wrap">
                 <table class="table">
                   <thead>
                     <tr><th>Route / Location</th><th>Precision</th><th>Value</th><th>Source</th></tr>
@@ -3434,9 +3526,16 @@ import {
                     ${sampleRouteRows
                       .map((row) => `<tr><td><strong>${escapeHtml(row.route)}</strong></td><td>${escapeHtml(row.surface)}</td><td>${escapeHtml(row.status)}</td><td>Sample fallback</td></tr>`)
                       .join("")}
+                    ${sampleRows
+                      .map((row) => `<tr><td><strong>${escapeHtml(row.city || row.country || row.page_path || row.eventId || "Sample row")}</strong></td><td>${escapeHtml(row.precision || "sample")}</td><td>${escapeHtml(row.recordedAt || row.timestamp || "")}</td><td>${escapeHtml(row.source || "sample_fallback")}</td></tr>`)
+                      .join("")}
+                    ${staleRows
+                      .map((row) => `<tr><td><strong>${escapeHtml(row.city || row.country || row.page_path || row.eventId || "Stale row")}</strong></td><td>${escapeHtml(row.precision || "stale")}</td><td>${escapeHtml(row.recordedAt || row.timestamp || "")}</td><td>stale_unverified</td></tr>`)
+                      .join("")}
                   </tbody>
                 </table>
-              </div>`
+              </div>
+              </details>`
             )
           : ""}
       </div>
@@ -5513,7 +5612,7 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
@@ -5523,6 +5622,7 @@ import {
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
+    const analyticsAction = target.getAttribute("data-analytics-action");
     const registryAction = target.getAttribute("data-registry-action");
     const registryKind = target.getAttribute("data-registry-kind");
     const registryId = target.getAttribute("data-registry-id");
@@ -5536,6 +5636,11 @@ import {
 
     if (accountAction === "refresh") {
       hydrateAccountRegistry(true);
+      return;
+    }
+
+    if (analyticsAction) {
+      runAnalyticsAction(analyticsAction);
       return;
     }
 

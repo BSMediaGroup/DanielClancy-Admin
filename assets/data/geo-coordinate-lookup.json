@@ -1,0 +1,11 @@
+{
+  "schema": "danielclancy-admin-geo-coordinate-lookup.v1",
+  "source": "verified_builtin_lookup",
+  "notes": "Approximate city-center coordinates. Used only for exact city plus country matches in source-tagged live analytics rows.",
+  "cities": [
+    { "city": "Los Angeles", "region": "California", "country_code": "US", "lat": 34.0522, "lon": -118.2437 },
+    { "city": "Portland", "region": "Oregon", "country_code": "US", "lat": 45.5152, "lon": -122.6784 },
+    { "city": "Sydney", "region": "New South Wales", "country_code": "AU", "lat": -33.8688, "lon": 151.2093 },
+    { "city": "Sydney", "region": "NSW", "country_code": "AU", "lat": -33.8688, "lon": 151.2093 }
+  ]
+}

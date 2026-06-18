@@ -1,4 +1,9 @@
 import { requireAdmin } from "../../_shared/admin-accounts.js";
+import {
+  isLiveAnalyticsRow,
+  loadPageVisitAnalytics as loadStoredPageVisitAnalytics,
+  purgeNonLiveAnalyticsRows
+} from "../../_shared/analytics-store.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -44,7 +49,7 @@ function corsHeaders(request, env) {
   return {
     "access-control-allow-origin": allowedOrigin(request, env),
     "access-control-allow-credentials": "true",
-    "access-control-allow-methods": "GET,OPTIONS",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
     "access-control-allow-headers": "content-type"
   };
 }
@@ -64,6 +69,22 @@ function cleanText(value, maxLength = 500) {
 function safeNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function countryCode(value) {
+  const text = cleanText(value, 80).toUpperCase();
+  if (/^[A-Z]{2}$/.test(text)) return text;
+  const lookup = {
+    "AUSTRALIA": "AU",
+    "UNITED STATES": "US",
+    "UNITED STATES OF AMERICA": "US",
+    "USA": "US",
+    "UNITED KINGDOM": "GB",
+    "GREAT BRITAIN": "GB",
+    "CANADA": "CA",
+    "NEW ZEALAND": "NZ"
+  };
+  return lookup[text] || "";
 }
 
 function mergeCount(map, key, seed) {
@@ -171,7 +192,7 @@ export function aggregatePageVisitEvents(events = []) {
   let cityCount = 0;
   let countryOnlyCount = 0;
 
-  for (const event of events) {
+  for (const event of events.filter(isLiveAnalyticsRow)) {
     mergeCount(pages, event.page_path || "/", {
       path: event.page_path || "/",
       title: event.page_title || "",
@@ -384,9 +405,11 @@ function normalizeGraphQlResults(results) {
     if (result.kind === "countries") {
       output.countries = result.rows.map((row) => ({
         country: cleanText(row.dimensions?.country || "Unavailable", 120),
+        country_code: countryCode(row.dimensions?.country),
         requests: safeNumber(row.count),
         visits: safeNumber(row.sum?.visits),
         source: "cloudflare_graphql",
+        live: true,
         precision: "country"
       }));
     }
@@ -411,9 +434,11 @@ function normalizeGraphQlResults(results) {
         city: cleanText(row.dimensions?.city || "", 120),
         region: cleanText(row.dimensions?.region || "", 120),
         country: cleanText(row.dimensions?.country || "", 120),
+        country_code: countryCode(row.dimensions?.country),
         count: safeNumber(row.count),
         visits: safeNumber(row.sum?.visits),
         source: "cloudflare_graphql",
+        live: true,
         precision: row.dimensions?.city ? "city" : row.dimensions?.region ? "region" : "country"
       })).filter((row) => row.city);
     }
@@ -471,6 +496,7 @@ export async function queryCloudflareAnalytics(env, fetchImpl = fetch) {
   return {
     configured: true,
     source: anySuccess ? (normalized.errors.length ? "cloudflare_graphql_partial" : "cloudflare_graphql") : "cloudflare_graphql_error",
+    queriedAt: now.toISOString(),
     windows: {
       totals: { label: "last_24_hours", since: since24h, until: now.toISOString() },
       grouped: { label: "last_7_days", since: since7d, until: now.toISOString() }
@@ -489,20 +515,32 @@ function countryRows(pageVisit, cloudflare) {
   const rows = pageVisit.rollup.countries.length ? pageVisit.rollup.countries : cloudflare.countries || [];
   return rows.slice(0, 20).map((row) => ({
     country: row.country || "Unavailable",
+    country_code: row.country_code || countryCode(row.country),
     count: row.count ?? row.requests ?? row.visits ?? null,
     source: row.source || "unavailable",
+    live: row.live !== false && ["page_visit_kv", "cloudflare_graphql"].includes(row.source),
     precision: "country"
   }));
+}
+
+function freshnessState(pageVisit, cloudflare) {
+  if (pageVisit.sampleRows?.length && !pageVisit.rollup.events) return "sample_only";
+  if (!pageVisit.rollup.events && cloudflare.source === "cloudflare_graphql_partial") return "cloudflare_partial";
+  if (!pageVisit.rollup.events) return "no_live_events";
+  const lastEvent = Date.parse(pageVisit.rollup.lastEventAt || pageVisit.storage?.updatedAt || "");
+  if (!Number.isFinite(lastEvent)) return "live_stale";
+  return Date.now() - lastEvent <= 60 * 60 * 1000 ? "live_recent" : "live_stale";
 }
 
 export async function analyticsStatus(env, options = {}) {
   const missingConfig = REQUIRED_CONFIG.filter((key) => !hasEnv(env, key));
   const [cloudflare, pageVisit] = await Promise.all([
     queryCloudflareAnalytics(env, options.fetchImpl),
-    loadPageVisitAnalytics(env)
+    loadStoredPageVisitAnalytics(env)
   ]);
   const cityRows = fallbackCityRows(pageVisit, cloudflare);
   const countries = countryRows(pageVisit, cloudflare);
+  const freshness = freshnessState(pageVisit, cloudflare);
   const zeroPageVisitEvents = !pageVisit.rollup.events;
   const notes = [
     ...(cloudflare.notes || []),
@@ -523,6 +561,9 @@ export async function analyticsStatus(env, options = {}) {
     configured: missingConfig.length === 0,
     source,
     lastChecked: new Date().toISOString(),
+    lastCloudflareQueryTime: cloudflare.queriedAt || "",
+    lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",
+    sourceFreshnessState: freshness,
     totals: {
       ...cloudflare.totals,
       pageVisitEvents: pageVisit.rollup.events || 0
@@ -538,6 +579,7 @@ export async function analyticsStatus(env, options = {}) {
       configured: cloudflare.configured,
       source: cloudflare.source,
       lastResult: cloudflare.source,
+      lastQueryTime: cloudflare.queriedAt || "",
       errors: cloudflare.errors || [],
       windows: cloudflare.windows || null
     },
@@ -548,20 +590,35 @@ export async function analyticsStatus(env, options = {}) {
       events: pageVisit.rollup.events || 0,
       cityEvents: pageVisit.rollup.cityEvents || 0,
       countryOnlyEvents: pageVisit.rollup.countryOnlyEvents || 0,
+      liveRows: pageVisit.liveRows || [],
+      sampleRows: pageVisit.sampleRows || [],
+      staleRows: pageVisit.staleRows || [],
+      lastLiveEventTime: pageVisit.rollup.lastEventAt || "",
       emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
     location: {
       source: pageVisit.rollup.events ? "page_visit_kv" : cloudflare.configured ? cloudflare.source : "unavailable",
       events: pageVisit.rollup.events || 0,
+      eventCount: pageVisit.rollup.events || 0,
       cityEvents: pageVisit.rollup.cityEvents || 0,
+      cityEventCount: pageVisit.rollup.cityEvents || 0,
       countryOnlyEvents: pageVisit.rollup.countryOnlyEvents || 0,
+      countryOnlyEventCount: pageVisit.rollup.countryOnlyEvents || 0,
       precision: cityRows.length ? "city" : countries.length ? "country" : "unavailable",
+      liveRows: cityRows,
+      sampleRows: pageVisit.sampleRows || [],
+      staleRows: pageVisit.staleRows || [],
+      lastUpdated: pageVisit.rollup.lastEventAt || pageVisit.storage?.updatedAt || cloudflare.queriedAt || "",
+      freshnessState: freshness,
       emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
     readiness: {
       cloudflare: Object.fromEntries(REQUIRED_CONFIG.map((key) => [key, hasEnv(env, key)])),
       dcAdminKvConfigured: Boolean(getKv(env)),
       lastCloudflareQueryResult: cloudflare.source,
+      lastCloudflareQueryTime: cloudflare.queriedAt || "",
+      lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",
+      sourceFreshnessState: freshness,
       lastPageVisitStorageResult: pageVisit.storage.lastResult
     },
     requiredConfig: REQUIRED_CONFIG,
@@ -578,7 +635,19 @@ export async function onRequest(context) {
 
   let response;
   try {
-    if (request.method !== "GET") {
+    if (request.method === "POST") {
+      const admin = await requireAdmin(request, env);
+      if (admin.error) {
+        response = json({ ok: false, error: admin.error }, { status: admin.status });
+      } else {
+        const body = await request.json().catch(() => ({}));
+        if (body?.action !== "purge_non_live_fallback_rows") {
+          response = json({ ok: false, error: "unknown_analytics_action" }, { status: 400 });
+        } else {
+          response = json({ ok: true, action: body.action, result: await purgeNonLiveAnalyticsRows(env) });
+        }
+      }
+    } else if (request.method !== "GET") {
       response = json({ ok: false, error: "method_not_allowed" }, { status: 405 });
     } else {
       const admin = await requireAdmin(request, env);

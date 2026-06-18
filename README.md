@@ -166,7 +166,11 @@ Public `danielclancy.net` page visits flow through the public repo's `POST /api/
 
 City-level location detail comes first from page-visit KV rows enriched with Cloudflare `request.cf.city`, then from any Cloudflare GraphQL city dataset that is available. If only region/country rows are available, the API and UI mark those rows with `precision: "region"` or `precision: "country"` and show “City detail unavailable from current data source” instead of pretending country rows are city rows. When zero page-visit events exist, the API/UI says “No page-visit events have been captured yet.”
 
-The Analytics map/location panel uses live location rows only. It does not fetch external map tiles/libraries and does not render sample markers as live data. Known city coordinates are plotted only for exact city/country matches in the built-in lookup; unknown city coordinates remain unplotted and country-only rows remain labelled as country precision.
+The Analytics map/location panel uses live location rows only. It does not fetch external map tiles/libraries and does not render sample markers as live data. Known city coordinates are plotted only for exact city/country matches in the built-in lookup; unknown city coordinates remain unplotted and country-only rows remain labelled as country precision. The lookup is documented in `assets/data/geo-coordinate-lookup.json` and is intentionally limited to verified approximate city-center coordinates for exact matches such as Los Angeles, Portland, and Sydney.
+
+Country values render with local SVG flag assets under `assets/icons/flags/` in location tables, city/region/country chips, map labels, and marker tooltip text. Unknown or unsupported country codes use the local `_fallback.svg` globe icon; no remote flag CDN or emoji flag fallback is used as the primary implementation.
+
+The Analytics page shows `Last refreshed`, `Last live page-visit event`, `Last Cloudflare GraphQL query`, and a freshness state of `live_recent`, `live_stale`, `no_live_events`, `sample_only`, or `cloudflare_partial`. The Refresh analytics button performs a manual periodic refresh; the UI does not claim realtime behavior. The admin-only Clear sample analytics rows action removes only rows explicitly tagged sample/fallback/demo/mock/test and keeps real `page_visit_kv` rows plus unverified stale legacy rows.
 
 ## Admin CMS API
 
@@ -287,6 +291,7 @@ DanielClancy-Admin/
 │   │   ├── admin-companies-baseline.json
 │   │   ├── admin-platforms-baseline.json
 │   │   ├── admin-positions-baseline.json
+│   │   ├── geo-coordinate-lookup.json
 │   │   ├── public-asset-catalog.json
 │   │   ├── public-projects-baseline.json
 │   │   └── source-audit-report.json
@@ -296,6 +301,13 @@ DanielClancy-Admin/
 │   │   ├── mono/
 │   │   └── other/
 │   ├── icons/
+│   │   └── flags/
+│   │       ├── _fallback.svg
+│   │       ├── au.svg
+│   │       ├── ca.svg
+│   │       ├── gb.svg
+│   │       ├── nz.svg
+│   │       └── us.svg
 │   ├── js/
 │   │   ├── admin-auth.js
 │   │   ├── admin-app.js
@@ -339,6 +351,7 @@ DanielClancy-Admin/
 │   ├── alerts-disabled.test.mjs
 │   ├── analytics-ingest-and-assets.test.mjs
 │   ├── analytics-helpers.test.mjs
+│   ├── analytics-map-flags.test.mjs
 │   ├── public-site-data-export.test.mjs
 │   ├── registry-overlay-persistence.test.mjs
 │   ├── registry-reconciliation.test.mjs

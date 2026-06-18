@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900" role="img" aria-label="United States flag">
+  <rect width="7410" height="3900" fill="#b22234"/>
+  <path d="M0 300h7410M0 900h7410M0 1500h7410M0 2100h7410M0 2700h7410M0 3300h7410" stroke="#fff" stroke-width="300"/>
+  <rect width="2964" height="2100" fill="#3c3b6e"/>
+  <g fill="#fff">
+    <circle cx="247" cy="175" r="75"/><circle cx="741" cy="175" r="75"/><circle cx="1235" cy="175" r="75"/><circle cx="1729" cy="175" r="75"/><circle cx="2223" cy="175" r="75"/><circle cx="2717" cy="175" r="75"/>
+    <circle cx="494" cy="525" r="75"/><circle cx="988" cy="525" r="75"/><circle cx="1482" cy="525" r="75"/><circle cx="1976" cy="525" r="75"/><circle cx="2470" cy="525" r="75"/>
+    <circle cx="247" cy="875" r="75"/><circle cx="741" cy="875" r="75"/><circle cx="1235" cy="875" r="75"/><circle cx="1729" cy="875" r="75"/><circle cx="2223" cy="875" r="75"/><circle cx="2717" cy="875" r="75"/>
+    <circle cx="494" cy="1225" r="75"/><circle cx="988" cy="1225" r="75"/><circle cx="1482" cy="1225" r="75"/><circle cx="1976" cy="1225" r="75"/><circle cx="2470" cy="1225" r="75"/>
+    <circle cx="247" cy="1575" r="75"/><circle cx="741" cy="1575" r="75"/><circle cx="1235" cy="1575" r="75"/><circle cx="1729" cy="1575" r="75"/><circle cx="2223" cy="1575" r="75"/><circle cx="2717" cy="1575" r="75"/>
+    <circle cx="494" cy="1925" r="75"/><circle cx="988" cy="1925" r="75"/><circle cx="1482" cy="1925" r="75"/><circle cx="1976" cy="1925" r="75"/><circle cx="2470" cy="1925" r="75"/>
+  </g>
+</svg>
