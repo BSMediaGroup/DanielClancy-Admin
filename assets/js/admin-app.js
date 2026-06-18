@@ -197,108 +197,114 @@
           "logoPath": "./assets/logos/company-richmondross-0.svg",
           "location": "Crows Nest, NSW",
           "website": "https://www.richmondross.com.au/",
-          "description": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+          "description": "Richmond + Ross have over 30 years of experience in the design of retail facilities, including shopping centres, fast food, public domain, bulk fuel & retail, 5 star & tourism, institutional and industrial projects. The scale and type of retail developments range from simple 75m² standalone tenancies all the way through to 50,000+m²Regional Centres",
           "status": "active",
           "sortOrder": 10,
-          "sourceNotes": "",
+          "classificationSource": "employer_and_studio",
+          "sourceNotes": "Promoted from employment and project studio/company source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Richmond+Ross",
+                  "rawName": "Richmond+Ross",
+                  "normalizedName": "Richmond+Ross",
                   "normalizedId": "richmond-ross",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "Richmond+Ross",
-                  "normalizedId": "richmond-ross",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "a646f50f-eeba-46ac-959f-e10e16ca89d9",
                   "sourceField": "Company Name",
-                  "rawValue": "Richmond+Ross",
-                  "normalizedId": "richmond-ross",
+                  "linkedPositionIds": [
+                      "richmond-ross-revit-draftsperson-and-technician"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               },
               {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
-                  "sourceField": "company",
-                  "rawValue": "Richmond+Ross",
+                  "rawName": "Richmond+Ross",
+                  "normalizedName": "Richmond+Ross",
                   "normalizedId": "richmond-ross",
+                  "classification": "studio",
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-26-south",
+                  "sourceField": "company",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "redevelopment-of-highway-service-center-pheasants-nest-m31-north-26-south"
+                  ],
                   "notes": ""
               },
               {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-homebush-nsw",
-                  "sourceField": "company",
-                  "rawValue": "Richmond+Ross",
+                  "rawName": "Richmond+Ross",
+                  "normalizedName": "Richmond+Ross",
                   "normalizedId": "richmond-ross",
+                  "classification": "studio",
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-homebush-2c-nsw",
+                  "sourceField": "company",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "upss-homebush-2c-nsw"
+                  ],
                   "notes": ""
               },
               {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-beacon-hill-nsw",
-                  "sourceField": "company",
-                  "rawValue": "Richmond+Ross",
+                  "rawName": "Richmond+Ross",
+                  "normalizedName": "Richmond+Ross",
                   "normalizedId": "richmond-ross",
+                  "classification": "studio",
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-beacon-hill-2c-nsw",
+                  "sourceField": "company",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "upss-beacon-hill-2c-nsw"
+                  ],
                   "notes": ""
               },
               {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-wyoming-nsw",
-                  "sourceField": "company",
-                  "rawValue": "Richmond+Ross",
+                  "rawName": "Richmond+Ross",
+                  "normalizedName": "Richmond+Ross",
                   "normalizedId": "richmond-ross",
+                  "classification": "studio",
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-wyoming-2c-nsw",
+                  "sourceField": "company",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "upss-wyoming-2c-nsw"
+                  ],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "meriton-group",
           "slug": "meriton-group",
           "name": "Meriton Group",
-          "logoPath": "./assets/logos/company-meriton-0.svg",
+          "logoPath": "",
           "location": "Sydney, NSW",
           "website": "https://www.meriton.com.au/",
-          "description": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+          "description": "Established in 1963, Meriton has made a significant impact on the Australian landscape. The private company has designed, developed and built more than 75,000 apartments and some of the tallest residential towers across the east coast of Australia. Meriton has spearheaded the apartment revolution with sophisticated, high-quality apartments. Its founder and managing director, billionaire property entrepreneur Harry Triguboff, is still passionately involved in the design and construction of all projects",
           "status": "active",
           "sortOrder": 20,
-          "sourceNotes": "",
+          "classificationSource": "employer",
+          "sourceNotes": "Promoted from employment/position source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Meriton Group",
+                  "rawName": "Meriton Group",
+                  "normalizedName": "Meriton Group",
                   "normalizedId": "meriton-group",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "Meriton Group",
-                  "normalizedId": "meriton-group",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "c8d8ca96-ae87-4224-a5fb-b634736bd304",
                   "sourceField": "Company Name",
-                  "rawValue": "Meriton Group",
-                  "normalizedId": "meriton-group",
+                  "linkedPositionIds": [
+                      "meriton-group-structural-revit-draftsman"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "leffler-simes-architects",
@@ -307,68 +313,58 @@
           "logoPath": "./assets/logos/company-lefflersimes-0.svg",
           "location": "Melbourne, VIC",
           "website": "https://www.lefflersimes.com.au/",
-          "description": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+          "description": "Leffler Simes Architects (LSA) is well recognised as one of Australia’s leading architectural practices with offices in Sydney, Melbourne and Brisbane. Established in the late 1960s, Leffler Simes was at the forefront of the dramatic expansion of the retail sector throughout Australia and designed a majority of the large shopping centres built at this time. With a solid retail pedigree founded in the 1970s and 80s, Leffler Simes have maintained a role as a major retail practice since.",
           "status": "active",
           "sortOrder": 30,
-          "sourceNotes": "",
+          "classificationSource": "employer",
+          "sourceNotes": "Promoted from employment/position source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Leffler Simes Architects",
+                  "rawName": "Leffler Simes Architects",
+                  "normalizedName": "Leffler Simes Architects",
                   "normalizedId": "leffler-simes-architects",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "Leffler Simes Architects",
-                  "normalizedId": "leffler-simes-architects",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "a604cfa4-d498-4397-806f-d1ad3e574091",
                   "sourceField": "Company Name",
-                  "rawValue": "Leffler Simes Architects",
-                  "normalizedId": "leffler-simes-architects",
+                  "linkedPositionIds": [
+                      "leffler-simes-architects-architectural-revit-draftsman"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "fleetwood-australia",
           "slug": "fleetwood-australia",
           "name": "Fleetwood Australia",
-          "logoPath": "./assets/logos/company-fleetwood-0.svg",
+          "logoPath": "",
           "location": "Melbourne, VIC",
           "website": "https://www.fleetwood.com.au/",
-          "description": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+          "description": "At Fleetwood, we come together with a shared purpose: to make a positive difference wherever Australians live, work and explore. Established in 1964, we’ve been at the forefront of Australia’s modular construction and RV industries, delivering solutions that support growing communities. Guided by our values, we deliver innovative solutions that help people and businesses thrive.",
           "status": "active",
           "sortOrder": 40,
-          "sourceNotes": "",
+          "classificationSource": "employer",
+          "sourceNotes": "Promoted from employment/position source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Fleetwood Australia",
+                  "rawName": "Fleetwood Australia",
+                  "normalizedName": "Fleetwood Australia",
                   "normalizedId": "fleetwood-australia",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "4beb6983-ee39-43f9-9ec2-61405ebe6389",
                   "sourceField": "Company Name",
-                  "rawValue": "Fleetwood Australia",
-                  "normalizedId": "fleetwood-australia",
+                  "linkedPositionIds": [
+                      "fleetwood-australia-revit-draftsperson"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "place-laboratory",
@@ -377,53 +373,56 @@
           "logoPath": "./assets/logos/company-placelab-0.svg",
           "location": "Perth, WA",
           "website": "https://www.placelaboratory.com/",
-          "description": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+          "description": "At PLACE Laboratory we believe that the public realm is the stage for life. When the public realm is designed well, the combinations and possibilities of life’s acts are infinite. The interplay between buildings and open space sets the stage. We do not advocate design for designs sake. We believe the role of the designer is to interpret the cultural underpinnings of a society and give life and meaning in three dimensions to the physical form of space. Spaces, which are engaging, meaningful, delightful, walkable, welcoming, attractive and vital. Places that exhibit the qualities of good design have great social, economic and environmental value. They bring positive tangible results that are increasingly being recognised by the urban development industry.",
           "status": "active",
           "sortOrder": 50,
-          "sourceNotes": "Canonical public logo alias: Place Laboratory",
+          "classificationSource": "employer_and_studio",
+          "sourceNotes": "Promoted from employment and project studio/company source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Place Laboratory",
+                  "rawName": "Place Laboratory",
+                  "normalizedName": "Place Laboratory",
                   "normalizedId": "place-laboratory",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "PLACE Laboratory",
-                  "normalizedId": "place-laboratory",
-                  "notes": "Canonical public logo alias: Place Laboratory"
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "91185310-a4f5-422d-8420-4d590d590584",
                   "sourceField": "Company Name",
-                  "rawValue": "Place Laboratory",
-                  "normalizedId": "place-laboratory",
+                  "linkedPositionIds": [
+                      "place-laboratory-drafstman"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               },
               {
+                  "rawName": "Place Laboratory",
+                  "normalizedName": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "curtin-creative-quarter-misc-details",
                   "sourceField": "company",
-                  "rawValue": "Place Laboratory",
-                  "normalizedId": "place-laboratory",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "curtin-creative-quarter-misc-details"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "Place Laboratory",
+                  "normalizedName": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "cottesloe-beach-house-landscape-design",
                   "sourceField": "company",
-                  "rawValue": "Place Laboratory",
-                  "normalizedId": "place-laboratory",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "cottesloe-beach-house-landscape-design"
+                  ],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "dc-design-studio",
@@ -431,62 +430,85 @@
           "name": "DC Design Studio",
           "logoPath": "./assets/logos/company-dcdesignstudio-0.svg",
           "location": "Perth, WA",
-          "website": "https://www.danielclancy.net/",
-          "description": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+          "website": "https://danielclancy.net",
+          "description": "DC Design Studio is a boutique design documentation consultancy based in the Perth Central Business District. It offers a diverse range of design documentation solutions for any sized project. Whether you require a quick and simple 2D CAD Sketch for a custom part manufacture or a full scale discipline specific set of building plans, or even a simple Business card graphic or promotional banner, DC Design Studio utilizes a range of Industry standard software and computer hardware to achieve timely results",
           "status": "active",
           "sortOrder": 60,
-          "sourceNotes": "",
+          "classificationSource": "employer_and_studio",
+          "sourceNotes": "Promoted from employment and project studio/company source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "DC Design Studio",
+                  "rawName": "DC Design Studio",
+                  "normalizedName": "DC Design Studio",
                   "normalizedId": "dc-design-studio",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "b44da0e1-bdd9-49b1-8870-c44b4d0682d0",
                   "sourceField": "Company Name",
-                  "rawValue": "DC Design Studio",
-                  "normalizedId": "dc-design-studio",
+                  "linkedPositionIds": [
+                      "dc-design-studio-design-consultant"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               },
               {
+                  "rawName": "DC Design Studio",
+                  "normalizedName": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-2c-armadale-6112",
                   "sourceField": "company",
-                  "rawValue": "DC Design Studio",
-                  "normalizedId": "dc-design-studio",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-2c-armadale-6112"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "DC Design Studio",
+                  "normalizedName": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "lot-500-eighth-road-land-resumption",
                   "sourceField": "company",
-                  "rawValue": "DC Design Studio",
-                  "normalizedId": "dc-design-studio",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "lot-500-eighth-road-land-resumption"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "DC Design Studio",
+                  "normalizedName": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "spratt-residence-proposed-addition",
                   "sourceField": "company",
-                  "rawValue": "DC Design Studio",
-                  "normalizedId": "dc-design-studio",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "spratt-residence-proposed-addition"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "DC Design Studio",
+                  "normalizedName": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "wungong-urban-water-master-plan",
                   "sourceField": "company",
-                  "rawValue": "DC Design Studio",
-                  "normalizedId": "dc-design-studio",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "wungong-urban-water-master-plan"
+                  ],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "urbis",
@@ -495,45 +517,42 @@
           "logoPath": "./assets/logos/company-urbis-0.svg",
           "location": "Perth, WA",
           "website": "https://urbis.com.au/",
-          "description": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+          "description": "Urbis is a professional consulting firm operating in Australia, Asia and the Middle East advising on the use, development, investment and governance of property, cities and communities. Urbis operates at the forefront of urban and societal change and provides multi-disciplinary capability through recruiting and retaining the most talented people providing collaborative professional services",
           "status": "active",
           "sortOrder": 70,
-          "sourceNotes": "Canonical public logo alias: Urbis",
+          "classificationSource": "employer_and_studio",
+          "sourceNotes": "Promoted from employment and project studio/company source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "Urbis Pty Ltd",
+                  "rawName": "Urbis Pty Ltd",
+                  "normalizedName": "Urbis",
                   "normalizedId": "urbis",
-                  "notes": "Canonical public logo alias: Urbis"
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "Urbis",
-                  "normalizedId": "urbis",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "df505d0e-9be8-466b-aa25-47af54808b32",
                   "sourceField": "Company Name",
-                  "rawValue": "Urbis Pty Ltd",
-                  "normalizedId": "urbis",
-                  "notes": "Canonical public logo alias: Urbis"
+                  "linkedPositionIds": [
+                      "urbis-drafting-technician"
+                  ],
+                  "linkedProjectIds": [],
+                  "notes": ""
               },
               {
+                  "rawName": "Urbis",
+                  "normalizedName": "Urbis",
+                  "normalizedId": "urbis",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "cockburn-coast",
                   "sourceField": "company",
-                  "rawValue": "Urbis",
-                  "normalizedId": "urbis",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "cockburn-coast"
+                  ],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "acce",
@@ -542,61 +561,84 @@
           "logoPath": "./assets/logos/company-acce-0.svg",
           "location": "Como, WA",
           "website": "https://www.acce.net.au/",
-          "description": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+          "description": "Since its establishment in 1980, Andreotta Cardenosa Consulting Engineers have been providing the construction industry with quality personal service and expertise in the structural discipline. The firm has extensive experience in residential, commercial, industrial and institutional structures, providing them with the ability to manage all projects with efficiency and precision",
           "status": "active",
           "sortOrder": 80,
-          "sourceNotes": "Canonical public logo alias: ACCE",
+          "classificationSource": "employer_and_studio",
+          "sourceNotes": "Promoted from employment and project studio/company source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "ACCE Pty Ltd",
+                  "rawName": "ACCE Pty Ltd",
+                  "normalizedName": "ACCE",
                   "normalizedId": "acce",
-                  "notes": "Canonical public logo alias: ACCE"
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "ece6e62b-4bb0-4977-9d93-f355ecacc093",
                   "sourceField": "Company Name",
-                  "rawValue": "ACCE Pty Ltd",
-                  "normalizedId": "acce",
-                  "notes": "Canonical public logo alias: ACCE"
+                  "linkedPositionIds": [
+                      "acce-structural-draftsman"
+                  ],
+                  "linkedProjectIds": [],
+                  "notes": ""
               },
               {
+                  "rawName": "ACCE",
+                  "normalizedName": "ACCE",
+                  "normalizedId": "acce",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "proposed-retail-development-for-dawesville-iga",
                   "sourceField": "company",
-                  "rawValue": "ACCE",
-                  "normalizedId": "acce",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "proposed-retail-development-for-dawesville-iga"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "ACCE",
+                  "normalizedName": "ACCE",
+                  "normalizedId": "acce",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "henry-street-residence-structural-documentation",
                   "sourceField": "company",
-                  "rawValue": "ACCE",
-                  "normalizedId": "acce",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "henry-street-residence-structural-documentation"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "ACCE",
+                  "normalizedName": "ACCE",
+                  "normalizedId": "acce",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
                   "sourceField": "company",
-                  "rawValue": "ACCE",
-                  "normalizedId": "acce",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "lake-joondalup-baptist-college-new-arts-building-structural-plans"
+                  ],
                   "notes": ""
               },
               {
+                  "rawName": "ACCE",
+                  "normalizedName": "ACCE",
+                  "normalizedId": "acce",
+                  "classification": "studio",
                   "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
                   "sourceSection": "geraldton-fire-station-structural-documentation",
                   "sourceField": "company",
-                  "rawValue": "ACCE",
-                  "normalizedId": "acce",
+                  "linkedPositionIds": [],
+                  "linkedProjectIds": [
+                      "geraldton-fire-station-structural-documentation"
+                  ],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "ghd",
@@ -605,338 +647,28 @@
           "logoPath": "./assets/logos/company-ghd-0.svg",
           "location": "Geraldton & Perth, WA",
           "website": "https://www.ghd.com/",
-          "description": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+          "description": "GHD is a large, international professional services company providing a vast range of services all over the globe in property and buildings, energy and resources, mining and industry, water, transportation",
           "status": "active",
           "sortOrder": 90,
-          "sourceNotes": "Canonical public logo alias: GHD",
+          "classificationSource": "employer",
+          "sourceNotes": "Promoted from employment/position source fields.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company",
-                  "rawValue": "GHD Pty Ltd",
+                  "rawName": "GHD Pty Ltd",
+                  "normalizedName": "GHD",
                   "normalizedId": "ghd",
-                  "notes": "Canonical public logo alias: GHD"
-              },
-              {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "featuredEmployers",
-                  "sourceField": "featuredEmployers[]",
-                  "rawValue": "GHD",
-                  "normalizedId": "ghd",
-                  "notes": ""
-              },
-              {
+                  "classification": "employer",
                   "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
                   "sourceSection": "a53d41af-2258-44e7-987d-6437f7804d93",
                   "sourceField": "Company Name",
-                  "rawValue": "GHD Pty Ltd",
-                  "normalizedId": "ghd",
-                  "notes": "Canonical public logo alias: GHD"
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "dawesville-3-pty-ltd",
-          "slug": "dawesville-3-pty-ltd",
-          "name": "Dawesville 3 Pty Ltd",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 509,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "proposed-retail-development-for-dawesville-iga",
-                  "sourceField": "client",
-                  "rawValue": "Dawesville 3 Pty Ltd",
-                  "normalizedId": "dawesville-3-pty-ltd",
+                  "linkedPositionIds": [
+                      "ghd-draftsman"
+                  ],
+                  "linkedProjectIds": [],
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "riley-consulting",
-          "slug": "riley-consulting",
-          "name": "Riley Consulting",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 510,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "cue-roadhouse",
-                  "sourceField": "company",
-                  "rawValue": "Riley Consulting",
-                  "normalizedId": "riley-consulting",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "cue-roadhouse",
-                  "sourceField": "company",
-                  "rawValue": "Riley Consulting",
-                  "normalizedId": "riley-consulting",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "ampol-australia-petroleum-pty-ltd",
-          "slug": "ampol-australia-petroleum-pty-ltd",
-          "name": "Ampol Australia Petroleum Pty Ltd",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 511,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
-                  "sourceField": "client",
-                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
-                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-homebush-nsw",
-                  "sourceField": "client",
-                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
-                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-beacon-hill-nsw",
-                  "sourceField": "client",
-                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
-                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "upss-wyoming-nsw",
-                  "sourceField": "client",
-                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
-                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "mra-now-developmentwa",
-          "slug": "mra-now-developmentwa",
-          "name": "MRA (Now DevelopmentWA)",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 512,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
-                  "sourceField": "client",
-                  "rawValue": "MRA (Now DevelopmentWA)",
-                  "normalizedId": "mra-now-developmentwa",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "lot-500-eighth-road-land-resumption",
-                  "sourceField": "client",
-                  "rawValue": "MRA (Now DevelopmentWA)",
-                  "normalizedId": "mra-now-developmentwa",
-                  "notes": ""
-              },
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "wungong-urban-water-master-plan",
-                  "sourceField": "client",
-                  "rawValue": "MRA (Now DevelopmentWA)",
-                  "normalizedId": "mra-now-developmentwa",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "curtin-university",
-          "slug": "curtin-university",
-          "name": "Curtin University",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 513,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "curtin-creative-quarter-misc-details",
-                  "sourceField": "client",
-                  "rawValue": "Curtin University",
-                  "normalizedId": "curtin-university",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "landcorp-now-developmentwa",
-          "slug": "landcorp-now-developmentwa",
-          "name": "LandCorp (Now DevelopmentWA)",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 514,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "cockburn-coast",
-                  "sourceField": "client",
-                  "rawValue": "LandCorp (Now DevelopmentWA)",
-                  "normalizedId": "landcorp-now-developmentwa",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "c-and-j-spratt",
-          "slug": "c-and-j-spratt",
-          "name": "C & J Spratt",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 515,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "spratt-residence-proposed-addition",
-                  "sourceField": "client",
-                  "rawValue": "C & J Spratt",
-                  "normalizedId": "c-and-j-spratt",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "ktap-construction",
-          "slug": "ktap-construction",
-          "name": "KTAP Construction",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 516,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "henry-street-residence-structural-documentation",
-                  "sourceField": "client",
-                  "rawValue": "KTAP Construction",
-                  "normalizedId": "ktap-construction",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "buchan-group",
-          "slug": "buchan-group",
-          "name": "Buchan Group",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 517,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
-                  "sourceField": "client",
-                  "rawValue": "Buchan Group",
-                  "normalizedId": "buchan-group",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "minderoo-foundation",
-          "slug": "minderoo-foundation",
-          "name": "Minderoo Foundation",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 518,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "cottesloe-beach-house-landscape-design",
-                  "sourceField": "client",
-                  "rawValue": "Minderoo Foundation",
-                  "normalizedId": "minderoo-foundation",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
-      },
-      {
-          "id": "fesa-now-department-of-fire-and-emergency-services",
-          "slug": "fesa-now-department-of-fire-and-emergency-services",
-          "name": "FESA (Now Department of Fire and Emergency Services)",
-          "logoPath": "",
-          "location": "",
-          "website": "",
-          "description": "",
-          "status": "active",
-          "sortOrder": 519,
-          "sourceNotes": "",
-          "provenance": [
-              {
-                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
-                  "sourceSection": "geraldton-fire-station-structural-documentation",
-                  "sourceField": "client",
-                  "rawValue": "FESA (Now Department of Fire and Emergency Services)",
-                  "normalizedId": "fesa-now-department-of-fire-and-emergency-services",
-                  "notes": ""
-              }
-          ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       }
   ];
   const CV_PLATFORM_SEED = [
@@ -1337,7 +1069,7 @@
           "endDate": "2021-11-01",
           "current": false,
           "employmentType": "",
-          "summary": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+          "summary": "Richmond + Ross have over 30 years of experience in the design of retail facilities, including shopping centres, fast food, public domain, bulk fuel & retail, 5 star & tourism, institutional and industrial projects. The scale and type of retail developments range from simple 75m² standalone tenancies all the way through to 50,000+m²Regional Centres",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [
@@ -1346,18 +1078,18 @@
           "projectIds": [],
           "status": "active",
           "sortOrder": 10,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a646f50f-eeba-46ac-959f-e10e16ca89d9",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "Richmond+Ross | October 2019 – November 2021 | Revit Draftsperson & Technician",
                   "normalizedId": "richmond-ross-revit-draftsperson-and-technician",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "meriton-group-structural-revit-draftsman",
@@ -1370,7 +1102,7 @@
           "endDate": "2019-05-01",
           "current": false,
           "employmentType": "",
-          "summary": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+          "summary": "Established in 1963, Meriton has made a significant impact on the Australian landscape. The private company has designed, developed and built more than 75,000 apartments and some of the tallest residential towers across the east coast of Australia. Meriton has spearheaded the apartment revolution with sophisticated, high-quality apartments. Its founder and managing director, billionaire property entrepreneur Harry Triguboff, is still passionately involved in the design and construction of all projects",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [
@@ -1379,18 +1111,18 @@
           "projectIds": [],
           "status": "active",
           "sortOrder": 20,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "c8d8ca96-ae87-4224-a5fb-b634736bd304",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "Meriton Group | March 2019 – May 2019 | Structural Revit Draftsman",
                   "normalizedId": "meriton-group-structural-revit-draftsman",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "leffler-simes-architects-architectural-revit-draftsman",
@@ -1403,7 +1135,7 @@
           "endDate": "2018-11-01",
           "current": false,
           "employmentType": "",
-          "summary": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+          "summary": "Leffler Simes Architects (LSA) is well recognised as one of Australia’s leading architectural practices with offices in Sydney, Melbourne and Brisbane. Established in the late 1960s, Leffler Simes was at the forefront of the dramatic expansion of the retail sector throughout Australia and designed a majority of the large shopping centres built at this time. With a solid retail pedigree founded in the 1970s and 80s, Leffler Simes have maintained a role as a major retail practice since.",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [
@@ -1412,18 +1144,18 @@
           "projectIds": [],
           "status": "active",
           "sortOrder": 30,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a604cfa4-d498-4397-806f-d1ad3e574091",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "Leffler Simes Architects | September 2018 – November 2018 | Architectural Revit Draftsman",
                   "normalizedId": "leffler-simes-architects-architectural-revit-draftsman",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "fleetwood-australia-revit-draftsperson",
@@ -1436,7 +1168,7 @@
           "endDate": "2018-08-01",
           "current": false,
           "employmentType": "",
-          "summary": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+          "summary": "At Fleetwood, we come together with a shared purpose: to make a positive difference wherever Australians live, work and explore. Established in 1964, we’ve been at the forefront of Australia’s modular construction and RV industries, delivering solutions that support growing communities. Guided by our values, we deliver innovative solutions that help people and businesses thrive.",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [
@@ -1445,23 +1177,23 @@
           "projectIds": [],
           "status": "active",
           "sortOrder": 40,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "4beb6983-ee39-43f9-9ec2-61405ebe6389",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "Fleetwood Australia | July 2018 – August 2018 | Revit Draftsperson",
                   "normalizedId": "fleetwood-australia-revit-draftsperson",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
-          "id": "place-laboratory-draftsman",
-          "slug": "place-laboratory-draftsman",
-          "title": "Draftsman",
+          "id": "place-laboratory-drafstman",
+          "slug": "place-laboratory-drafstman",
+          "title": "Drafstman",
           "companyId": "place-laboratory",
           "companyName": "Place Laboratory",
           "location": "Perth, WA",
@@ -1469,25 +1201,25 @@
           "endDate": "2018-01-01",
           "current": false,
           "employmentType": "",
-          "summary": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+          "summary": "At PLACE Laboratory we believe that the public realm is the stage for life. When the public realm is designed well, the combinations and possibilities of life’s acts are infinite. The interplay between buildings and open space sets the stage. We do not advocate design for designs sake. We believe the role of the designer is to interpret the cultural underpinnings of a society and give life and meaning in three dimensions to the physical form of space. Spaces, which are engaging, meaningful, delightful, walkable, welcoming, attractive and vital. Places that exhibit the qualities of good design have great social, economic and environmental value. They bring positive tangible results that are increasingly being recognised by the urban development industry.",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [],
           "projectIds": [],
           "status": "active",
           "sortOrder": 50,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
-                  "rawValue": "Place Laboratory | January 2017 – January 2018 | Draftsman",
-                  "normalizedId": "place-laboratory-draftsman",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "91185310-a4f5-422d-8420-4d590d590584",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
+                  "rawValue": "Place Laboratory | January 2017 – January 2018 | Drafstman",
+                  "normalizedId": "place-laboratory-drafstman",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "dc-design-studio-design-consultant",
@@ -1500,27 +1232,25 @@
           "endDate": "2018-05-01",
           "current": false,
           "employmentType": "",
-          "summary": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+          "summary": "DC Design Studio is a boutique design documentation consultancy based in the Perth Central Business District. It offers a diverse range of design documentation solutions for any sized project. Whether you require a quick and simple 2D CAD Sketch for a custom part manufacture or a full scale discipline specific set of building plans, or even a simple Business card graphic or promotional banner, DC Design Studio utilizes a range of Industry standard software and computer hardware to achieve timely results",
           "responsibilities": [],
           "highlights": [],
-          "platformIds": [
-              "autodesk-autocad"
-          ],
+          "platformIds": [],
           "projectIds": [],
           "status": "active",
           "sortOrder": 60,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "b44da0e1-bdd9-49b1-8870-c44b4d0682d0",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "DC Design Studio | June 2015 – May 2018 | Design Consultant",
                   "normalizedId": "dc-design-studio-design-consultant",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "urbis-drafting-technician",
@@ -1533,25 +1263,25 @@
           "endDate": "2015-06-01",
           "current": false,
           "employmentType": "",
-          "summary": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+          "summary": "Urbis is a professional consulting firm operating in Australia, Asia and the Middle East advising on the use, development, investment and governance of property, cities and communities. Urbis operates at the forefront of urban and societal change and provides multi-disciplinary capability through recruiting and retaining the most talented people providing collaborative professional services",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [],
           "projectIds": [],
           "status": "active",
           "sortOrder": 70,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "df505d0e-9be8-466b-aa25-47af54808b32",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "Urbis Pty Ltd | August 2014 – June 2015 | Drafting Technician",
                   "normalizedId": "urbis-drafting-technician",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "acce-structural-draftsman",
@@ -1564,25 +1294,25 @@
           "endDate": "2014-03-01",
           "current": false,
           "employmentType": "",
-          "summary": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+          "summary": "Since its establishment in 1980, Andreotta Cardenosa Consulting Engineers have been providing the construction industry with quality personal service and expertise in the structural discipline. The firm has extensive experience in residential, commercial, industrial and institutional structures, providing them with the ability to manage all projects with efficiency and precision",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [],
           "projectIds": [],
           "status": "active",
           "sortOrder": 80,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "ece6e62b-4bb0-4977-9d93-f355ecacc093",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "ACCE Pty Ltd | January 2012 – March 2014 | Structural Draftsman",
                   "normalizedId": "acce-structural-draftsman",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       },
       {
           "id": "ghd-draftsman",
@@ -1595,25 +1325,25 @@
           "endDate": "2011-11-01",
           "current": false,
           "employmentType": "",
-          "summary": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+          "summary": "GHD is a large, international professional services company providing a vast range of services all over the globe in property and buildings, energy and resources, mining and industry, water, transportation",
           "responsibilities": [],
           "highlights": [],
           "platformIds": [],
           "projectIds": [],
           "status": "active",
           "sortOrder": 90,
-          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "sourceNotes": "Derived from public Employment+History.csv; source values are preserved in provenance.",
           "provenance": [
               {
-                  "sourceFile": "src/content/siteContent.ts",
-                  "sourceSection": "experienceItems",
-                  "sourceField": "company/period/role/location/summary/url",
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a53d41af-2258-44e7-987d-6437f7804d93",
+                  "sourceField": "Company Name/Employment Period/Employment Position/Company City (TXT)/CompanyProfile/Company URL",
                   "rawValue": "GHD Pty Ltd | August 2008 – November 2011 | Draftsman",
                   "normalizedId": "ghd-draftsman",
                   "notes": ""
               }
           ],
-          "updatedAt": "2026-06-18T12:37:11.672Z"
+          "updatedAt": "2026-06-18T15:13:52.384Z"
       }
   ];
   let loadingCount = 0;
@@ -1959,7 +1689,6 @@
       normalizeProjectRegistryRefs(project.studio || project.companyLabels || project.companyIds).forEach((name, index) => {
         const id = createSlug(name);
         if (!id || companyById.has(id)) return;
-        companyById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index }));
       });
       normalizeProjectRegistryRefs(project.software || project.platformLabels || project.platformIds).forEach((name, index) => {
         const id = platformRegistryId(name);
@@ -3896,7 +3625,14 @@
   }
 
   function sourceBadge(item) {
-    const label = item?.source === "admin_created" ? "Admin-created" : item?.provenance ? "Source-audited" : item?.source || item?.sourceNotes || "Source";
+    const classification = String(item?.classificationSource || "").replace(/_/g, " ");
+    const label = classification
+      ? `Source-audited: ${classification}`
+      : item?.source === "admin_created"
+        ? "Admin-created"
+        : item?.provenance
+          ? "Source-audited"
+          : item?.source || item?.sourceNotes || "Source";
     return badge(label, item?.source === "admin_created" ? "warn" : "success");
   }
 
@@ -3948,9 +3684,15 @@
     const path = String(item?.logoPath || "").trim();
     if (!path) return `<span class="asset-preview-placeholder">No logo</span>`;
     if (kind === "companies") {
-      return `<span class="company-logo-mask" style="--icon-url: url('${escapeHtml(path)}')" title="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)} logo"></span>`;
+      return `<span class="company-logo-mask" style="--icon-url: url('${escapeHtml(cssAssetUrl(path))}')" title="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)} logo"></span>`;
     }
     return `<img class="software-logo-img" src="${escapeHtml(path)}" alt="${escapeHtml(item.name)} logo" loading="lazy" />`;
+  }
+
+  function cssAssetUrl(path) {
+    const value = String(path || "").trim();
+    if (!value || /^(?:https?:|data:|blob:|\/)/i.test(value)) return value;
+    return `/${value.replace(/^\.?\//, "")}`;
   }
 
   function renderMediaControls(statuses, platforms, visibleCount, selectedVisible, featuredCount) {

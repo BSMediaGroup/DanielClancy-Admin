@@ -1,27 +1,34 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
-## Emergency Source Audit Registry Completion And Route Repair Milestone
+## Corrected Organization Classification And Registry Guardrail Milestone
 
 ### Technical Notes
 
-- Audited the read-only DanielClancy public CV/portfolio source, WorkSet CSV-derived project data, brand/logo references, copied Admin preview assets, and existing Admin baseline JSON before repairing Admin behavior.
-- Generated `assets/data/source-audit-report.json` with provenance for every extracted company, platform/software, position, project, project-company link, project-platform link, logo, asset, document, and warning.
-- Replaced incomplete inline/Admin seed data with complete source-derived Companies, Platforms, Positions, and Projects baselines: 20 companies, 6 platforms/software records, 9 employment positions, and 16 protected public project records.
+- Re-audited the read-only DanielClancy public CV/portfolio source, WorkSet CSV-derived project data, brand/logo references, copied Admin preview assets, and existing Admin baseline JSON with explicit organization classification buckets.
+- Regenerated `assets/data/source-audit-report.json` with `employersFound`, `studiosFound`, `clientsFound`, `vendorsFound`, `ambiguousOrganizations`, `companiesPromotedToRegistry`, `clientsExcludedFromCompanies`, `requiredCompanyAssertions`, and `warnings`.
+- Corrected the Companies baseline so employer/studio source classifications become Companies, while client-only names remain client/provenance and are excluded from the Company/Studio selector.
+- Rebuilt the source-derived baselines as 9 Companies, 6 platforms/software records, 9 employment positions, and 16 protected public project records.
+- Preserved Riley Consulting on the Cue Roadhouse project as client/provenance text only and removed it from Companies/company selector data because the source treatment is client-only for this correction.
+- Enforced Fleetwood Australia and GHD guardrails: if either appears in employment source data, the completeness test fails unless the matching Companies record exists.
+- Enforced position company links so every employment position has a `companyId` that resolves to the Companies registry.
+- Stopped project records from auto-promoting unknown `studio`/company labels into Companies during Admin fallback seeding; source-derived Companies remain the selector authority.
 - Normalized legacy project software labels such as `AutoCAD`, `Revit`, and `Sketchup` to audited platform registry IDs without adding duplicate runtime platform rows.
 - Restored Projects table row-open behavior by keeping `data-project-row-id` on rendered project rows while preserving interactive-control exclusions.
 - Added display-only Admin asset preview URL resolution so stored public project paths remain unchanged while local/Admin previews render from copied `public/media` and `public/docs` files.
-- Added `tests/source-audit-completeness.test.mjs` to fail when audited companies, platforms, positions, project relationships, required routes/nav entries, or copied asset catalog paths drift from generated Admin baselines.
-- Companies, Platforms, Positions, Projects, Media, Overview, Analytics, Accounts, and Settings routes were validated in a local Wrangler Pages preview with temporary local-only bindings and local KV.
+- Updated `tests/source-audit-completeness.test.mjs` to fail when audited companies, platforms, positions, project relationships, required routes/nav entries, copied asset catalog paths, employer company links, Fleetwood/GHD guardrails, or client-only exclusion rules drift from generated Admin baselines.
+- MCP/browser validation ran against local static preview `http://127.0.0.1:4176/`: `#/companies`, `#/positions`, and `#/projects` loaded without blank-page failures, Fleetwood/GHD were visible and searchable when source-derived, Riley Consulting was not visible as a Company, and the Projects company selector followed the corrected registry.
 - Alerts rule editor remains removed/disabled and is not restored as a normal nav item.
 - OAuth users are still not auto-promoted.
 - Manual env-backed admin access remains preserved.
-- DanielClancy public website was read-only for this repair; no CV/employment/company/software facts were invented.
+- DanielClancy public website was read-only for this repair; no CV/employment/company/client/software facts were invented.
 - StreamSuites and StreamSuites-Dashboard were not mutated.
 
 ### Human-Readable Notes
 
-- Admin now has complete source-derived Companies, Platforms, and Positions registries instead of partial scaffold data.
-- Projects editor selectors use the complete company and platform registries, support multiple platforms, and open from row clicks without hijacking buttons, inputs, checkboxes, links, or resize controls.
+- Admin now has corrected source-derived Companies, Platforms, and Positions registries instead of client-promoted scaffold data.
+- Projects editor selectors use the corrected company and platform registries, support multiple platforms, and open from row clicks without hijacking buttons, inputs, checkboxes, links, or resize controls.
+- Riley Consulting remains preserved as client/provenance text where sourced, but it is not a Company/Studio option.
+- Fleetwood Australia and GHD are protected by source-audit hard-fail tests because both are employment-source companies.
 - Company logos render as current-color masks, software logos stay full color, and project asset previews load from Admin-local copied preview files.
 
 ### Files / Areas Changed
@@ -43,7 +50,7 @@
 - Ran `node --test tests/alerts-disabled.test.mjs tests/source-audit-completeness.test.mjs`.
 - Ran `git diff --check`; only Git line-ending normalization warnings were reported.
 - Ran `npm run check --if-present` and `npm run build --if-present`; both exited cleanly with no scripts configured.
-- Ran Playwright MCP browser validation against a local Wrangler Pages preview on `http://127.0.0.1:4176/` with temporary local-only admin bindings and local KV. The final pass verified required routes, shell controls, sidebar/topbar/footer, source-derived counts, all source company/platform/position labels, project row-click editor open, complete project registry selectors, multi-platform selector, rendered asset previews, and zero current-tab console errors.
+- Ran MCP/Playwright browser validation against a local static preview on `http://127.0.0.1:4176/` using the local scaffold unlock. The final pass verified `#/companies`, `#/positions`, and `#/projects` rendered nonblank, Companies included/search-found Fleetwood Australia and GHD, Companies excluded/search-excluded client-only Riley Consulting, Positions rendered 9 source-derived rows whose companies exist in Companies, the Projects editor company selector included Fleetwood Australia and GHD, and the selector excluded Riley Consulting. Static preview reported expected API 404s for unavailable local Pages Functions; no unexpected page/runtime console errors were reported.
 
 ### Risks / Follow-Ups
 

@@ -26,11 +26,83 @@ function assertAllPresent(sourceItems, targetItems, label) {
   assert.deepEqual(missing, [], `${label} missing from baseline`);
 }
 
+function namesFor(items) {
+  return items.map((item) => item.normalizedName || item.name || item.companyName || item.rawName || item.id).filter(Boolean);
+}
+
+function sourceHasEmployer(name) {
+  const needle = name.toLowerCase();
+  return (audit.employersFound || []).some((item) =>
+    [item.rawName, item.normalizedName, item.normalizedId, ...(item.provenance || []).map((entry) => entry.rawName)]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(needle))
+  );
+}
+
 test("source audit records are represented in generated Admin baselines", () => {
   assertAllPresent(audit.companiesFound, companies, "companies");
   assertAllPresent(audit.platformsFound, platforms, "platforms");
   assertAllPresent(audit.positionsFound, positions, "positions");
   assertAllPresent(audit.projectsFound, projects, "projects");
+});
+
+test("source audit has explicit organization classification buckets", () => {
+  for (const field of [
+    "employersFound",
+    "studiosFound",
+    "clientsFound",
+    "vendorsFound",
+    "ambiguousOrganizations",
+    "companiesPromotedToRegistry",
+    "clientsExcludedFromCompanies",
+    "requiredCompanyAssertions",
+    "warnings"
+  ]) {
+    assert.ok(Array.isArray(audit[field]), `${field} should be an array`);
+  }
+});
+
+test("employment company guardrails resolve through Companies", () => {
+  const companyIds = idSet(companies);
+  const positionFailures = positions
+    .filter((position) => !companyIds.has(position.companyId))
+    .map((position) => `${position.title}:${position.companyName || position.companyId}`);
+  assert.deepEqual(positionFailures, [], `position companyId values should resolve to Companies: ${positionFailures.join(", ")}`);
+
+  const sourceEmploymentIds = new Set((audit.employersFound || []).map((item) => item.normalizedId));
+  const missingEmployers = Array.from(sourceEmploymentIds).filter((id) => !companyIds.has(id));
+  assert.deepEqual(missingEmployers, [], `employment source companies missing from Companies: ${missingEmployers.join(", ")}`);
+
+  if (sourceHasEmployer("Fleetwood")) {
+    assert.ok(companyIds.has("fleetwood-australia"), "Fleetwood appears in employment source and must exist in Companies");
+  }
+  if (sourceHasEmployer("GHD")) {
+    assert.ok(companyIds.has("ghd"), "GHD appears in employment source and must exist in Companies");
+  }
+});
+
+test("client-only organizations are excluded from Companies and project company selectors", () => {
+  const companyIds = idSet(companies);
+  const clientOnlyIds = new Set(audit.clientOnlyOrganizationIds || (audit.clientsExcludedFromCompanies || []).map((item) => item.normalizedId));
+  const promotedClients = Array.from(clientOnlyIds).filter((id) => companyIds.has(id));
+  assert.deepEqual(promotedClients, [], `client-only organizations promoted into Companies: ${promotedClients.join(", ")}`);
+
+  const rileyClientOnly = Array.from(clientOnlyIds).includes("riley-consulting");
+  if (rileyClientOnly) {
+    assert.ok(!companyIds.has("riley-consulting"), "Riley Consulting is client-only and must not be in Companies");
+    assert.doesNotMatch(adminApp, /"id":\s*"riley-consulting"/, "Projects editor/company selector seed must not include Riley Consulting");
+  }
+
+  const selectorLeaks = projects
+    .flatMap((project) => [...(project.companyIds || []), ...(project.companyLabels || []), ...(project.studio || [])].map((value) => [project.id, value]))
+    .filter(([, value]) => clientOnlyIds.has(String(value).trim()) || clientOnlyIds.has(String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-")))
+    .map(([projectId, value]) => `${projectId}:${value}`);
+  assert.deepEqual(selectorLeaks, [], `project company/studio selector values include client-only names: ${selectorLeaks.join(", ")}`);
+
+  const rileyProjects = projects.filter((project) => /riley consulting/i.test([project.client, project.clientName, project.clientLabel].join(" ")));
+  if (rileyClientOnly) {
+    assert.ok(rileyProjects.length > 0, "Riley Consulting source mention should be preserved as client/provenance");
+  }
 });
 
 test("project company and platform references resolve or are explicitly warned", () => {

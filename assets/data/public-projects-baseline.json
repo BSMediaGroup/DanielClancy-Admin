@@ -2,7 +2,7 @@
   "meta": {
     "sourceRepo": "DanielClancy",
     "sourceDescription": "Generated from the public DanielClancy WorkSet.csv portfolio pipeline used by src/content/workSetPortfolio.ts and public /portfolio detail routes.",
-    "generatedAt": "2026-06-18T12:38:03.556Z",
+    "generatedAt": "2026-06-18T15:13:52.384Z",
     "projectCount": 16,
     "sourceFilesUsed": [
       "cmsdata/wix/collection-tables/WorkSet.csv",
@@ -57,7 +57,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "acce"
       ],
@@ -76,7 +76,9 @@
         "rawValue": "Dawesville IGA",
         "normalizedId": "proposed-retail-development-for-dawesville-iga"
       },
-      "sortOrder": 10
+      "sortOrder": 10,
+      "clientName": "Dawesville 3 Pty Ltd",
+      "clientLabel": "Dawesville 3 Pty Ltd"
     },
     {
       "id": "cue-roadhouse",
@@ -107,9 +109,7 @@
         "Civil",
         "Transport"
       ],
-      "studio": [
-        "Riley Consulting"
-      ],
+      "studio": [],
       "software": [
         "AutoCAD"
       ],
@@ -120,13 +120,9 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
-      "companyIds": [
-        "riley-consulting"
-      ],
-      "companyLabels": [
-        "Riley Consulting"
-      ],
+      "updatedAt": "2026-06-18T15:13:52.384Z",
+      "companyIds": [],
+      "companyLabels": [],
       "platformIds": [
         "autodesk-autocad"
       ],
@@ -139,7 +135,10 @@
         "rawValue": "Cue Roadhouse",
         "normalizedId": "cue-roadhouse"
       },
-      "sortOrder": 20
+      "sortOrder": 20,
+      "clientName": "Riley Consulting",
+      "clientLabel": "Riley Consulting",
+      "studioSourceValue": "Riley Consulting"
     },
     {
       "id": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
@@ -453,7 +452,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "place-laboratory"
       ],
@@ -476,7 +475,9 @@
         "rawValue": "Curtin Creative Quarter",
         "normalizedId": "curtin-creative-quarter-misc-details"
       },
-      "sortOrder": 50
+      "sortOrder": 50,
+      "clientName": "Curtin University",
+      "clientLabel": "Curtin University"
     },
     {
       "id": "lot-500-eighth-road-land-resumption",
@@ -519,7 +520,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "dc-design-studio"
       ],
@@ -540,7 +541,9 @@
         "rawValue": "Eighth Road Land Resumption",
         "normalizedId": "lot-500-eighth-road-land-resumption"
       },
-      "sortOrder": 60
+      "sortOrder": 60,
+      "clientName": "MRA (Now DevelopmentWA)",
+      "clientLabel": "MRA (Now DevelopmentWA)"
     },
     {
       "id": "cockburn-coast",
@@ -602,7 +605,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "urbis"
       ],
@@ -621,7 +624,9 @@
         "rawValue": "Cockburn Coast Streetscapes",
         "normalizedId": "cockburn-coast"
       },
-      "sortOrder": 70
+      "sortOrder": 70,
+      "clientName": "LandCorp (Now DevelopmentWA)",
+      "clientLabel": "LandCorp (Now DevelopmentWA)"
     },
     {
       "id": "spratt-residence-proposed-addition",
@@ -666,7 +671,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "dc-design-studio"
       ],
@@ -685,7 +690,9 @@
         "rawValue": "Spratt Residence - Proposed Addition",
         "normalizedId": "spratt-residence-proposed-addition"
       },
-      "sortOrder": 80
+      "sortOrder": 80,
+      "clientName": "C & J Spratt",
+      "clientLabel": "C & J Spratt"
     },
     {
       "id": "upss-homebush-nsw",
@@ -797,7 +804,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "dc-design-studio"
       ],
@@ -818,7 +825,9 @@
         "rawValue": "Wungong Urban Water Master Plan",
         "normalizedId": "wungong-urban-water-master-plan"
       },
-      "sortOrder": 100
+      "sortOrder": 100,
+      "clientName": "MRA (Now DevelopmentWA)",
+      "clientLabel": "MRA (Now DevelopmentWA)"
     },
     {
       "id": "upss-beacon-hill-nsw",
@@ -937,7 +946,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "acce"
       ],
@@ -956,7 +965,9 @@
         "rawValue": "Henry Street Residence - Structural Documentation",
         "normalizedId": "henry-street-residence-structural-documentation"
       },
-      "sortOrder": 120
+      "sortOrder": 120,
+      "clientName": "KTAP Construction",
+      "clientLabel": "KTAP Construction"
     },
     {
       "id": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
@@ -1005,7 +1016,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "acce"
       ],
@@ -1024,7 +1035,9 @@
         "rawValue": "Lake Joondalup Baptist College",
         "normalizedId": "lake-joondalup-baptist-college-new-arts-building-structural-plans"
       },
-      "sortOrder": 130
+      "sortOrder": 130,
+      "clientName": "Buchan Group",
+      "clientLabel": "Buchan Group"
     },
     {
       "id": "cottesloe-beach-house-landscape-design",
@@ -1080,7 +1093,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "place-laboratory"
       ],
@@ -1103,7 +1116,9 @@
         "rawValue": "Cottesloe Beach House - Landscape Design",
         "normalizedId": "cottesloe-beach-house-landscape-design"
       },
-      "sortOrder": 140
+      "sortOrder": 140,
+      "clientName": "Minderoo Foundation",
+      "clientLabel": "Minderoo Foundation"
     },
     {
       "id": "upss-wyoming-nsw",
@@ -1216,7 +1231,7 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "updatedAt": "2026-06-18T15:13:52.384Z",
       "companyIds": [
         "acce"
       ],
@@ -1235,7 +1250,9 @@
         "rawValue": "Geraldton Fire Station - Structural Documentation",
         "normalizedId": "geraldton-fire-station-structural-documentation"
       },
-      "sortOrder": 160
+      "sortOrder": 160,
+      "clientName": "FESA (Now Department of Fire and Emergency Services)",
+      "clientLabel": "FESA (Now Department of Fire and Emergency Services)"
     }
   ]
 }

@@ -102,12 +102,12 @@ window.DC_ADMIN_SCAFFOLD_DATA = {
       documentationUrl: "",
       livePage: "/portfolio/cue-roadhouse",
       tags: ["Roadhouse site upgrade and civil works", "Civil", "Transport"],
-      studio: ["Riley Consulting"],
+      studio: [],
       software: ["AutoCAD"],
       sourceFolder: "cmsdata/wix/collection-tables/WorkSet.csv",
       sourceFiles: ["CUE ROADHOUSE_Page_1.jpg", "CUE ROADHOUSE_Page_2.jpg"],
       sourceConfidence: "Medium",
-      internalNotes: "Seeded from the public site WorkSet-derived shape. Individual cloud document URLs are not wired in the public flow yet.",
+      internalNotes: "Seeded from the public site WorkSet-derived shape. Riley Consulting is preserved as client/provenance only; no company/studio registry option is inferred from this scaffold row.",
       updatedAt: "2025-11-21T22:49:03Z"
     },
     {
