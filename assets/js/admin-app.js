@@ -1591,7 +1591,9 @@ import {
 
   function loadRegistryItems(storageKey) {
     try {
-      return unpackRegistryStorage(window.localStorage.getItem(storageKey) || "[]").items.map(normalizeRegistryItem).filter((item) => item.id);
+      const stored = unpackRegistryStorage(window.localStorage.getItem(storageKey) || "[]");
+      const source = stored.overlay || stored.items || [];
+      return Array.isArray(source) ? source.map(normalizeRegistryItem).filter((item) => item.id) : [];
     } catch {
       return [];
     }
@@ -1605,8 +1607,8 @@ import {
     const seed = CV_POSITION_SEED.map(normalizePosition);
     try {
       const stored = unpackRegistryStorage(window.localStorage.getItem(POSITIONS_STORAGE_KEY) || "[]");
-      const rows = Array.isArray(stored.items) ? stored.items : [];
-      const reconciled = reconcilePositionsCollection(seed, rows, registryState.companies.items, (id) => registryLabel("companies", id));
+      const source = stored.overlay || stored.items || [];
+      const reconciled = reconcilePositionsCollection(seed, source, registryState.companies.items, (id) => registryLabel("companies", id));
       positionsState.reconciliation = {
         ...reconciled.meta,
         localDataRepaired: Boolean(stored.migratedFromLegacy || reconciled.meta.warnings.length || reconciled.meta.sourceRequiredRowsRestored)
@@ -1654,6 +1656,31 @@ import {
     return result;
   }
 
+  function registryBaseline(kind) {
+    if (kind === "companies") return CV_COMPANY_SEED;
+    if (kind === "platforms") return CV_PLATFORM_SEED;
+    if (kind === "positions") return CV_POSITION_SEED.map(normalizePosition);
+    return [];
+  }
+
+  function registryStorageOptions(kind) {
+    const { clientOnlyIds, requiredCompanyIds } = registryRules();
+    if (kind === "companies") {
+      return { baselineItems: CV_COMPANY_SEED, clientOnlyIds, requiredIds: requiredCompanyIds, updatedBy: currentAdminSession()?.email || "local-admin" };
+    }
+    if (kind === "platforms") {
+      return { baselineItems: CV_PLATFORM_SEED, requiredIds: new Set(CV_PLATFORM_SEED.map((item) => item.id)), updatedBy: currentAdminSession()?.email || "local-admin" };
+    }
+    if (kind === "positions") {
+      return { baselineItems: CV_POSITION_SEED.map(normalizePosition), companyLabelResolver: (id) => registryLabel("companies", id), updatedBy: currentAdminSession()?.email || "local-admin" };
+    }
+    return {};
+  }
+
+  function registryOverlayPayload(kind, rows, reconciliation = {}) {
+    return registryStoragePayload(kind, rows, reconciliation, registryStorageOptions(kind));
+  }
+
   function loadAndReconcileLocalRegistry(kind) {
     const config = registryConfig(kind);
     if (!config) return;
@@ -1663,7 +1690,7 @@ import {
     } catch {
       stored = { items: [], migratedFromLegacy: true };
     }
-    reconcileRegistryItems(kind, stored.items, { localDataRepaired: stored.migratedFromLegacy });
+    reconcileRegistryItems(kind, stored.overlay || stored.items, { localDataRepaired: stored.migratedFromLegacy });
     migrateRegistryStorage(kind);
   }
 
@@ -1689,7 +1716,7 @@ import {
     try {
       window.localStorage.setItem(
         config.storageKey,
-        JSON.stringify(registryStoragePayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
+        JSON.stringify(registryOverlayPayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
       );
       window.localStorage.setItem(REGISTRY_SCHEMA_STORAGE_KEY, new Date().toISOString());
     } catch {
@@ -1701,7 +1728,7 @@ import {
     try {
       window.localStorage.setItem(
         POSITIONS_STORAGE_KEY,
-        JSON.stringify(registryStoragePayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
+        JSON.stringify(registryOverlayPayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
       );
       window.localStorage.setItem(REGISTRY_SCHEMA_STORAGE_KEY, new Date().toISOString());
     } catch {
@@ -1716,7 +1743,7 @@ import {
     try {
       window.localStorage.setItem(
         config.storageKey,
-        JSON.stringify(registryStoragePayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
+        JSON.stringify(registryOverlayPayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
       );
     } catch {
       registryState[kind].message = `${config.label} saved in memory only because localStorage is unavailable.`;
@@ -1731,7 +1758,7 @@ import {
     try {
       window.localStorage.setItem(
         POSITIONS_STORAGE_KEY,
-        JSON.stringify(registryStoragePayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
+        JSON.stringify(registryOverlayPayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
       );
     } catch {
       positionsState.message = "Positions saved in memory only because localStorage is unavailable.";
@@ -2154,6 +2181,15 @@ import {
     `;
   }
 
+  function registryOverlayCountBadges(kind) {
+    const meta = kind === "positions" ? positionsState.reconciliation : registryState[kind]?.reconciliation;
+    const summary = meta?.overlaySummary || meta || {};
+    const overrides = Number(meta?.overridesCount || summary.overridesCount || 0);
+    const customRows = Number(meta?.customRowsCount || summary.customRowsCount || 0);
+    const excludedRows = Number(meta?.excludedRowsCount || summary.excludedRowsCount || meta?.staleRowsExcluded || 0);
+    return [badge(`${overrides} override(s)`, overrides ? "success" : "warn"), badge(`${customRows} custom`, customRows ? "success" : "warn"), badge(`${excludedRows} excluded`, excludedRows ? "warn" : "success")].join("");
+  }
+
   function markCmsStorage(collection, status, message, extra = {}) {
     const config = getCmsConfig(collection);
     if (!config) return;
@@ -2200,11 +2236,18 @@ import {
           JSON.stringify(
             collection === "projects"
               ? projectsStoragePayload()
-              : registryStoragePayload(collection, config.getItems(), config.state.reconciliation || payload.meta || {}),
+              : registryOverlayPayload(collection, config.getItems(), config.state.reconciliation || payload.meta || {}),
             null,
             2
           )
         );
+        if (["companies", "platforms", "positions"].includes(collection) && payload.meta) {
+          config.state.reconciliation = {
+            ...(config.state.reconciliation || {}),
+            ...payload.meta,
+            localDataRepaired: Boolean(payload.meta.staleRowsExcluded || payload.meta.sourceRequiredRowsRestored || payload.meta.warnings?.length)
+          };
+        }
         const repaired = payload.meta?.staleRowsExcluded || payload.meta?.sourceRequiredRowsRestored;
         markCmsStorage(
           collection,
@@ -2331,6 +2374,14 @@ import {
     if (!force && (storage.status === "not-configured" || storage.status === "fallback")) {
       return;
     }
+    if (["companies", "platforms", "positions"].includes(collection)) {
+      try {
+        window.localStorage.setItem(config.storageKey, JSON.stringify(registryOverlayPayload(collection, config.getItems(), config.state.reconciliation || {}), null, 2));
+        window.localStorage.setItem(REGISTRY_SCHEMA_STORAGE_KEY, new Date().toISOString());
+      } catch {
+        // Local registry fallback is best-effort when browser storage is restricted.
+      }
+    }
     markCmsStorage(collection, "saving", "Saving to admin storage...");
     if (renderAfter && activePageIs(collection)) config.render();
     try {
@@ -2338,7 +2389,13 @@ import {
         method: "PUT",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(collection === "projects" ? projectsStoragePayload() : { items: config.getItems() })
+        body: JSON.stringify(
+          collection === "projects"
+            ? projectsStoragePayload()
+            : ["companies", "platforms", "positions"].includes(collection)
+              ? registryOverlayPayload(collection, config.getItems(), config.state.reconciliation || {})
+              : { items: config.getItems() }
+        )
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
@@ -2359,13 +2416,28 @@ import {
             message: "Saved reconciled Projects baseline overlay to admin storage."
           });
         }
+        if (["companies", "platforms", "positions"].includes(collection) && Array.isArray(payload.items)) {
+          config.setItems(payload.items);
+          if (payload.meta) {
+            config.state.reconciliation = {
+              ...(config.state.reconciliation || {}),
+              ...payload.meta,
+              localDataRepaired: Boolean(payload.meta.staleRowsExcluded || payload.meta.sourceRequiredRowsRestored || payload.meta.warnings?.length)
+            };
+          }
+          try {
+            window.localStorage.setItem(config.storageKey, JSON.stringify(registryOverlayPayload(collection, config.getItems(), config.state.reconciliation || payload.meta || {}), null, 2));
+          } catch {
+            // The saved API result still updates in-memory rows when localStorage is unavailable.
+          }
+        }
         markCmsStorage(collection, "connected", "Saved to admin storage.", {
           source: payload.source || "kv",
           lastSaved: payload.meta?.updatedAt || new Date().toISOString()
         });
       }
     } catch {
-      markCmsStorage(collection, "fallback", "Pages Functions are unavailable here. Saved to local browser fallback only.", {
+      markCmsStorage(collection, "fallback", "No live admin API connected; saved locally only.", {
         source: "local"
       });
     }
@@ -3581,6 +3653,7 @@ import {
           `${config.label} are predefined options used by Projects. Project editor custom text entry is disabled for this field.`,
           `<button class="button" type="button" data-registry-action="create" data-registry-kind="${kind}">Create ${config.singular}</button>
            <button class="button button-secondary" type="button" data-registry-action="sync-cms" data-registry-kind="${kind}">Sync/save registry</button>
+           <button class="button button-secondary" type="button" data-registry-action="repair-cache" data-registry-kind="${kind}">Reconcile / repair local registry cache</button>
            <button class="button button-secondary" type="button" data-registry-action="reset-cache" data-registry-kind="${kind}">Reset local registry cache</button>`
         )}
         <div class="cms-storage-status">
@@ -3593,7 +3666,7 @@ import {
           "Archived rows are retained for compatibility but hidden from the Projects editor selectors.",
           `<div class="cms-toolbar">
             <label class="field field-wide"><span>Search</span><input class="input" type="search" data-registry-filter="${kind}" value="${escapeHtml(state.search)}" placeholder="Name, ID, logo path, website" /></label>
-            <div class="cms-toolbar-summary">${badge(`${items.length} visible`, "warn")}${badge(`${activeRegistryItems(kind).length} active`, "success")}</div>
+            <div class="cms-toolbar-summary">${badge(`${items.length} visible`, "warn")}${badge(`${activeRegistryItems(kind).length} active`, "success")}${registryOverlayCountBadges(kind)}</div>
           </div>
           <div class="table-wrap">
             <table class="table registry-table">
@@ -3621,7 +3694,9 @@ import {
           "Positions",
           "Employment positions are seeded from the public CV source. Admin storage can overlay edits without changing public CV rendering in this task.",
           `<button class="button" type="button" data-position-action="create">Create Position</button>
-           <button class="button button-secondary" type="button" data-position-action="sync-cms">Sync/save positions</button>`
+           <button class="button button-secondary" type="button" data-position-action="sync-cms">Sync/save positions</button>
+           <button class="button button-secondary" type="button" data-position-action="repair-cache">Reconcile / repair local registry cache</button>
+           <button class="button button-secondary" type="button" data-registry-action="reset-cache" data-registry-kind="positions">Reset local registry cache</button>`
         )}
         <div class="cms-storage-status">
           ${badge(cmsStatusText(positionsState.storage), cmsStatusTone(positionsState.storage))}
@@ -3634,7 +3709,7 @@ import {
           `<div class="cms-toolbar">
             <label class="field"><span>Search</span><input class="input" type="search" data-position-filter="search" value="${escapeHtml(positionsState.search)}" placeholder="Title, company, location, summary" /></label>
             <label class="field"><span>Status</span><select class="input" data-position-filter="status"><option value="all"${positionsState.status === "all" ? " selected" : ""}>All statuses</option><option value="active"${positionsState.status === "active" ? " selected" : ""}>active</option><option value="archived"${positionsState.status === "archived" ? " selected" : ""}>archived</option></select></label>
-            <div class="cms-toolbar-summary">${badge(`${visible.length} visible`, "warn")}${badge(`${positionsState.items.filter((item) => item.status !== "archived").length} active`, "success")}</div>
+            <div class="cms-toolbar-summary">${badge(`${visible.length} visible`, "warn")}${badge(`${positionsState.items.filter((item) => item.status !== "archived").length} active`, "success")}${registryOverlayCountBadges("positions")}</div>
           </div>
           <div class="table-wrap">
             <table class="table positions-table">
@@ -3749,6 +3824,11 @@ import {
   }
 
   function sourceBadge(item) {
+    if (item?.status === "excluded") return badge("Excluded/stale", "warn");
+    if (item?.registryOrigin === "source_override") return badge("Source override", "success");
+    if (item?.registryOrigin === "custom" || item?.source === "admin_created") return badge("Custom", "warn");
+    if (item?.status === "archived") return badge("Archived", "warn");
+    if (item?.registryOrigin === "source_baseline" || item?.registrySourceType === "source") return badge("Source baseline", "success");
     const classification = String(item?.classificationSource || "").replace(/_/g, " ");
     const label = classification
       ? `Source-audited: ${classification}`
@@ -3758,6 +3838,10 @@ import {
           ? "Source-audited"
           : item?.source || item?.sourceNotes || "Source";
     return badge(label, item?.source === "admin_created" ? "warn" : "success");
+  }
+
+  function isSourceRegistryRow(item) {
+    return item?.registrySourceType === "source" || item?.registryOrigin === "source_baseline" || item?.registryOrigin === "source_override" || item?.source === "public_cv_source" || Boolean(item?.provenance || item?.sourceNotes || item?.classificationSource);
   }
 
   function renderRegistryModal(kind, modal) {
@@ -5526,7 +5610,7 @@ import {
       const item = positionsState.items.find((entry) => entry.id === positionId);
       if (item) {
         const nextStatus = item.status === "archived" ? "active" : "archived";
-        if (nextStatus === "archived" && !window.confirm(`Archive ${item.title}?`)) return;
+        if (nextStatus === "archived" && !window.confirm(`Archive ${item.title}? Source-derived rows are stored as archive overrides; custom rows remain in Admin overlay storage.`)) return;
         item.status = nextStatus;
         item.updatedAt = new Date().toISOString();
         positionsState.message = `${item.title} ${nextStatus === "archived" ? "archived" : "activated"}.`;
@@ -5540,6 +5624,8 @@ import {
       renderPositions();
     } else if (positionAction === "sync-cms") {
       persistCmsCollection("positions", true, true);
+    } else if (positionAction === "repair-cache") {
+      repairLocalRegistryCache("positions");
     }
 
     if (positionAction) return;
@@ -5750,6 +5836,14 @@ import {
   }
 
   function handleRegistryAction(kind, action, id) {
+    if (action === "reset-cache") {
+      resetLocalRegistryCache(kind);
+      return;
+    }
+    if (action === "repair-cache") {
+      repairLocalRegistryCache(kind);
+      return;
+    }
     if (!registryState[kind]) return;
     const config = registryConfig(kind);
     if (action === "create") {
@@ -5804,10 +5898,6 @@ import {
       persistCmsCollection(kind, true, true);
       return;
     }
-    if (action === "reset-cache") {
-      resetLocalRegistryCache(kind);
-      return;
-    }
     if (action === "upload-logo") {
       app.querySelector(`[data-registry-upload-input="${CSS.escape(kind)}"]`)?.click();
     }
@@ -5837,15 +5927,34 @@ import {
     else render();
   }
 
+  function repairLocalRegistryCache(kind = "") {
+    try {
+      loadAndReconcileLocalRegistry("companies");
+      loadAndReconcileLocalRegistry("platforms");
+      reconcilePositionsFromStorage();
+      registryState.companies.message = "Local Companies cache repaired to registry overlay v3 without deleting valid custom rows.";
+      registryState.platforms.message = "Local Platforms cache repaired to registry overlay v3 without deleting valid custom rows.";
+      positionsState.message = "Local Positions cache repaired to registry overlay v3 without deleting valid custom rows.";
+    } catch {
+      if (kind === "positions") positionsState.message = "Local registry cache repair failed; existing in-memory rows were kept.";
+      else if (registryState[kind]) registryState[kind].message = "Local registry cache repair failed; existing in-memory rows were kept.";
+    }
+    if (kind === "platforms") renderRegistryPage("platforms");
+    else if (kind === "companies") renderRegistryPage("companies");
+    else if (activePageIs("positions") || kind === "positions") renderPositions();
+    else render();
+  }
+
   function saveRegistryFromForm(kind, form) {
     const name = formValue(form, "name");
-    const id = createSlug(formValue(form, "id") || name);
+    const originalId = formValue(form, "originalId");
+    const existingItem = registryState[kind].items.find((item) => item.id === originalId);
+    const id = isSourceRegistryRow(existingItem) ? originalId : createSlug(formValue(form, "id") || name);
     if (!name || !id) {
       registryState[kind].message = "Name and ID are required.";
       renderRegistryPage(kind);
       return;
     }
-    const originalId = formValue(form, "originalId");
     const existingIndex = registryState[kind].items.findIndex((item) => item.id === originalId);
     const duplicate = registryState[kind].items.some((item, index) => item.id === id && index !== existingIndex);
     if (duplicate) {
@@ -5883,14 +5992,15 @@ import {
 
   function savePositionFromForm(form) {
     const title = formValue(form, "title");
-    const id = createSlug(formValue(form, "id") || title);
+    const originalId = formValue(form, "originalId");
+    const existingItem = positionsState.items.find((item) => item.id === originalId);
+    const id = isSourceRegistryRow(existingItem) ? originalId : createSlug(formValue(form, "id") || title);
     const companyId = formValue(form, "companyId");
     if (!title || !id || !companyId) {
       positionsState.message = "Title, ID, and company are required.";
       renderPositions();
       return;
     }
-    const originalId = formValue(form, "originalId");
     const existingIndex = positionsState.items.findIndex((item) => item.id === originalId);
     const duplicate = positionsState.items.some((item, index) => item.id === id && index !== existingIndex);
     if (duplicate) {
@@ -5934,7 +6044,16 @@ import {
   function deletePosition(id) {
     const item = positionsState.items.find((entry) => entry.id === id);
     if (!item) return;
-    if (!window.confirm(`Delete position "${item.title}"? This only affects Admin storage/fallback and does not change the public CV.`)) return;
+    if (isSourceRegistryRow(item)) {
+      if (!window.confirm(`Archive source-derived position "${item.title}" instead of deleting the source baseline row?`)) return;
+      item.status = "archived";
+      item.updatedAt = new Date().toISOString();
+      positionsState.message = `Archived ${item.title}; source-derived position rows are retained for provenance.`;
+      persistPositions();
+      renderPositions();
+      return;
+    }
+    if (!window.confirm(`Delete custom position "${item.title}"? This removes only the Admin custom row and does not change the public CV.`)) return;
     positionsState.items = positionsState.items.filter((entry) => entry.id !== id);
     positionsState.message = `Deleted ${item.title}.`;
     persistPositions();

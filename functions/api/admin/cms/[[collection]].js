@@ -6,7 +6,8 @@ import {
   normalizePositionRegistryItem,
   reconcilePositionsCollection,
   reconcileRegistryCollection,
-  registryStoragePayload
+  registryStoragePayload,
+  summarizeOverlay
 } from "../../../_shared/registry-reconciliation.js";
 
 const COOKIE_NAME = "dc_auth_session";
@@ -213,6 +214,14 @@ function validateRows(collection, value) {
   return "";
 }
 
+function validateRegistryWritePayload(collection, payload) {
+  if (payload && typeof payload === "object" && !Array.isArray(payload) && payload.schemaVersion === "registry-overlay.v3") {
+    if (payload.collection && payload.collection !== collection) return "payload_collection_mismatch";
+    return "";
+  }
+  return validateRows(collection, Array.isArray(payload) ? payload : payload?.items);
+}
+
 function projectIdentity(row) {
   return String(row?.id || row?.slug || "").trim().toLowerCase();
 }
@@ -398,9 +407,10 @@ async function readCollection(request, env, collection) {
   }
 
   const raw = await binding.get(COLLECTIONS[collection].key);
+  const companyOverlayRaw = registryBaselines && collection === "positions" ? await binding.get(COLLECTIONS.companies.key) : null;
   if (!raw) {
     if (registryBaselines) {
-      const merged = reconcileCmsRegistry(collection, registryBaselines, []);
+      const merged = reconcileCmsRegistry(collection, registryBaselines, [], companyOverlayRaw);
       return registryReadResponse(collection, merged, {
         configured: true,
         source: "baseline_only",
@@ -446,7 +456,7 @@ async function readCollection(request, env, collection) {
     const parsed = JSON.parse(raw);
     const { items, wrapper } = normalizeStoredCollection(parsed);
     if (registryBaselines) {
-      const merged = reconcileCmsRegistry(collection, registryBaselines, items);
+      const merged = reconcileCmsRegistry(collection, registryBaselines, parsed?.schemaVersion === "registry-overlay.v3" ? parsed : items, companyOverlayRaw);
       return registryReadResponse(collection, merged, {
         configured: true,
         source: "baseline_plus_kv",
@@ -491,7 +501,7 @@ async function readCollection(request, env, collection) {
   }
 }
 
-function reconcileCmsRegistry(collection, registryBaselines, items) {
+function reconcileCmsRegistry(collection, registryBaselines, items, companyOverlay = []) {
   if (collection === "companies") {
     return reconcileRegistryCollection("companies", registryBaselines.companies, items, {
       clientOnlyIds: registryBaselines.clientOnlyIds,
@@ -503,7 +513,7 @@ function reconcileCmsRegistry(collection, registryBaselines, items) {
       requiredIds: new Set(registryBaselines.platforms.map((item) => item.id || item.slug).filter(Boolean))
     });
   }
-  const companyResult = reconcileRegistryCollection("companies", registryBaselines.companies, [], {
+  const companyResult = reconcileRegistryCollection("companies", registryBaselines.companies, companyOverlay || [], {
     clientOnlyIds: registryBaselines.clientOnlyIds,
     requiredIds: registryBaselines.requiredCompanyIds
   });
@@ -516,13 +526,21 @@ function reconcileCmsRegistry(collection, registryBaselines, items) {
 }
 
 function registryReadResponse(collection, merged, options = {}) {
+  const summary = merged.meta?.overlaySummary || summarizeOverlay(merged.overlay);
   return {
     ok: true,
     configured: options.configured,
     storageConfigured: Boolean(options.configured),
     source: options.source,
     collection,
+    rows: merged.items,
     items: merged.items,
+    overlaySummary: summary,
+    reconciled: true,
+    warnings: merged.meta?.warnings || [],
+    excludedRows: merged.meta?.excludedRows || [],
+    sourceRequiredRowsRestored: merged.meta?.sourceRequiredRowsRestored || 0,
+    staleRowsExcluded: merged.meta?.staleRowsExcluded || 0,
     meta: {
       storage: "kv",
       binding: "DC_ADMIN_KV",
@@ -561,7 +579,9 @@ async function writeCollection(context, collection, session) {
   }
 
   const items = Array.isArray(payload) ? payload : payload?.items;
-  const validationError = validateRows(collection, items);
+  const validationError = ["companies", "platforms", "positions"].includes(collection)
+    ? validateRegistryWritePayload(collection, payload)
+    : validateRows(collection, items);
   if (validationError) {
     return json({ ok: false, error: validationError }, { status: 400 });
   }
@@ -600,16 +620,23 @@ async function writeCollection(context, collection, session) {
     };
   } else if (["companies", "platforms", "positions"].includes(collection)) {
     const registryBaselines = await loadRegistryBaselines(request, env);
-    const merged = reconcileCmsRegistry(collection, registryBaselines, items);
-    stored = registryStoragePayload(collection, merged.items, merged.meta);
+    const companyOverlayRaw = collection === "positions" ? await binding.get(COLLECTIONS.companies.key) : null;
+    const overlayInput = payload?.schemaVersion === "registry-overlay.v3" ? payload : items;
+    const merged = reconcileCmsRegistry(collection, registryBaselines, overlayInput, companyOverlayRaw);
+    stored = registryStoragePayload(collection, merged.overlay, merged.meta);
     responseItems = merged.items;
     responseMeta = {
       reconciled: true,
       storageSource: "baseline_plus_kv",
+      overlaySchemaVersion: "registry-overlay.v3",
       staleRowsExcluded: merged.meta?.staleRowsExcluded || 0,
       sourceRequiredRowsRestored: merged.meta?.sourceRequiredRowsRestored || 0,
       excludedRows: merged.meta?.excludedRows || [],
-      warnings: merged.meta?.warnings || []
+      warnings: merged.meta?.warnings || [],
+      overlaySummary: merged.meta?.overlaySummary || summarizeOverlay(stored),
+      overridesCount: merged.meta?.overridesCount || 0,
+      customRowsCount: merged.meta?.customRowsCount || 0,
+      excludedRowsCount: merged.meta?.excludedRowsCount || 0
     };
   }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
@@ -624,7 +651,7 @@ async function writeCollection(context, collection, session) {
       domain: "admin.danielclancy.net",
       severity: "info",
       title: `DanielClancy ${collection} CMS update`,
-      message: `${collection} CMS save accepted with ${items.length} item(s).`,
+      message: `${collection} CMS save accepted with ${(responseItems || []).length} item(s).`,
       tags: ["cms", collection, "admin", "danielclancy"],
       linkUrl: `https://admin.danielclancy.net/#/${collection}`,
       pagePath: `#/${collection}`,
@@ -653,7 +680,14 @@ async function writeCollection(context, collection, session) {
     storageConfigured: true,
     source: collection === "projects" ? "baseline_overlay_saved" : ["companies", "platforms", "positions"].includes(collection) ? "baseline_plus_kv_saved" : "kv",
     collection,
+    rows: responseItems,
     items: responseItems,
+    saved: true,
+    overlaySchemaVersion: responseMeta.overlaySchemaVersion,
+    overridesCount: responseMeta.overridesCount,
+    customRowsCount: responseMeta.customRowsCount,
+    excludedRowsCount: responseMeta.excludedRowsCount,
+    warnings: responseMeta.warnings || [],
     meta: {
       storage: "kv",
       binding: "DC_ADMIN_KV",

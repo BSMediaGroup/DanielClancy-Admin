@@ -1,5 +1,53 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Registry Overlay v3 Persistence Hotfix
+
+### Technical Notes
+
+- Replaced Companies/Platforms/Positions registry persistence with schema `registry-overlay.v3`.
+- Baseline source rows are no longer persisted as full KV/localStorage rows. Source-derived edits are stored as `overrides` keyed by stable source ID, user-created rows are stored as `customRows`, deleted custom IDs are tracked separately, and stale/client-only rows are tracked in `excludedRows`.
+- Fixed the exact persistence bug from the previous pass: `registryStoragePayload()` was saving reconciled baseline rows back into storage as normal `items`, then API/client reloads re-reconciled that already-reconciled snapshot. Source baseline fields could overwrite edited fields, full-row storage could reappear as duplicates, and API/local fallback used mismatched storage shapes.
+- CMS API GET for Companies/Platforms/Positions now migrates old v1/v2 arrays or wrappers in memory, reconciles baseline plus overlay, returns `rows`/`items`, `overlaySummary`, warnings, excluded rows, stale-exclusion counts, and source-required restoration counts.
+- CMS API PUT for Companies/Platforms/Positions now accepts either `registry-overlay.v3` or full visible rows. Full rows are converted to overlay patches/custom rows before persistence; full reconciled baseline rows are not stored as duplicate custom rows.
+- Positions reconciliation now resolves company links against the current Companies overlay where available, not only the Companies baseline.
+- Local static fallback saves Companies/Platforms/Positions to localStorage in the same v3 overlay format before attempting the live API. API failures leave the in-memory editor rows intact and show “No live admin API connected; saved locally only.”
+- Added “Reconcile / repair local registry cache” for Companies, Platforms, and Positions. It migrates stale local arrays/wrappers to overlay v3 without deleting valid custom rows.
+- Kept “Reset local registry cache” scoped to Companies/Platforms/Positions registry cache keys only after confirmation; it does not clear auth/session state, Projects, Media, disabled Alerts compatibility data, or unrelated CMS content.
+- Added row-source UI badges for Source baseline, Source override, Custom, Archived, and Excluded/stale, plus save/status badges for override/custom/excluded counts.
+- Added `tests/registry-overlay-persistence.test.mjs` covering source edit persistence, custom row dedupe, full-row PUT conversion, idempotence, Riley exclusion, Fleetwood/GHD restoration, position company resolution, old localStorage migration, and sync failure retaining in-memory rows.
+- DanielClancy public website was read-only.
+- No employment/company/client/software/position/CV facts were invented.
+- Alerts rule editor remains removed/disabled.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Editing a source Company, Platform, or Position now creates an override instead of a duplicate full row.
+- Sync/Save no longer collapses Positions back to the baseline or discards source-derived edits.
+- Creating custom registry rows should reload as exactly one custom row.
+- Riley Consulting remains blocked from active Companies when classified client-only, while required source companies such as Fleetwood Australia and GHD remain restored.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `assets/js/registry-reconciliation.js`
+- `functions/_shared/registry-reconciliation.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `tests/registry-overlay-persistence.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Run targeted syntax, source-audit, registry reconciliation, overlay persistence, diff, npm check/build, and MCP/browser edit/save/reload validation before release.
+
+### Risks / Follow-Ups
+
+- Live production KV migration should be observed on a Pages-compatible dev/runtime environment with `DC_ADMIN_KV` configured before promoting this as a production data migration.
+- Public-site publishing/hydration from Admin storage remains future work.
+
 ## Emergency Static Module Load Hotfix
 
 ### Technical Notes
