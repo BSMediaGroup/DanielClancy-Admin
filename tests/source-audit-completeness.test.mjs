@@ -149,6 +149,10 @@ test("registry fallback and Projects editor integrity hooks are present", () => 
   assert.match(adminApp, /const CV_COMPANY_SEED = \[/);
   assert.match(adminApp, /const CV_PLATFORM_SEED = \[/);
   assert.match(adminApp, /const CV_POSITION_SEED = \[/);
+  assert.match(adminApp, /REGISTRY_SCHEMA_VERSION/);
+  assert.match(adminApp, /reconcileRegistryItems\("companies"/);
+  assert.match(adminApp, /resetLocalRegistryCache/);
+  assert.match(adminApp, /Local registry data was reconciled against the source baseline\./);
   assert.match(adminApp, /registryMultiSelectField\("Software \/ platforms", "platformIds", "platforms"/);
   assert.match(adminApp, /<select class="input" name="\$\{escapeHtml\(name\)\}" multiple/);
   assert.match(adminApp, /addEventListener\("click"/);

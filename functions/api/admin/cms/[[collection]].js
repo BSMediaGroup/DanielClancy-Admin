@@ -1,5 +1,13 @@
 import { requireAdmin as resolveAdminSession } from "../../../_shared/admin-accounts.js";
 import { postDanielClancyAlert } from "../../../_shared/alert-sender.js";
+import {
+  extractClientOnlyIds,
+  extractRequiredCompanyIds,
+  normalizePositionRegistryItem,
+  reconcilePositionsCollection,
+  reconcileRegistryCollection,
+  registryStoragePayload
+} from "../../../_shared/registry-reconciliation.js";
 
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -17,6 +25,10 @@ const COLLECTIONS = {
   positions: { key: "cms:positions", maxRows: 250 }
 };
 const PROJECTS_BASELINE_PATH = "/assets/data/public-projects-baseline.json";
+const COMPANIES_BASELINE_PATH = "/assets/data/admin-companies-baseline.json";
+const PLATFORMS_BASELINE_PATH = "/assets/data/admin-platforms-baseline.json";
+const POSITIONS_BASELINE_PATH = "/assets/data/admin-positions-baseline.json";
+const SOURCE_AUDIT_PATH = "/assets/data/source-audit-report.json";
 const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
 const CMS_ALERT_TRIGGER_TYPES = {
   projects: "project_cms_update",
@@ -214,40 +226,47 @@ function normalizeStoredCollection(parsed) {
 }
 
 async function loadProjectsBaseline(request, env) {
+  return loadJsonAsset(request, env, PROJECTS_BASELINE_PATH, { meta: {}, projects: [] }, "projects");
+}
+
+async function loadJsonAsset(request, env, path, fallback, key) {
   if (!env?.ASSETS || typeof env.ASSETS.fetch !== "function") {
-    return {
-      meta: {
-        sourceRepo: "DanielClancy",
-        projectCount: 0,
-        sourceFilesUsed: [],
-        missingReason: "assets_binding_unavailable"
-      },
-      projects: []
-    };
+    return { ...fallback, meta: { ...(fallback.meta || {}), missingReason: "assets_binding_unavailable" } };
   }
 
-  const url = new URL(PROJECTS_BASELINE_PATH, request.url);
+  const url = new URL(path, request.url);
   const response = await env.ASSETS.fetch(url);
   if (!response.ok) {
-    return {
-      meta: {
-        sourceRepo: "DanielClancy",
-        projectCount: 0,
-        sourceFilesUsed: [],
-        missingReason: `asset_http_${response.status}`
-      },
-      projects: []
-    };
+    return { ...fallback, meta: { ...(fallback.meta || {}), missingReason: `asset_http_${response.status}` } };
   }
 
   const parsed = await response.json();
-  const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
+  if (key === "projects") {
+    const projects = Array.isArray(parsed?.projects) ? parsed.projects : [];
+    return { meta: { ...(parsed?.meta || {}), projectCount: projects.length }, projects };
+  }
+  return parsed || fallback;
+}
+
+async function loadRegistryBaselines(request, env) {
+  const [companiesPayload, platformsPayload, positionsPayload, auditPayload] = await Promise.all([
+    loadJsonAsset(request, env, COMPANIES_BASELINE_PATH, { meta: {}, companies: [] }, "companies"),
+    loadJsonAsset(request, env, PLATFORMS_BASELINE_PATH, { meta: {}, platforms: [] }, "platforms"),
+    loadJsonAsset(request, env, POSITIONS_BASELINE_PATH, { meta: {}, positions: [] }, "positions"),
+    loadJsonAsset(request, env, SOURCE_AUDIT_PATH, {}, "audit")
+  ]);
+  const companies = Array.isArray(companiesPayload?.companies) ? companiesPayload.companies : [];
+  const platforms = Array.isArray(platformsPayload?.platforms) ? platformsPayload.platforms : [];
+  const positions = Array.isArray(positionsPayload?.positions) ? positionsPayload.positions : [];
+  const clientOnlyIds = extractClientOnlyIds(auditPayload || {});
+  const requiredCompanyIds = extractRequiredCompanyIds(auditPayload || {}, companies);
   return {
-    meta: {
-      ...(parsed?.meta || {}),
-      projectCount: projects.length
-    },
-    projects
+    companies,
+    platforms,
+    positions,
+    audit: auditPayload || {},
+    clientOnlyIds,
+    requiredCompanyIds
   };
 }
 
@@ -335,7 +354,17 @@ function validateProjectsPayloadSafety(items, baselinePayload, payload) {
 async function readCollection(request, env, collection) {
   const binding = env.DC_ADMIN_KV;
   const baselinePayload = collection === "projects" ? await loadProjectsBaseline(request, env) : null;
+  const registryBaselines = ["companies", "platforms", "positions"].includes(collection) ? await loadRegistryBaselines(request, env) : null;
   if (!binding || typeof binding.get !== "function") {
+    if (registryBaselines) {
+      const merged = reconcileCmsRegistry(collection, registryBaselines, []);
+      return registryReadResponse(collection, merged, {
+        configured: false,
+        source: "baseline_only_storage_not_configured",
+        storageSource: "baseline_only_storage_not_configured",
+        message: "DC_ADMIN_KV is not configured; returning reconciled source baseline."
+      });
+    }
     if (collection === "projects" && baselinePayload?.projects?.length) {
       const merged = mergeProjectsBaselineWithKv(baselinePayload, []);
       return {
@@ -370,6 +399,16 @@ async function readCollection(request, env, collection) {
 
   const raw = await binding.get(COLLECTIONS[collection].key);
   if (!raw) {
+    if (registryBaselines) {
+      const merged = reconcileCmsRegistry(collection, registryBaselines, []);
+      return registryReadResponse(collection, merged, {
+        configured: true,
+        source: "baseline_only",
+        storageSource: "baseline_only",
+        key: COLLECTIONS[collection].key,
+        message: "No KV record exists yet; returning reconciled source baseline."
+      });
+    }
     if (collection === "projects" && baselinePayload?.projects?.length) {
       const merged = mergeProjectsBaselineWithKv(baselinePayload, []);
       return {
@@ -406,6 +445,16 @@ async function readCollection(request, env, collection) {
   try {
     const parsed = JSON.parse(raw);
     const { items, wrapper } = normalizeStoredCollection(parsed);
+    if (registryBaselines) {
+      const merged = reconcileCmsRegistry(collection, registryBaselines, items);
+      return registryReadResponse(collection, merged, {
+        configured: true,
+        source: "baseline_plus_kv",
+        storageSource: "baseline_plus_kv",
+        key: COLLECTIONS[collection].key,
+        updatedAt: wrapper?.updatedAt || parsed?.updatedAt || null
+      });
+    }
     if (collection === "projects" && baselinePayload?.projects?.length) {
       const merged = mergeProjectsBaselineWithKv(baselinePayload, items, wrapper);
       return {
@@ -442,6 +491,54 @@ async function readCollection(request, env, collection) {
   }
 }
 
+function reconcileCmsRegistry(collection, registryBaselines, items) {
+  if (collection === "companies") {
+    return reconcileRegistryCollection("companies", registryBaselines.companies, items, {
+      clientOnlyIds: registryBaselines.clientOnlyIds,
+      requiredIds: registryBaselines.requiredCompanyIds
+    });
+  }
+  if (collection === "platforms") {
+    return reconcileRegistryCollection("platforms", registryBaselines.platforms, items, {
+      requiredIds: new Set(registryBaselines.platforms.map((item) => item.id || item.slug).filter(Boolean))
+    });
+  }
+  const companyResult = reconcileRegistryCollection("companies", registryBaselines.companies, [], {
+    clientOnlyIds: registryBaselines.clientOnlyIds,
+    requiredIds: registryBaselines.requiredCompanyIds
+  });
+  return reconcilePositionsCollection(
+    registryBaselines.positions,
+    items.map((item) => normalizePositionRegistryItem(item, (id) => companyResult.items.find((company) => company.id === id)?.name || "")),
+    companyResult.items,
+    (id) => companyResult.items.find((company) => company.id === id)?.name || ""
+  );
+}
+
+function registryReadResponse(collection, merged, options = {}) {
+  return {
+    ok: true,
+    configured: options.configured,
+    storageConfigured: Boolean(options.configured),
+    source: options.source,
+    collection,
+    items: merged.items,
+    meta: {
+      storage: "kv",
+      binding: "DC_ADMIN_KV",
+      key: options.key || COLLECTIONS[collection].key,
+      updatedAt: options.updatedAt || null,
+      message: options.message || "Returned reconciled source baseline plus admin storage overlay.",
+      reconciled: true,
+      storageSource: options.storageSource || options.source || "baseline_plus_kv",
+      staleRowsExcluded: merged.meta?.staleRowsExcluded || 0,
+      sourceRequiredRowsRestored: merged.meta?.sourceRequiredRowsRestored || 0,
+      excludedRows: merged.meta?.excludedRows || [],
+      warnings: merged.meta?.warnings || []
+    }
+  };
+}
+
 async function writeCollection(context, collection, session) {
   const { request, env } = context;
   const binding = env.DC_ADMIN_KV;
@@ -475,6 +572,8 @@ async function writeCollection(context, collection, session) {
     items,
     updatedAt
   };
+  let responseItems = items;
+  let responseMeta = {};
   if (collection === "projects") {
     const baselinePayload = await loadProjectsBaseline(request, env);
     const safetyError = validateProjectsPayloadSafety(items, baselinePayload, payload);
@@ -499,12 +598,24 @@ async function writeCollection(context, collection, session) {
       adminCreatedItems: Array.isArray(payload?.adminCreatedItems) ? payload.adminCreatedItems : [],
       hiddenBaselineIds: Array.isArray(payload?.hiddenBaselineIds) ? payload.hiddenBaselineIds : []
     };
+  } else if (["companies", "platforms", "positions"].includes(collection)) {
+    const registryBaselines = await loadRegistryBaselines(request, env);
+    const merged = reconcileCmsRegistry(collection, registryBaselines, items);
+    stored = registryStoragePayload(collection, merged.items, merged.meta);
+    responseItems = merged.items;
+    responseMeta = {
+      reconciled: true,
+      storageSource: "baseline_plus_kv",
+      staleRowsExcluded: merged.meta?.staleRowsExcluded || 0,
+      sourceRequiredRowsRestored: merged.meta?.sourceRequiredRowsRestored || 0,
+      excludedRows: merged.meta?.excludedRows || [],
+      warnings: merged.meta?.warnings || []
+    };
   }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
-  const responseItems =
-    collection === "projects"
-      ? mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).items
-      : items;
+  if (collection === "projects") {
+    responseItems = mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).items;
+  }
   logAlertFailure(
     "cms_alert_delivery_failed",
     await postDanielClancyAlert(context, {
@@ -525,7 +636,7 @@ async function writeCollection(context, collection, session) {
       authProvider: session?.provider || "",
       payload: {
         collection,
-        itemCount: items.length,
+        itemCount: responseItems.length,
         actorEmail: session?.email || "",
         actorProvider: session?.provider || "",
         user_email: session?.email || "",
@@ -540,7 +651,7 @@ async function writeCollection(context, collection, session) {
     ok: true,
     configured: true,
     storageConfigured: true,
-    source: collection === "projects" ? "baseline_overlay_saved" : "kv",
+    source: collection === "projects" ? "baseline_overlay_saved" : ["companies", "platforms", "positions"].includes(collection) ? "baseline_plus_kv_saved" : "kv",
     collection,
     items: responseItems,
     meta: {
@@ -548,6 +659,7 @@ async function writeCollection(context, collection, session) {
       binding: "DC_ADMIN_KV",
       key: COLLECTIONS[collection].key,
       updatedAt,
+      ...responseMeta,
       ...(collection === "projects"
         ? mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).meta
         : {})

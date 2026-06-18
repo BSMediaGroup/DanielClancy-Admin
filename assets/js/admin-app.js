@@ -1,3 +1,16 @@
+import {
+  REGISTRY_SCHEMA_VERSION,
+  createRegistrySlug,
+  extractClientOnlyIds,
+  extractRequiredCompanyIds,
+  normalizePositionRegistryItem,
+  normalizeRegistryItem as reconcileNormalizeRegistryItem,
+  reconcilePositionsCollection,
+  reconcileRegistryCollection,
+  registryStoragePayload,
+  unpackRegistryStorage
+} from "../../functions/_shared/registry-reconciliation.js";
+
 (function () {
   const data = window.DC_ADMIN_SCAFFOLD_DATA;
   const app = document.getElementById("app");
@@ -29,6 +42,7 @@
   const COMPANIES_STORAGE_KEY = "danielclancy-admin.companies.scaffold.v1";
   const PLATFORMS_STORAGE_KEY = "danielclancy-admin.platforms.scaffold.v1";
   const POSITIONS_STORAGE_KEY = "danielclancy-admin.positions.scaffold.v1";
+  const REGISTRY_SCHEMA_STORAGE_KEY = REGISTRY_SCHEMA_VERSION;
   const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
   const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
@@ -111,18 +125,20 @@
   };
   const registryState = {
     companies: {
-      items: loadRegistryItems(COMPANIES_STORAGE_KEY),
+      items: [],
       search: "",
       modal: null,
       message: "Company registry uses admin storage when available and local fallback otherwise.",
-      storage: { status: "checking", source: "local", message: "Checking Companies registry..." }
+      storage: { status: "checking", source: "local", message: "Checking Companies registry..." },
+      reconciliation: { reconciled: true, staleRowsExcluded: 0, sourceRequiredRowsRestored: 0, warnings: [] }
     },
     platforms: {
-      items: loadRegistryItems(PLATFORMS_STORAGE_KEY),
+      items: [],
       search: "",
       modal: null,
       message: "Platform registry uses admin storage when available and local fallback otherwise.",
-      storage: { status: "checking", source: "local", message: "Checking Platforms registry..." }
+      storage: { status: "checking", source: "local", message: "Checking Platforms registry..." },
+      reconciliation: { reconciled: true, staleRowsExcluded: 0, sourceRequiredRowsRestored: 0, warnings: [] }
     }
   };
   const positionsState = {
@@ -131,6 +147,7 @@
     status: "all",
     modal: null,
     message: "Positions are seeded from the public CV source and use admin storage when available.",
+    reconciliation: { reconciled: true, staleRowsExcluded: 0, sourceRequiredRowsRestored: 0, warnings: [] },
     storage: {
       status: "checking",
       source: "local",
@@ -1346,6 +1363,26 @@
           "updatedAt": "2026-06-18T15:13:52.384Z"
       }
   ];
+  const SOURCE_AUDIT_REGISTRY_RULES = {
+    clientOnlyOrganizationIds: [
+      "ampol-australia-petroleum-pty-ltd",
+      "buchan-group",
+      "c-and-j-spratt",
+      "curtin-university",
+      "dawesville-3-pty-ltd",
+      "fesa-now-department-of-fire-and-emergency-services",
+      "ktap-construction",
+      "landcorp-now-developmentwa",
+      "minderoo-foundation",
+      "mra-now-developmentwa",
+      "riley-consulting"
+    ],
+    employersFound: CV_COMPANY_SEED.map((item) => ({ normalizedId: item.id })),
+    studiosFound: CV_COMPANY_SEED
+      .filter((item) => String(item.classificationSource || "").includes("studio"))
+      .map((item) => ({ normalizedId: item.id })),
+    companiesPromotedToRegistry: CV_COMPANY_SEED.map((item) => ({ normalizedId: item.id }))
+  };
   let loadingCount = 0;
 
   function escapeHtml(value) {
@@ -1554,72 +1591,85 @@
 
   function loadRegistryItems(storageKey) {
     try {
-      const stored = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
-      return Array.isArray(stored) ? stored.map(normalizeRegistryItem).filter((item) => item.id) : [];
+      return unpackRegistryStorage(window.localStorage.getItem(storageKey) || "[]").items.map(normalizeRegistryItem).filter((item) => item.id);
     } catch {
       return [];
     }
   }
 
   function normalizeRegistryItem(raw = {}) {
-    const name = String(raw.name || raw.label || raw.id || "").trim();
-    const id = createSlug(raw.id || raw.slug || name);
-    return {
-      ...raw,
-      id,
-      slug: createSlug(raw.slug || id),
-      name: name || id,
-      logoPath: String(raw.logoPath || ""),
-      location: String(raw.location || ""),
-      company: String(raw.company || raw.vendor || ""),
-      vendor: String(raw.vendor || raw.company || ""),
-      website: String(raw.website || ""),
-      description: String(raw.description || raw.details || ""),
-      details: String(raw.details || raw.description || ""),
-      status: String(raw.status || "active").toLowerCase() === "archived" ? "archived" : "active",
-      sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
-      sourceNotes: String(raw.sourceNotes || raw.source || ""),
-      source: String(raw.source || raw.sourceNotes || "public_cv_source"),
-      updatedAt: String(raw.updatedAt || new Date().toISOString())
-    };
+    return reconcileNormalizeRegistryItem(raw);
   }
 
   function loadPositions() {
     const seed = CV_POSITION_SEED.map(normalizePosition);
     try {
-      const stored = JSON.parse(window.localStorage.getItem(POSITIONS_STORAGE_KEY) || "[]");
-      const rows = Array.isArray(stored) ? stored : Array.isArray(stored?.items) ? stored.items : null;
-      return rows ? mergeSeedRows(seed, rows.map(normalizePosition)) : seed;
+      const stored = unpackRegistryStorage(window.localStorage.getItem(POSITIONS_STORAGE_KEY) || "[]");
+      const rows = Array.isArray(stored.items) ? stored.items : [];
+      const reconciled = reconcilePositionsCollection(seed, rows, registryState.companies.items, (id) => registryLabel("companies", id));
+      positionsState.reconciliation = {
+        ...reconciled.meta,
+        localDataRepaired: Boolean(stored.migratedFromLegacy || reconciled.meta.warnings.length || reconciled.meta.sourceRequiredRowsRestored)
+      };
+      return reconciled.items;
     } catch {
       return seed;
     }
   }
 
   function normalizePosition(raw = {}) {
-    const title = String(raw.title || raw.role || raw.id || "").trim();
-    const companyId = createSlug(raw.companyId || raw.company || raw.companyName || "");
-    const companyName = String(raw.companyName || registryLabel("companies", companyId) || raw.company || "").trim();
+    return normalizePositionRegistryItem(raw, (companyId) => registryLabel("companies", companyId));
+  }
+
+  function registryRules() {
     return {
-      ...raw,
-      id: createSlug(raw.id || raw.slug || `${companyName}-${title}`),
-      slug: createSlug(raw.slug || raw.id || `${companyName}-${title}`),
-      title: title || "Untitled position",
-      companyId,
-      companyName,
-      location: String(raw.location || ""),
-      startDate: String(raw.startDate || ""),
-      endDate: String(raw.endDate || ""),
-      current: Boolean(raw.current),
-      employmentType: String(raw.employmentType || ""),
-      summary: String(raw.summary || ""),
-      responsibilities: arrayFromValue(raw.responsibilities || raw.highlights || []),
-      highlights: arrayFromValue(raw.highlights || raw.responsibilities || []),
-      platformIds: normalizeProjectRegistryRefs(raw.platformIds || raw.technologies || raw.software || []),
-      status: String(raw.status || "active").toLowerCase() === "archived" ? "archived" : "active",
-      sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
-      source: String(raw.source || "public_cv_source"),
-      updatedAt: String(raw.updatedAt || new Date().toISOString())
+      clientOnlyIds: extractClientOnlyIds(SOURCE_AUDIT_REGISTRY_RULES),
+      requiredCompanyIds: extractRequiredCompanyIds(SOURCE_AUDIT_REGISTRY_RULES, CV_COMPANY_SEED)
     };
+  }
+
+  function reconcileRegistryItems(kind, storedItems = [], options = {}) {
+    const { clientOnlyIds, requiredCompanyIds } = registryRules();
+    const baseline = kind === "companies" ? CV_COMPANY_SEED : CV_PLATFORM_SEED;
+    const result = reconcileRegistryCollection(kind, baseline, storedItems, {
+      clientOnlyIds,
+      requiredIds: kind === "companies" ? requiredCompanyIds : new Set(baseline.map((item) => item.id))
+    });
+    const meta = {
+      ...result.meta,
+      localDataRepaired: Boolean(
+        options.localDataRepaired ||
+          registryState[kind]?.reconciliation?.localDataRepaired ||
+          result.meta.staleRowsExcluded ||
+          result.meta.sourceRequiredRowsRestored
+      ),
+      staleRowsExcluded: Math.max(Number(registryState[kind]?.reconciliation?.staleRowsExcluded || 0), Number(result.meta.staleRowsExcluded || 0)),
+      sourceRequiredRowsRestored: Math.max(
+        Number(registryState[kind]?.reconciliation?.sourceRequiredRowsRestored || 0),
+        Number(result.meta.sourceRequiredRowsRestored || 0)
+      )
+    };
+    registryState[kind].items = result.items;
+    registryState[kind].reconciliation = meta;
+    return result;
+  }
+
+  function loadAndReconcileLocalRegistry(kind) {
+    const config = registryConfig(kind);
+    if (!config) return;
+    let stored = { items: [], migratedFromLegacy: false };
+    try {
+      stored = unpackRegistryStorage(window.localStorage.getItem(config.storageKey) || "[]");
+    } catch {
+      stored = { items: [], migratedFromLegacy: true };
+    }
+    reconcileRegistryItems(kind, stored.items, { localDataRepaired: stored.migratedFromLegacy });
+    migrateRegistryStorage(kind);
+  }
+
+  function reconcilePositionsFromStorage() {
+    positionsState.items = loadPositions();
+    migratePositionsStorage();
   }
 
   function mergeSeedRows(seed, stored) {
@@ -1633,11 +1683,41 @@
     return Array.from(byId.values()).sort(compareRegistryItems);
   }
 
-  function persistRegistryItems(kind) {
+  function migrateRegistryStorage(kind) {
     const config = registryConfig(kind);
     if (!config) return;
     try {
-      window.localStorage.setItem(config.storageKey, JSON.stringify(registryState[kind].items, null, 2));
+      window.localStorage.setItem(
+        config.storageKey,
+        JSON.stringify(registryStoragePayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
+      );
+      window.localStorage.setItem(REGISTRY_SCHEMA_STORAGE_KEY, new Date().toISOString());
+    } catch {
+      // Registry cache migration is optional in file/static mode.
+    }
+  }
+
+  function migratePositionsStorage() {
+    try {
+      window.localStorage.setItem(
+        POSITIONS_STORAGE_KEY,
+        JSON.stringify(registryStoragePayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
+      );
+      window.localStorage.setItem(REGISTRY_SCHEMA_STORAGE_KEY, new Date().toISOString());
+    } catch {
+      // Registry cache migration is optional in file/static mode.
+    }
+  }
+
+  function persistRegistryItems(kind) {
+    const config = registryConfig(kind);
+    if (!config) return;
+    reconcileRegistryItems(kind, registryState[kind].items);
+    try {
+      window.localStorage.setItem(
+        config.storageKey,
+        JSON.stringify(registryStoragePayload(kind, registryState[kind].items, registryState[kind].reconciliation), null, 2)
+      );
     } catch {
       registryState[kind].message = `${config.label} saved in memory only because localStorage is unavailable.`;
     }
@@ -1645,8 +1725,14 @@
   }
 
   function persistPositions() {
+    const reconciled = reconcilePositionsCollection(CV_POSITION_SEED.map(normalizePosition), positionsState.items, registryState.companies.items, (id) => registryLabel("companies", id));
+    positionsState.items = reconciled.items;
+    positionsState.reconciliation = reconciled.meta;
     try {
-      window.localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(positionsState.items, null, 2));
+      window.localStorage.setItem(
+        POSITIONS_STORAGE_KEY,
+        JSON.stringify(registryStoragePayload("positions", positionsState.items, positionsState.reconciliation), null, 2)
+      );
     } catch {
       positionsState.message = "Positions saved in memory only because localStorage is unavailable.";
     }
@@ -1672,14 +1758,8 @@
   }
 
   function seedRegistriesFromCvSource() {
-    registryState.companies.items = mergeSeedRows(
-      CV_COMPANY_SEED.map((item) => normalizeRegistryItem({ ...item, source: "public_cv_source" })),
-      registryState.companies.items
-    );
-    registryState.platforms.items = mergeSeedRows(
-      CV_PLATFORM_SEED.map((item) => normalizeRegistryItem({ ...item, source: "public_cv_source" })),
-      registryState.platforms.items
-    );
+    reconcileRegistryItems("companies", registryState.companies.items);
+    reconcileRegistryItems("platforms", registryState.platforms.items);
   }
 
   function seedRegistriesFromProjects() {
@@ -1696,8 +1776,8 @@
         platformById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index, logoPath: platformLogoPath(name) }));
       });
     });
-    registryState.companies.items = Array.from(companyById.values()).sort(compareRegistryItems);
-    registryState.platforms.items = Array.from(platformById.values()).sort(compareRegistryItems);
+    reconcileRegistryItems("companies", Array.from(companyById.values()));
+    reconcileRegistryItems("platforms", Array.from(platformById.values()));
   }
 
   function compareRegistryItems(left, right) {
@@ -1954,7 +2034,7 @@
         storageKey: COMPANIES_STORAGE_KEY,
         getItems: () => registryState.companies.items,
         setItems: (items) => {
-          registryState.companies.items = items.map(normalizeRegistryItem).sort(compareRegistryItems);
+          reconcileRegistryItems("companies", items);
         },
         render: () => renderRegistryPage("companies")
       };
@@ -1965,7 +2045,7 @@
         storageKey: PLATFORMS_STORAGE_KEY,
         getItems: () => registryState.platforms.items,
         setItems: (items) => {
-          registryState.platforms.items = items.map(normalizeRegistryItem).sort(compareRegistryItems);
+          reconcileRegistryItems("platforms", items);
         },
         render: () => renderRegistryPage("platforms")
       };
@@ -1976,7 +2056,9 @@
         storageKey: POSITIONS_STORAGE_KEY,
         getItems: () => positionsState.items,
         setItems: (items) => {
-          positionsState.items = mergeSeedRows(CV_POSITION_SEED.map(normalizePosition), items.map(normalizePosition));
+          const reconciled = reconcilePositionsCollection(CV_POSITION_SEED.map(normalizePosition), items.map(normalizePosition), registryState.companies.items, (id) => registryLabel("companies", id));
+          positionsState.items = reconciled.items;
+          positionsState.reconciliation = reconciled.meta;
         },
         render: renderPositions
       };
@@ -2049,6 +2131,29 @@
     `;
   }
 
+  function registryReconciliationStatusMarkup(kind) {
+    const meta = kind === "positions" ? positionsState.reconciliation : registryState[kind]?.reconciliation;
+    if (!meta) return "";
+    const stale = Number(meta.staleRowsExcluded || 0);
+    const restored = Number(meta.sourceRequiredRowsRestored || 0);
+    const repaired = Boolean(meta.localDataRepaired || stale || restored);
+    if (!repaired && !(meta.warnings || []).length) return "";
+    const summary = [
+      repaired ? "Local registry data was reconciled against the source baseline." : "",
+      stale ? `${stale} stale/client-only row(s) excluded.` : "",
+      restored ? `${restored} source-required row(s) restored.` : "",
+      ...(meta.warnings || []).slice(0, 2)
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return `
+      <div class="cms-storage-status" data-registry-reconciliation="${escapeHtml(kind)}">
+        ${badge("Reconciled", "success")}
+        <span>${escapeHtml(summary)}</span>
+      </div>
+    `;
+  }
+
   function markCmsStorage(collection, status, message, extra = {}) {
     const config = getCmsConfig(collection);
     if (!config) return;
@@ -2074,7 +2179,7 @@
         markCmsStorage(collection, "not-configured", "DC_ADMIN_KV is not configured. Using local browser fallback.", {
           source: payload.source || "local_fallback_unavailable"
         });
-      } else if (Array.isArray(payload.items) && (payload.source === "kv" || collection === "projects")) {
+      } else if (Array.isArray(payload.items) && (payload.source === "kv" || payload.meta?.reconciled || collection === "projects")) {
         if (collection === "projects") {
           Object.assign(projectBaselineState, {
             loaded: true,
@@ -2092,12 +2197,28 @@
         config.setItems(payload.items);
         window.localStorage.setItem(
           config.storageKey,
-          JSON.stringify(collection === "projects" ? projectsStoragePayload() : config.getItems(), null, 2)
+          JSON.stringify(
+            collection === "projects"
+              ? projectsStoragePayload()
+              : registryStoragePayload(collection, config.getItems(), config.state.reconciliation || payload.meta || {}),
+            null,
+            2
+          )
         );
-        markCmsStorage(collection, "connected", collection === "projects" ? "Loaded from protected public-site baseline with admin storage overlay." : "Loaded from admin storage.", {
+        const repaired = payload.meta?.staleRowsExcluded || payload.meta?.sourceRequiredRowsRestored;
+        markCmsStorage(
+          collection,
+          "connected",
+          collection === "projects"
+            ? "Loaded from protected public-site baseline with admin storage overlay."
+            : repaired
+              ? "Loaded from admin storage and reconciled against source baseline."
+              : "Loaded from admin storage.",
+          {
           source: payload.source || "kv",
           lastLoaded: payload.meta?.updatedAt || new Date().toISOString()
-        });
+          }
+        );
       } else {
         markCmsStorage(collection, "connected", "Admin storage is reachable. No saved collection exists yet; local browser data is still shown.", {
           source: payload.source || "seed"
@@ -3459,12 +3580,14 @@
           config.label,
           `${config.label} are predefined options used by Projects. Project editor custom text entry is disabled for this field.`,
           `<button class="button" type="button" data-registry-action="create" data-registry-kind="${kind}">Create ${config.singular}</button>
-           <button class="button button-secondary" type="button" data-registry-action="sync-cms" data-registry-kind="${kind}">Sync/save registry</button>`
+           <button class="button button-secondary" type="button" data-registry-action="sync-cms" data-registry-kind="${kind}">Sync/save registry</button>
+           <button class="button button-secondary" type="button" data-registry-action="reset-cache" data-registry-kind="${kind}">Reset local registry cache</button>`
         )}
         <div class="cms-storage-status">
           ${badge(cmsStatusText(state.storage), cmsStatusTone(state.storage))}
           <span>${escapeHtml(state.storage.message || state.message)}</span>
         </div>
+        ${registryReconciliationStatusMarkup(kind)}
         ${panel(
           `${config.label} options`,
           "Archived rows are retained for compatibility but hidden from the Projects editor selectors.",
@@ -3504,6 +3627,7 @@
           ${badge(cmsStatusText(positionsState.storage), cmsStatusTone(positionsState.storage))}
           <span>${escapeHtml(positionsState.storage.message || positionsState.message)}</span>
         </div>
+        ${registryReconciliationStatusMarkup("positions")}
         ${panel(
           "Position records",
           "Archive keeps records available for compatibility while hiding them from the active view.",
@@ -5680,9 +5804,37 @@
       persistCmsCollection(kind, true, true);
       return;
     }
+    if (action === "reset-cache") {
+      resetLocalRegistryCache(kind);
+      return;
+    }
     if (action === "upload-logo") {
       app.querySelector(`[data-registry-upload-input="${CSS.escape(kind)}"]`)?.click();
     }
+  }
+
+  function resetLocalRegistryCache(kind = "") {
+    if (!window.confirm("Reset local registry cache for Companies, Platforms, and Positions? This does not clear auth/session data or unrelated CMS content.")) {
+      return;
+    }
+    try {
+      window.localStorage.removeItem(COMPANIES_STORAGE_KEY);
+      window.localStorage.removeItem(PLATFORMS_STORAGE_KEY);
+      window.localStorage.removeItem(POSITIONS_STORAGE_KEY);
+      window.localStorage.removeItem(REGISTRY_SCHEMA_STORAGE_KEY);
+    } catch {
+      // Local cache reset is best-effort in restricted storage modes.
+    }
+    loadAndReconcileLocalRegistry("companies");
+    loadAndReconcileLocalRegistry("platforms");
+    reconcilePositionsFromStorage();
+    registryState.companies.message = "Local registry cache reset and source baseline restored.";
+    registryState.platforms.message = "Local registry cache reset and source baseline restored.";
+    positionsState.message = "Local registry cache reset and source positions baseline restored.";
+    if (kind === "platforms") renderRegistryPage("platforms");
+    else if (kind === "companies") renderRegistryPage("companies");
+    else if (activePageIs("positions")) renderPositions();
+    else render();
   }
 
   function saveRegistryFromForm(kind, form) {
@@ -6602,7 +6754,9 @@
     }
   });
 
-  positionsState.items = loadPositions();
+  loadAndReconcileLocalRegistry("companies");
+  loadAndReconcileLocalRegistry("platforms");
+  reconcilePositionsFromStorage();
   if (!window.location.hash && ["/", "/index.html"].includes(window.location.pathname)) {
     window.location.hash = "#/overview";
   } else {
@@ -6612,6 +6766,7 @@
   initSidebarMode();
   seedRegistriesFromCvSource();
   seedRegistriesFromProjects();
+  reconcilePositionsFromStorage();
   hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));

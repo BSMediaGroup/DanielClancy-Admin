@@ -206,6 +206,10 @@ Projects are handled differently from Media, Companies, Platforms, and disabled 
 
 `assets/data/source-audit-report.json` records the current read-only source audit against the public DanielClancy CV/portfolio source and copied Admin preview catalogs. The audit separates organization-like names into `employersFound`, `studiosFound`, `clientsFound`, `vendorsFound`, and `ambiguousOrganizations`, then records `companiesPromotedToRegistry`, `clientsExcludedFromCompanies`, `requiredCompanyAssertions`, and `warnings`. `assets/data/admin-companies-baseline.json`, `assets/data/admin-platforms-baseline.json`, and `assets/data/admin-positions-baseline.json` are generated registry baselines from that audit. These registries are source-derived only; blank optional fields indicate missing source facts, not invented replacements. Companies, Platforms, Positions, and Projects should be rechecked with focused Node completeness tests plus MCP/browser validation whenever these baselines are regenerated or route-loading behavior is repaired.
 
+Companies, Platforms, and Positions are reconciled through `functions/_shared/registry-reconciliation.js` using schema `danielclancy-admin.registries.v2`. Reconciliation starts from the source baseline, then merges localStorage/KV/admin rows only when they do not conflict with the source audit. Stale production KV rows or legacy local fallback arrays cannot remove source-required employers/studios such as Fleetwood Australia or GHD, and client-only organizations are excluded from active Companies. If the source audit classifies Riley Consulting as client-only, Riley remains preserved only in project client/provenance fields and is excluded from Companies and project company selectors even when stale localStorage, KV, scaffold, or import rows try to add it. The UI surfaces a compact “Local registry data was reconciled against the source baseline.” status when local cache repair, stale-row exclusion, or required-row restoration occurs.
+
+The Companies and Platforms pages include a “Reset local registry cache” action. It clears only the registry cache keys for Companies, Platforms, Positions, and the registry schema marker, then reloads the source baselines. It does not clear auth/session storage, account data, Projects, Media, disabled Alerts compatibility data, or unrelated CMS content.
+
 Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
 
 `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs` contain copied preview files from the public DanielClancy repo at the same relative public paths. This lets Admin editor previews resolve `/media/portfolio/thumbs/...`, `/media/portfolio/...`, and `/docs/...` locally without remote URLs or embedded assets. `assets/data/public-asset-catalog.json` is regenerated from those copied Admin files and records the original `DanielClancy` source repo/source directories.
@@ -267,6 +271,7 @@ DanielClancy-Admin/
 │   │   ├── admin-accounts.js
 │   │   ├── analytics-store.js
 │   │   ├── alert-sender.js
+│   │   ├── registry-reconciliation.js
 │   │   └── turnstile.js
 │   └── api/
 │       ├── analytics/
@@ -291,6 +296,7 @@ DanielClancy-Admin/
 │   ├── alerts-disabled.test.mjs
 │   ├── analytics-ingest-and-assets.test.mjs
 │   ├── analytics-helpers.test.mjs
+│   ├── registry-reconciliation.test.mjs
 │   └── source-audit-completeness.test.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
@@ -314,9 +320,9 @@ DanielClancy-Admin/
 - Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and the dark map-style panel uses an internal SVG/grid surface with exact city-coordinate plotting only. Empty live analytics shows “No live page-visit location events captured yet.” and no fake sample dots.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
-- Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with client-only names excluded, source/provenance classification shown, KV/local fallback, active/archive status, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
+- Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with v2 registry reconciliation, client-only names excluded, source-required employers restored from baseline, source/provenance classification shown, KV/local fallback, active/archive status, local registry cache reset, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
 - Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
-- Positions page for CV-derived employment position records, with KV/local fallback, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector.
+- Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.
 - Sidebar has separate collapse and hide controls; the mode is persisted locally, hidden mode exposes a reopen control, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
 - The topbar loading strip sits on the bottom edge of the topbar and uses the StreamSuites-style purple gradient motion. The topbar user dropdown includes session identity details plus Accounts, Settings, Public Site, and Logout actions.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.

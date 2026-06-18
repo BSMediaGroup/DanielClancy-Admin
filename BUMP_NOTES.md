@@ -1,5 +1,51 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Registry Reconciliation And Stale Cache Repair Milestone
+
+### Technical Notes
+
+- Added shared registry reconciliation under `functions/_shared/registry-reconciliation.js` with schema `danielclancy-admin.registries.v2`.
+- Companies, Platforms, and Positions now start from source-derived baselines and merge localStorage/KV/admin rows only after source-audit reconciliation.
+- Legacy bare-array localStorage rows under the existing Companies/Platforms/Positions keys are read through reconciliation and migrated to the v2 wrapper.
+- Stale rows that conflict with source-audit client-only classification are excluded from active Companies and reported in reconciliation metadata/status.
+- Source-required Companies from the employment/studio baseline are restored even when localStorage/KV lacks them.
+- Riley Consulting remains excluded from Companies when source-audit classifies it as client-only; project client/provenance text remains preserved separately.
+- Projects editor company selectors and Positions company selectors use reconciled active Companies only.
+- CMS API GET/PUT for Companies, Platforms, and Positions now returns reconciled baseline-plus-KV payloads with `reconciled`, `staleRowsExcluded`, `sourceRequiredRowsRestored`, `storageSource`, `warnings`, and excluded-row metadata.
+- Added a scoped “Reset local registry cache” action for registry cache keys only; it does not clear auth/session data, Projects, Media, disabled Alerts compatibility data, or unrelated CMS content.
+- Added stale-data simulation tests covering the old broken Companies list, Riley exclusion, Fleetwood/GHD restoration, project selector behavior, and Positions company resolution.
+- DanielClancy public website was read-only.
+- No employment/company/client/software/CV facts were invented.
+- Alerts editor remains removed/disabled.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Static fallback mode can no longer let old browser cache rows hide Fleetwood Australia/GHD or reintroduce Riley Consulting as a Company.
+- Production KV rows for Companies/Platforms/Positions are treated as overlays on the audited baseline, not as full replacement authority.
+- The UI now shows a compact reconciliation notice when local registry data is repaired or stale/client-only rows are excluded.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `functions/_shared/registry-reconciliation.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `index.html`
+- `tests/registry-reconciliation.test.mjs`
+- `tests/source-audit-completeness.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run targeted syntax, source-audit, registry-reconciliation, diff, npm check/build, and MCP/browser stale-localStorage validation before release.
+
+### Risks / Follow-Ups
+
+- Hosted production should be rechecked after deployment with live `DC_ADMIN_KV` to confirm any older KV payloads are reported as reconciled and cannot replace the source baseline.
+
 ## Corrected Organization Classification And Registry Guardrail Milestone
 
 ### Technical Notes
