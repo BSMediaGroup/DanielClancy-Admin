@@ -11,14 +11,18 @@ const JSON_HEADERS = {
 const COLLECTIONS = {
   projects: { key: "cms:projects", maxRows: 500 },
   media: { key: "cms:media", maxRows: 500 },
-  alerts: { key: "cms:alerts", maxRows: 500 }
+  alerts: { key: "cms:alerts", maxRows: 500 },
+  companies: { key: "cms:companies", maxRows: 250 },
+  platforms: { key: "cms:platforms", maxRows: 250 }
 };
 const PROJECTS_BASELINE_PATH = "/assets/data/public-projects-baseline.json";
 const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
 const CMS_ALERT_TRIGGER_TYPES = {
   projects: "project_cms_update",
   media: "media_cms_update",
-  alerts: "alerts_cms_update"
+  alerts: "alerts_cms_update",
+  companies: "project_cms_update",
+  platforms: "project_cms_update"
 };
 
 function json(payload, init = {}) {

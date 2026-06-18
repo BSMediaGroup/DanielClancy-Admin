@@ -358,6 +358,61 @@ export async function updateAccount(env, id, patch) {
   return { ok: true, account: updated };
 }
 
+export async function updateCurrentAccountProfile(env, session, patch) {
+  const registry = await loadAccountRegistry(env);
+  if (!registry.storageConfigured) return { ok: false, error: "storage_not_configured", status: 503 };
+  const email = normalizeEmail(session?.email);
+  const provider = cleanString(session?.provider || "unknown").toLowerCase();
+  const username = cleanString(session?.username);
+  const providerSubject = cleanString(session?.providerSubject || session?.provider_subject);
+  const target = findAccount(registry.accounts, { provider, providerSubject, email, username });
+  if (!target) return { ok: false, error: "account_not_found", status: 404 };
+  const kvAccounts = registry.accounts.filter((account) => account.source !== "env_master");
+  const cleanPatch = {
+    displayName: cleanString(patch?.displayName || patch?.display_name).slice(0, 160),
+    avatarUrl: cleanString(patch?.avatarUrl || patch?.avatar_url).slice(0, 1000)
+  };
+  const now = new Date().toISOString();
+  let updated;
+  if (target.source === "env_master" || target.locked) {
+    const overlayId = `profile_overlay:${target.email}`;
+    const existing = kvAccounts.find((account) => account.id === overlayId);
+    updated = sanitizeAccount({
+      ...(existing || {}),
+      id: overlayId,
+      provider: target.provider,
+      providerSubject: target.providerSubject,
+      email: target.email,
+      username: target.username,
+      displayName: cleanPatch.displayName || target.displayName,
+      avatarUrl: cleanPatch.avatarUrl || target.avatarUrl,
+      accountType: target.accountType,
+      adminLevel: target.adminLevel,
+      status: target.status,
+      source: "profile_overlay",
+      firstSeenAt: existing?.firstSeenAt || now,
+      lastSeenAt: now,
+      updatedAt: now
+    });
+    const nextAccounts = existing
+      ? kvAccounts.map((account) => (account.id === overlayId ? updated : account))
+      : [updated, ...kvAccounts];
+    const saved = await saveKvAccounts(env, nextAccounts);
+    if (!saved.ok) return { ok: false, error: saved.error, status: 503 };
+    return { ok: true, account: updated };
+  }
+
+  updated = sanitizeAccount({
+    ...target,
+    displayName: cleanPatch.displayName || target.displayName,
+    avatarUrl: cleanPatch.avatarUrl || target.avatarUrl,
+    updatedAt: now
+  });
+  const saved = await saveKvAccounts(env, kvAccounts.map((account) => (account.id === target.id ? updated : account)));
+  if (!saved.ok) return { ok: false, error: saved.error, status: 503 };
+  return { ok: true, account: updated };
+}
+
 export async function resolveSession(request, env) {
   const session = await readSession(request, env);
   if (!session) {
@@ -382,12 +437,14 @@ export async function resolveSession(request, env) {
   const registry = await loadAccountRegistry(env).catch(() => null);
   const envMaster = registry?.accounts?.find((account) => account.source === "env_master" && account.email === email);
   if (provider === "password" && envMaster) {
+    const overlay = registry?.accounts?.find((account) => account.source === "profile_overlay" && account.email === email);
     return {
       authenticated: true,
       provider,
       email,
       username: "",
-      display_name: envMaster.displayName,
+      display_name: overlay?.displayName || envMaster.displayName,
+      avatar_url: overlay?.avatarUrl || envMaster.avatarUrl || "",
       account_type: "admin",
       admin_level: "master",
       is_admin: true,
@@ -405,6 +462,7 @@ export async function resolveSession(request, env) {
       email: registryAccount.email || email,
       username: registryAccount.username || username,
       display_name: registryAccount.displayName || session.display_name || email || username || "DanielClancy account",
+      avatar_url: registryAccount.avatarUrl || session.avatar_url || "",
       account_type: registryAccount.accountType,
       admin_level: registryAccount.adminLevel || "none",
       is_admin: isAdmin,

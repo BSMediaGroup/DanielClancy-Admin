@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, first-pass admin CMS endpoints for Projects, Media, and Alerts, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry a protected public-site baseline snapshot so existing DanielClancy.net portfolio records are not treated as disposable scaffold rows.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, admin CMS endpoints for Projects, Media, Companies, Platforms, and disabled Alerts compatibility, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry protected public-site baseline and asset-catalog snapshots so existing DanielClancy.net portfolio records/assets are not treated as disposable scaffold rows.
 
 ## Local Use
 
@@ -51,7 +51,7 @@ Required Cloudflare env vars:
 - `DC_ADMIN_SITE_ORIGIN` - expected `https://admin.danielclancy.net`
 Required Cloudflare KV binding:
 
-- `DC_ADMIN_KV` - production CMS persistence for Projects, Media, and Alerts
+- `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, disabled Alerts compatibility, and account/profile overlays
 
 Required shared analytics ingest secret:
 
@@ -59,8 +59,8 @@ Required shared analytics ingest secret:
 
 Optional Cloudflare R2 asset binding:
 
-- `DC_ADMIN_ASSETS_R2` - required for persistent Projects image uploads from the Admin CMS editor
-- `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - optional public base URL used to return browser-ready URLs after R2 upload; without it the upload API returns the stored R2 key
+- `DC_ADMIN_ASSETS_R2` - required for persistent Projects image/document uploads, registry logo uploads, and account avatar uploads from the Admin dashboard
+- `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - optional public base URL used to return browser-ready URLs after R2 upload; without it the upload API returns a relative key-style path
 
 Recommended shared-cookie env var:
 
@@ -116,6 +116,7 @@ Implemented endpoints:
 - `POST /api/admin/accounts/disable`
 - `POST /api/admin/accounts/enable`
 - `POST /api/admin/accounts/update`
+- `POST /api/admin/accounts/profile`
 - `PATCH /api/admin/accounts/:id`
 
 The account registry uses Cloudflare KV binding `DC_ADMIN_KV` with key `accounts:registry`. The stored wrapper is `collection: "accounts"`, `updatedAt`, and `accounts`. Account records store safe identity/role/status fields such as provider, provider subject, email, username, display name, avatar URL, account type, admin level, status, first/last seen, last login, notes, source, and updated time. Passwords, OAuth access tokens, and OAuth refresh tokens are never stored.
@@ -125,7 +126,7 @@ The two manual master admin accounts are always synthesized at runtime from env 
 - `mail@danielclancy.net` via `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1`
 - `daniel@brainstream.media` via `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`
 
-Locked env-backed master admins cannot be deleted, disabled, demoted, or edited through the UI/API. OAuth callback registration creates or updates known regular accounts by default. OAuth users are not automatically promoted to admin; a master admin must promote a KV-backed account through the Accounts UI/API. Non-master admins can read the account list but cannot change roles, status, or notes.
+Locked env-backed master admins cannot be deleted, disabled, demoted, or edited for role/status through the UI/API. OAuth callback registration creates or updates known regular accounts by default. OAuth users are not automatically promoted to admin; a master admin must promote a KV-backed account through the Accounts UI/API. Non-master admins can read the account list but cannot change roles, status, or notes. The Accounts page can update the current signed-in user's display name/avatar as account overlay metadata; it does not store passwords or OAuth tokens.
 
 `GET /api/auth/session` resolves role from env-backed manual master sessions first, then `accounts:registry`, then the signed session fallback. The frontend local scaffold account rows are not production authority and cannot override the server-resolved role.
 
@@ -177,9 +178,13 @@ Implemented endpoints:
 - `PUT /api/admin/cms/media`
 - `GET /api/admin/cms/alerts`
 - `PUT /api/admin/cms/alerts`
+- `GET /api/admin/cms/companies`
+- `PUT /api/admin/cms/companies`
+- `GET /api/admin/cms/platforms`
+- `PUT /api/admin/cms/platforms`
 - `POST /api/admin/assets/upload`
 
-All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, and `alerts`.
+All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, `alerts`, `companies`, and `platforms`.
 
 CMS endpoints are not Turnstile-gated because they are operational admin APIs behind the signed admin session.
 
@@ -189,14 +194,20 @@ Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
 - `cms:projects`
 - `cms:media`
 - `cms:alerts`
+- `cms:companies`
+- `cms:platforms`
 
 When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configured/fallback response instead of pretending to save. The dashboard keeps existing localStorage data available and labels this as local browser fallback. A simple static/Python server does not run Cloudflare Pages Functions, so local static views will use fallback mode unless served through a Pages-compatible dev runtime with bindings.
 
-Projects are handled differently from Media and Alerts. `assets/data/public-projects-baseline.json` is a generated snapshot from the public DanielClancy repo's WorkSet-derived portfolio pipeline (`cmsdata/wix/collection-tables/WorkSet.csv`, `src/content/workSetPortfolio.ts`, and the public portfolio routes). The Projects API loads that baseline first, then merges `cms:projects` KV data as admin edits, metadata, visibility/status changes, and admin-created additions. Legacy bare-array KV data and older partial scaffold rows are treated as overlays and must not collapse the Projects list to only those rows.
+Projects are handled differently from Media, Companies, Platforms, and disabled Alerts compatibility. `assets/data/public-projects-baseline.json` is a generated snapshot from the public DanielClancy repo's WorkSet-derived portfolio pipeline (`cmsdata/wix/collection-tables/WorkSet.csv`, `src/content/workSetPortfolio.ts`, and the public portfolio routes). The Projects API loads that baseline first, then merges `cms:projects` KV data as admin edits, metadata, visibility/status changes, and admin-created additions. Legacy bare-array KV data and older partial scaffold rows are treated as overlays and must not collapse the Projects list to only those rows.
 
 Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
 
-`POST /api/admin/assets/upload` requires a signed admin session and `DC_ADMIN_ASSETS_R2`. It accepts multipart image uploads for Projects CMS image fields, validates common web image MIME types, enforces a 10MB cap, stores files under `portfolio/projects/<project-slug>/`, and returns the R2 key plus a URL only when `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` is configured. When R2 is missing, the API returns `storage_not_configured`; the Projects editor can still preview selected images locally and keeps manual path fields editable. Document/PDF upload remains a follow-up; the document path field remains editable.
+`assets/data/public-asset-catalog.json` is a generated admin-side snapshot from the public DanielClancy repo. It catalogs `/public/media/portfolio/thumbs`, `/public/media/portfolio`, and `/public/docs` as public URL-style paths for admin dropdowns; no binary public assets are copied into this repo.
+
+Projects now use autocomplete/dropdowns and previews for thumbnail (`/media/portfolio/thumbs`), gallery/hero (`/media/portfolio`), and document/PDF (`/docs`) paths. Gallery items render as an ordered thumbnail grid with move up/down and remove controls. Company/studio and software/platform fields are predefined registry selections only, backed by the Companies and Platforms pages. The Projects table supports locally persisted resizable columns with a reset action.
+
+`POST /api/admin/assets/upload` requires a signed admin session and `DC_ADMIN_ASSETS_R2`. It accepts multipart image uploads for Projects image fields, registry logos, and account avatars, plus PDF uploads for document paths; validates common web image MIME types and `application/pdf`; enforces a 10MB cap; and stores files under `portfolio/thumbs/<project-slug>/`, `portfolio/projects/<project-slug>/`, `docs/projects/<project-slug>/`, or `accounts/avatars/` depending on the field. It returns the R2 key and a browser-ready URL only when `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` is configured. When R2 is missing, the API returns `storage_not_configured`; the editor keeps manual/autocomplete path fields and unsaved form data intact.
 
 ## Cloudflare Setup Checkpoint
 
@@ -221,6 +232,7 @@ DanielClancy-Admin/
 │   ├── css/
 │   │   └── admin.css
 │   ├── data/
+│   │   ├── public-asset-catalog.json
 │   │   └── public-projects-baseline.json
 │   ├── fonts/
 │   │   ├── Recharge-Bold.otf
@@ -272,14 +284,17 @@ DanielClancy-Admin/
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, Projects, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Projects, Media, Companies, Platforms, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
-- Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins and master-only role/status/note actions.
+- Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
 - Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and empty live analytics shows a real empty state instead of fake sample map markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, R2-backed image upload controls for hero/thumbnail/gallery paths when `DC_ADMIN_ASSETS_R2` is configured, bulk actions, reset, and safe JSON copy/import controls.
+- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, bulk actions, reset, and safe JSON copy/import controls.
+- Companies page for predefined company/studio options used by Projects, with KV/local fallback, active/archive status, logo path selection, and optional logo upload.
+- Platforms page for predefined software/platform options used by Projects, with KV/local fallback, active/archive status, logo path selection, selected-platform icon chips, and optional logo upload.
+- Sidebar can expand, collapse to icon-only, or hide; the mode is persisted locally, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.

@@ -3,7 +3,8 @@ import {
   requireAdmin,
   requireMasterAdmin,
   safeRegistryResponse,
-  updateAccount
+  updateAccount,
+  updateCurrentAccountProfile
 } from "../../../_shared/admin-accounts.js";
 
 const JSON_HEADERS = {
@@ -65,6 +66,23 @@ function actionFromRequest(request, path, body) {
 }
 
 async function handleMutation(request, env, path) {
+  if (path === "profile") {
+    const admin = await requireAdmin(request, env);
+    if (admin.error) return json({ ok: false, error: admin.error }, { status: admin.status });
+    const body = await readBody(request);
+    const result = await updateCurrentAccountProfile(env, admin.session, {
+      displayName: body.displayName || body.display_name,
+      avatarUrl: body.avatarUrl || body.avatar_url
+    });
+    if (!result.ok) return json({ ok: false, error: result.error }, { status: result.status || 500 });
+    const registry = await loadAccountRegistry(env);
+    return json({
+      ...safeRegistryResponse(registry, { ...admin.session, display_name: result.account.displayName, avatar_url: result.account.avatarUrl }),
+      action: "profile",
+      account: result.account
+    });
+  }
+
   const master = await requireMasterAdmin(request, env);
   if (master.error) return json({ ok: false, error: master.error }, { status: master.status });
 

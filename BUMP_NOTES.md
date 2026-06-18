@@ -1,5 +1,56 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Projects CMS Usability, Registries, Sidebar, And Profile Editing Milestone
+
+### Technical Notes
+
+- Added generated `assets/data/public-asset-catalog.json` from the current public DanielClancy repo paths for `/public/media/portfolio/thumbs`, `/public/media/portfolio`, and `/public/docs`; no binary public assets were copied.
+- Upgraded Projects editor asset controls with current-value display, existing-asset dropdowns, previews, upload buttons, document/PDF support, and a reorderable gallery thumbnail grid with move up/down and remove controls.
+- Added Companies and Platforms admin pages backed by the existing CMS API/KV path (`cms:companies`, `cms:platforms`) with local fallback, active/archive status, create/edit modals, logo path selection, and upload controls when `DC_ADMIN_ASSETS_R2` is configured.
+- Projects company/studio and software/platform fields now use predefined registry selections only, storing stable IDs plus compatibility labels.
+- Added Projects table column resize handles with widths persisted under `danielclancy-admin.projects.table.columns.v1` and a reset action.
+- Updated the sidebar to support persisted expanded/collapsed/hidden modes, use SVG icons from `assets/icons/ui`, remove redundant `OPEN` labels, and display `ADMIN DASHBOARD` in the brand subtext.
+- Added current-user account profile editing for display name and avatar URL/path through `/api/admin/accounts/profile`; role/status/admin-level changes remain master-admin-only and env-backed master role controls remain locked.
+- Expanded `/api/admin/assets/upload` to support image/PDF uploads and structured keys for thumbnails, project images, documents, and account avatars.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- Alerts rule editor remains removed/disabled; StreamSuites-Dashboard remains the rule-management surface.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Project editing is now much closer to a usable CMS workflow: pick known public assets, preview selections, reorder gallery images, and choose company/platform values from managed registries instead of free text.
+- Admin shell navigation is less cramped and can be collapsed or hidden while retaining icon navigation.
+- Account owners can maintain their visible admin profile metadata without changing account authority rules.
+
+### Files / Areas Changed
+
+- `index.html`
+- `assets/data/public-asset-catalog.json`
+- `assets/js/admin-app.js`
+- `assets/js/admin-auth.js`
+- `assets/css/admin.css`
+- `functions/_shared/admin-accounts.js`
+- `functions/api/admin/accounts/[[path]].js`
+- `functions/api/admin/assets/upload.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `.env.example`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check` on changed frontend JS and Pages Function/helper files.
+- Run focused `node --test` only if existing cheap tests remain practical.
+- Run `git diff --check`.
+- No MCP browser tests, Playwright MCP checks, or rendered browser smoke tests are part of this pass.
+
+### Risks / Follow-Ups
+
+- Public site project rendering fixes are the next task.
+- Analytics dark map fix is the next task.
+- Hosted R2/KV behavior still needs deployment-side verification with real Cloudflare bindings.
+
 ## Emergency Auth Turnstile Removal And Alert Geo Context Milestone
 
 ### Technical Notes

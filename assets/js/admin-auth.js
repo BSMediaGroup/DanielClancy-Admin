@@ -88,10 +88,11 @@
         .toUpperCase() || "A";
       target.innerHTML = `<span class="environment-pill environment-pill-success">Admin session</span>`;
       if (userTarget) {
+        const avatar = session.avatar_url || session.avatarUrl || "";
         userTarget.innerHTML = `
           <details class="topbar-user-menu">
             <summary aria-label="Open user menu">
-              <span class="topbar-avatar">${escapeHtml(initials)}</span>
+              <span class="topbar-avatar">${avatar ? `<img src="${escapeHtml(avatar)}" alt="" />` : escapeHtml(initials)}</span>
               <span class="topbar-user-label">${escapeHtml(identity)}</span>
             </summary>
             <div class="topbar-user-popover">

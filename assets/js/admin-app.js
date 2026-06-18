@@ -4,20 +4,29 @@
   const nav = document.getElementById("sidebar-nav");
   const routeTitle = document.getElementById("route-title");
   const navToggle = document.getElementById("nav-toggle");
+  const sidebarModeToggle = document.getElementById("sidebar-mode-toggle");
   const topbarLoader = document.getElementById("topbar-loader");
 
   const routes = [
-    { id: "overview", label: "Overview", icon: "OV", path: "#/overview" },
-    { id: "analytics", label: "Analytics", icon: "AN", path: "#/analytics" },
-    { id: "accounts", label: "Accounts", icon: "AC", path: "#/accounts" },
-    { id: "settings", label: "Settings", icon: "SE", path: "#/settings" },
-    { id: "projects", label: "Projects", icon: "PR", path: "#/projects" },
-    { id: "media", label: "Media", icon: "ME", path: "#/media" }
+    { id: "overview", label: "Overview", icon: "home.svg", path: "#/overview" },
+    { id: "analytics", label: "Analytics", icon: "globe.svg", path: "#/analytics" },
+    { id: "accounts", label: "Accounts", icon: "identity.svg", path: "#/accounts" },
+    { id: "settings", label: "Settings", icon: "cog.svg", path: "#/settings" },
+    { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
+    { id: "media", label: "Media", icon: "media.svg", path: "#/media" },
+    { id: "companies", label: "Companies", icon: "profilecard.svg", path: "#/companies" },
+    { id: "platforms", label: "Platforms", icon: "appspark.svg", path: "#/platforms" }
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
   const PROJECTS_BASELINE_URL = "/assets/data/public-projects-baseline.json";
   const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
+  const PUBLIC_ASSET_CATALOG_URL = "/assets/data/public-asset-catalog.json";
+  const PUBLIC_ASSET_CATALOG_STORAGE_KEY = "danielclancy-admin.public-asset-catalog.v1";
+  const COMPANIES_STORAGE_KEY = "danielclancy-admin.companies.scaffold.v1";
+  const PLATFORMS_STORAGE_KEY = "danielclancy-admin.platforms.scaffold.v1";
+  const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
+  const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
   const ALERTS_STORAGE_KEY = "danielclancy-admin.alerts.scaffold.v1";
   const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
@@ -89,6 +98,28 @@
     modal: null,
     message: "Local project data loaded. Protected public-site baseline will be merged when available.",
     storage: cmsStorageState.projects
+  };
+  const publicAssetCatalogState = {
+    status: "checking",
+    message: "Loading public asset catalog snapshot...",
+    entries: [],
+    metadata: null
+  };
+  const registryState = {
+    companies: {
+      items: loadRegistryItems(COMPANIES_STORAGE_KEY),
+      search: "",
+      modal: null,
+      message: "Company registry uses admin storage when available and local fallback otherwise.",
+      storage: { status: "checking", source: "local", message: "Checking Companies registry..." }
+    },
+    platforms: {
+      items: loadRegistryItems(PLATFORMS_STORAGE_KEY),
+      search: "",
+      modal: null,
+      message: "Platform registry uses admin storage when available and local fallback otherwise.",
+      storage: { status: "checking", source: "local", message: "Checking Platforms registry..." }
+    }
   };
   const mediaState = {
     items: loadMediaItems(),
@@ -164,6 +195,8 @@
 
   function normalizeProject(raw) {
     const fallbackId = createSlug(raw?.slug || raw?.id || raw?.title || `project-${Date.now()}`);
+    const studio = normalizeProjectRegistryRefs(raw?.studio || raw?.companyIds || raw?.company || []);
+    const software = normalizeProjectRegistryRefs(raw?.software || raw?.platformIds || raw?.platforms || []);
     return {
       id: String(raw?.id || fallbackId),
       slug: createSlug(raw?.slug || raw?.id || raw?.title || fallbackId),
@@ -190,8 +223,12 @@
       documentationUrl: String(raw?.documentationUrl || ""),
       livePage: String(raw?.livePage || (raw?.slug ? `/portfolio/${raw.slug}` : "")),
       tags: arrayFromValue(raw?.tags || raw?.subtypes || []),
-      studio: arrayFromValue(raw?.studio || []),
-      software: arrayFromValue(raw?.software || []),
+      studio,
+      companyIds: normalizeProjectRegistryRefs(raw?.companyIds || studio),
+      companyLabels: normalizeProjectRegistryRefs(raw?.companyLabels || studio),
+      software,
+      platformIds: normalizeProjectRegistryRefs(raw?.platformIds || software),
+      platformLabels: normalizeProjectRegistryRefs(raw?.platformLabels || software),
       sourceFolder: String(raw?.sourceFolder || "cmsdata/wix/collection-tables/WorkSet.csv"),
       sourceFiles: arrayFromValue(raw?.sourceFiles || []),
       sourceConfidence: String(raw?.sourceConfidence || "Medium"),
@@ -201,6 +238,15 @@
       baselineVersion: String(raw?.baselineVersion || ""),
       source: String(raw?.source || "")
     };
+  }
+
+  function normalizeProjectRegistryRefs(value) {
+    return arrayFromValue(value)
+      .map((item) => {
+        if (item && typeof item === "object") return String(item.id || item.slug || item.name || item.label || "").trim();
+        return String(item || "").trim();
+      })
+      .filter(Boolean);
   }
 
   function projectIdentity(project) {
@@ -312,6 +358,110 @@
     } catch {
       return seed;
     }
+  }
+
+  function loadRegistryItems(storageKey) {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+      return Array.isArray(stored) ? stored.map(normalizeRegistryItem).filter((item) => item.id) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function normalizeRegistryItem(raw = {}) {
+    const name = String(raw.name || raw.label || raw.id || "").trim();
+    const id = createSlug(raw.id || raw.slug || name);
+    return {
+      ...raw,
+      id,
+      slug: createSlug(raw.slug || id),
+      name: name || id,
+      logoPath: String(raw.logoPath || ""),
+      location: String(raw.location || ""),
+      company: String(raw.company || raw.vendor || ""),
+      vendor: String(raw.vendor || raw.company || ""),
+      website: String(raw.website || ""),
+      description: String(raw.description || raw.details || ""),
+      details: String(raw.details || raw.description || ""),
+      status: String(raw.status || "active").toLowerCase() === "archived" ? "archived" : "active",
+      sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
+      updatedAt: String(raw.updatedAt || new Date().toISOString())
+    };
+  }
+
+  function persistRegistryItems(kind) {
+    const config = registryConfig(kind);
+    if (!config) return;
+    try {
+      window.localStorage.setItem(config.storageKey, JSON.stringify(registryState[kind].items, null, 2));
+    } catch {
+      registryState[kind].message = `${config.label} saved in memory only because localStorage is unavailable.`;
+    }
+    persistCmsCollection(kind, registryState[kind].items);
+  }
+
+  function registryConfig(kind) {
+    if (kind === "companies") return { label: "Companies", singular: "Company", storageKey: COMPANIES_STORAGE_KEY, route: "companies" };
+    if (kind === "platforms") return { label: "Platforms", singular: "Platform", storageKey: PLATFORMS_STORAGE_KEY, route: "platforms" };
+    return null;
+  }
+
+  function seedRegistriesFromProjects() {
+    const companyById = new Map(registryState.companies.items.map((item) => [item.id, item]));
+    const platformById = new Map(registryState.platforms.items.map((item) => [item.id, item]));
+    projectState.projects.forEach((project) => {
+      normalizeProjectRegistryRefs(project.studio || project.companyLabels || project.companyIds).forEach((name, index) => {
+        const id = createSlug(name);
+        if (!id || companyById.has(id)) return;
+        companyById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index }));
+      });
+      normalizeProjectRegistryRefs(project.software || project.platformLabels || project.platformIds).forEach((name, index) => {
+        const id = createSlug(name);
+        if (!id || platformById.has(id)) return;
+        platformById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index, logoPath: platformLogoPath(name) }));
+      });
+    });
+    registryState.companies.items = Array.from(companyById.values()).sort(compareRegistryItems);
+    registryState.platforms.items = Array.from(platformById.values()).sort(compareRegistryItems);
+  }
+
+  function compareRegistryItems(left, right) {
+    return (Number(left.sortOrder) || 1000) - (Number(right.sortOrder) || 1000) || String(left.name).localeCompare(String(right.name));
+  }
+
+  function activeRegistryItems(kind) {
+    return (registryState[kind]?.items || []).filter((item) => item.status !== "archived").sort(compareRegistryItems);
+  }
+
+  function registryLabel(kind, idOrName) {
+    const value = String(idOrName || "").trim();
+    if (!value) return "";
+    const id = createSlug(value);
+    const found = (registryState[kind]?.items || []).find((item) => item.id === id || item.slug === id || item.name === value);
+    return found?.name || value;
+  }
+
+  function selectedRegistryLabels(kind, values) {
+    return normalizeProjectRegistryRefs(values).map((value) => registryLabel(kind, value)).filter(Boolean);
+  }
+
+  function platformLogoPath(nameOrId) {
+    const label = registryLabel("platforms", nameOrId) || String(nameOrId || "");
+    const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const map = {
+      autocad: "./assets/icons/ui/flmedit.svg",
+      autodeskautocad: "./assets/icons/ui/flmedit.svg",
+      revit: "./assets/icons/ui/brick.svg",
+      autodeskrevit: "./assets/icons/ui/brick.svg",
+      adobecreativecloud: "./assets/icons/ui/appspark.svg",
+      trimblesketchup: "./assets/icons/ui/cropsquare.svg",
+      sketchup: "./assets/icons/ui/cropsquare.svg",
+      microsoftoffice: "./assets/icons/ui/bookstack.svg",
+      microsoftoffice365: "./assets/icons/ui/bookstack.svg",
+      qgis: "./assets/icons/ui/globe.svg"
+    };
+    return map[normalized] || "";
   }
 
   function persistProjects() {
@@ -524,6 +674,28 @@
         render: renderAlerts
       };
     }
+    if (collection === "companies") {
+      return {
+        state: registryState.companies,
+        storageKey: COMPANIES_STORAGE_KEY,
+        getItems: () => registryState.companies.items,
+        setItems: (items) => {
+          registryState.companies.items = items.map(normalizeRegistryItem).sort(compareRegistryItems);
+        },
+        render: () => renderRegistryPage("companies")
+      };
+    }
+    if (collection === "platforms") {
+      return {
+        state: registryState.platforms,
+        storageKey: PLATFORMS_STORAGE_KEY,
+        getItems: () => registryState.platforms.items,
+        setItems: (items) => {
+          registryState.platforms.items = items.map(normalizeRegistryItem).sort(compareRegistryItems);
+        },
+        render: () => renderRegistryPage("platforms")
+      };
+    }
     return null;
   }
 
@@ -656,6 +828,70 @@
     }
   }
 
+  async function hydratePublicAssetCatalog(renderAfter = false) {
+    publicAssetCatalogState.status = "checking";
+    try {
+      const response = await fetch(PUBLIC_ASSET_CATALOG_URL, { cache: "no-store" });
+      const payload = await response.json();
+      const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+      Object.assign(publicAssetCatalogState, {
+        status: "loaded",
+        message: `Loaded ${entries.length} public asset catalog item(s).`,
+        entries,
+        metadata: payload?.metadata || null
+      });
+      try {
+        window.localStorage.setItem(PUBLIC_ASSET_CATALOG_STORAGE_KEY, JSON.stringify(payload));
+      } catch {
+        // Catalog caching is optional.
+      }
+    } catch {
+      try {
+        const cached = JSON.parse(window.localStorage.getItem(PUBLIC_ASSET_CATALOG_STORAGE_KEY) || "{}");
+        const entries = Array.isArray(cached?.entries) ? cached.entries : [];
+        Object.assign(publicAssetCatalogState, {
+          status: entries.length ? "cached" : "fallback",
+          message: entries.length ? `Using cached public asset catalog with ${entries.length} item(s).` : "Public asset catalog unavailable.",
+          entries,
+          metadata: cached?.metadata || null
+        });
+      } catch {
+        Object.assign(publicAssetCatalogState, {
+          status: "fallback",
+          message: "Public asset catalog unavailable.",
+          entries: [],
+          metadata: null
+        });
+      }
+    }
+    if (renderAfter && activePageIs("projects")) renderProjects();
+  }
+
+  function catalogEntries(type) {
+    return publicAssetCatalogState.entries.filter((entry) => entry.type === type);
+  }
+
+  function catalogOptions(type, currentValue = "") {
+    const current = String(currentValue || "").trim();
+    const options = catalogEntries(type);
+    const hasCurrent = current && !options.some((entry) => entry.relativePath === current);
+    return `
+      ${hasCurrent ? `<option value="${escapeHtml(current)}">${escapeHtml(current)} (current/manual)</option>` : ""}
+      ${options
+        .map((entry) => `<option value="${escapeHtml(entry.relativePath)}">${escapeHtml(entry.label || entry.filename)}</option>`)
+        .join("")}
+    `;
+  }
+
+  function assetPreview(path, alt = "Selected asset preview") {
+    const value = String(path || "").trim();
+    if (!value) return `<span class="asset-preview-placeholder">No asset selected</span>`;
+    if (/\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(value)) {
+      return `<img src="${escapeHtml(value)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+    }
+    return `<span class="selected-file-indicator">${escapeHtml(value.split("/").pop() || value)}</span>`;
+  }
+
   async function persistCmsCollection(collection, renderAfter = false, force = false) {
     const config = getCmsConfig(collection);
     if (!config) return;
@@ -714,7 +950,7 @@
   }
 
   function hydrateCmsCollections() {
-    ["projects", "media", "alerts"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
+    ["projects", "media", "alerts", "companies", "platforms"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
   }
 
   async function hydrateAccountRegistry(renderAfter = false) {
@@ -867,6 +1103,7 @@
       if (projectState.projects.length > (data.projects || []).length) {
         projectState.message = "Loaded from protected public-site baseline with local/admin storage overlay.";
       }
+      seedRegistriesFromProjects();
     } catch {
       Object.assign(projectBaselineState, {
         loaded: false,
@@ -920,9 +1157,12 @@
   function projectAssetIssues(project) {
     const issues = [];
 
-    if (!project.heroImage && !project.thumbnailPath) issues.push("missing image");
+    if (!project.thumbnailPath) issues.push("missing thumbnail");
+    if (!project.heroImage) issues.push("hero defaults to gallery");
     if (!project.documentPath && !project.documentationUrl) issues.push("missing document");
     if (!project.galleryPaths.length && !project.sourceFiles.length) issues.push("missing gallery");
+    if (!normalizeProjectRegistryRefs(project.companyIds || project.studio).length) issues.push("missing company");
+    if (!normalizeProjectRegistryRefs(project.platformIds || project.software).length) issues.push("missing platforms");
     if (!project.livePage) issues.push("missing detail link");
     if (project.status !== "published" || project.visibility !== "public") issues.push("draft/hidden");
 
@@ -1087,6 +1327,14 @@
     return String(new FormData(form).get(name) || "").trim();
   }
 
+  function formSelectedValues(form, name) {
+    const field = form.elements[name];
+    if (field instanceof HTMLSelectElement) {
+      return Array.from(field.selectedOptions).map((option) => option.value).filter(Boolean);
+    }
+    return textareaArray(formValue(form, name));
+  }
+
   function textareaArray(value) {
     return String(value || "")
       .split(/\n/)
@@ -1176,12 +1424,11 @@
           .filter(Boolean)
           .join(" ");
         const href = route.disabled ? "javascript:void(0)" : route.path;
-        const meta = route.disabled ? "Future" : "Open";
+        const icon = `./assets/icons/ui/${route.icon || route.fallbackIcon || "dashboard.svg"}`;
         return `
-          <a class="${classes}" href="${href}" ${route.disabled ? 'aria-disabled="true"' : ""}>
-            <span class="nav-icon">${escapeHtml(route.icon)}</span>
+          <a class="${classes}" href="${href}" title="${escapeHtml(route.label)}" ${route.disabled ? 'aria-disabled="true"' : ""}>
+            <span class="nav-icon" aria-hidden="true"><span class="ui-mask-icon" style="--icon-url: url('${escapeHtml(icon)}')"></span></span>
             <span>${escapeHtml(route.label)}</span>
-            <small class="nav-meta">${escapeHtml(meta)}</small>
           </a>
         `;
       })
@@ -1706,6 +1953,8 @@
           </div>`
         )}
 
+        ${renderCurrentProfilePanel()}
+
         ${panel(
           "Account registry",
           canManageAccounts()
@@ -1746,6 +1995,27 @@
         ${registryFallbackReference()}
       </div>
     `;
+  }
+
+  function renderCurrentProfilePanel() {
+    const session = currentAdminSession() || {};
+    const displayName = session.display_name || session.displayName || session.email || "";
+    const avatarUrl = session.avatar_url || session.avatarUrl || "";
+    return panel(
+      "Current user profile",
+      "Edit only your display name and avatar overlay. Role, admin level, password, and OAuth token data are not editable here.",
+      `<form class="profile-form" data-account-profile-form>
+        <label class="field"><span>Display name</span><input class="input" name="displayName" value="${escapeHtml(displayName)}" autocomplete="name" /></label>
+        <label class="field project-upload-field">
+          <span>Avatar image path/URL</span>
+          <div class="input-with-action"><input class="input" name="avatarUrl" value="${escapeHtml(avatarUrl)}" /><button class="button button-secondary" type="button" data-account-action="upload-avatar">Upload</button></div>
+          <span class="asset-preview">${assetPreview(avatarUrl, "Current avatar")}</span>
+          <input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-account-avatar-input />
+          <span class="upload-status" data-account-avatar-status></span>
+        </label>
+        <div class="field-actions"><button class="button" type="submit">Save profile</button></div>
+      </form>`
+    );
   }
 
   function renderProjects() {
@@ -1794,7 +2064,8 @@
         ${panel(
           "Project table editor",
           "Table-style CMS editor aligned to the public WorkSet-derived portfolio fields where practical.",
-          renderProjectTable(visibleProjects)
+          renderProjectTable(visibleProjects),
+          `<button class="button button-secondary" type="button" data-project-action="reset-columns">Reset column widths</button>`
         )}
 
         ${projectState.modal ? renderProjectModal(projectState.modal) : ""}
@@ -1851,6 +2122,107 @@
         )}
 
         ${mediaState.modal ? renderMediaModal(mediaState.modal) : ""}
+      </div>
+    `;
+  }
+
+  function renderRegistryPage(kind) {
+    const config = registryConfig(kind);
+    if (!config) return;
+    routeTitle.textContent = config.label;
+    const state = registryState[kind];
+    const term = state.search.trim().toLowerCase();
+    const items = state.items.filter((item) => !term || [item.name, item.id, item.logoPath, item.website, item.location, item.company, item.vendor].join(" ").toLowerCase().includes(term));
+    app.innerHTML = `
+      <div class="page registry-page">
+        ${pageHeader(
+          `${config.label} registry`,
+          config.label,
+          `${config.label} are predefined options used by Projects. Project editor custom text entry is disabled for this field.`,
+          `<button class="button" type="button" data-registry-action="create" data-registry-kind="${kind}">Create ${config.singular}</button>
+           <button class="button button-secondary" type="button" data-registry-action="sync-cms" data-registry-kind="${kind}">Sync/save registry</button>`
+        )}
+        <div class="cms-storage-status">
+          ${badge(cmsStatusText(state.storage), cmsStatusTone(state.storage))}
+          <span>${escapeHtml(state.storage.message || state.message)}</span>
+        </div>
+        ${panel(
+          `${config.label} options`,
+          "Archived rows are retained for compatibility but hidden from the Projects editor selectors.",
+          `<div class="cms-toolbar">
+            <label class="field field-wide"><span>Search</span><input class="input" type="search" data-registry-filter="${kind}" value="${escapeHtml(state.search)}" placeholder="Name, ID, logo path, website" /></label>
+            <div class="cms-toolbar-summary">${badge(`${items.length} visible`, "warn")}${badge(`${activeRegistryItems(kind).length} active`, "success")}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="table registry-table">
+              <thead><tr><th>Name</th><th>ID</th><th>Status</th><th>${kind === "companies" ? "Logo / location" : "Logo / vendor"}</th><th>Website</th><th>Updated</th><th>Actions</th></tr></thead>
+              <tbody>${items.map((item) => registryRow(kind, item)).join("") || `<tr><td colspan="7"><div class="empty-state">No ${config.label.toLowerCase()} match this filter.</div></td></tr>`}</tbody>
+            </table>
+          </div>`
+        )}
+        ${state.modal ? renderRegistryModal(kind, state.modal) : ""}
+      </div>
+    `;
+  }
+
+  function registryRow(kind, item) {
+    const logo = item.logoPath ? assetPreview(item.logoPath, `${item.name} logo`) : `<span class="asset-preview-placeholder">No logo</span>`;
+    return `
+      <tr>
+        <td><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.description || item.details || "No details recorded")}</span></td>
+        <td><code>${escapeHtml(item.id)}</code></td>
+        <td>${badge(item.status, item.status === "active" ? "success" : "warn")}</td>
+        <td><div class="registry-logo-cell">${logo}<span>${escapeHtml(kind === "companies" ? item.location : item.vendor || item.company || "")}</span></div></td>
+        <td>${item.website ? `<a class="path-text" href="${escapeHtml(item.website)}" rel="noreferrer">${escapeHtml(item.website)}</a>` : `<span class="muted">Not recorded</span>`}</td>
+        <td>${escapeHtml(formatTimestamp(item.updatedAt))}</td>
+        <td><div class="row-actions">
+          <button class="button button-secondary" type="button" data-registry-action="edit" data-registry-kind="${kind}" data-registry-id="${escapeHtml(item.id)}">Edit</button>
+          <button class="button button-danger" type="button" data-registry-action="archive" data-registry-kind="${kind}" data-registry-id="${escapeHtml(item.id)}">${item.status === "archived" ? "Activate" : "Archive"}</button>
+        </div></td>
+      </tr>
+    `;
+  }
+
+  function renderRegistryModal(kind, modal) {
+    const config = registryConfig(kind);
+    const item = normalizeRegistryItem(modal.item);
+    const logoOptions = catalogOptions(kind === "companies" ? "thumbnail" : "portfolio_image", item.logoPath);
+    return `
+      <div class="modal-backdrop" data-registry-modal-backdrop>
+        <section class="modal registry-modal" role="dialog" aria-modal="true" aria-labelledby="registry-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">${escapeHtml(config.label)} registry</span>
+              <h2 id="registry-modal-title">${modal.mode === "create" ? `Create ${config.singular}` : `Edit ${config.singular}`}</h2>
+              <p>Optional fields stay blank unless real source data exists. Upload persistence requires DC_ADMIN_ASSETS_R2.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close registry editor" data-registry-action="close-modal" data-registry-kind="${kind}">x</button>
+          </header>
+          <form class="modal-body project-form" data-registry-form="${kind}">
+            <input type="hidden" name="originalId" value="${escapeHtml(item.id)}" />
+            <div class="form-grid">
+              ${field("Name", "name", item.name, "text", true, false)}
+              ${field("ID / slug", "id", item.id, "text", true, false)}
+              <label class="field"><span>Status</span><select class="input" name="status"><option value="active"${item.status === "active" ? " selected" : ""}>active</option><option value="archived"${item.status === "archived" ? " selected" : ""}>archived</option></select></label>
+              ${field("Sort order", "sortOrder", item.sortOrder, "number", false, false)}
+              ${field(kind === "companies" ? "Location" : "Company/vendor", kind === "companies" ? "location" : "vendor", kind === "companies" ? item.location : item.vendor || item.company, "text", false, false)}
+              ${field("Website", "website", item.website, "url", false, false)}
+              <label class="field project-upload-field">
+                <span>Logo path</span>
+                <div class="input-with-action"><input class="input" type="text" name="logoPath" value="${escapeHtml(item.logoPath)}" /><button class="button button-secondary" type="button" data-registry-action="upload-logo" data-registry-kind="${kind}">Upload</button></div>
+                <select class="input asset-picker" data-registry-logo-select><option value="">Choose existing asset</option>${logoOptions}</select>
+                <span class="asset-preview">${assetPreview(item.logoPath, `${item.name} logo`)}</span>
+                <input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-registry-upload-input="${kind}" />
+                <span class="upload-status" data-registry-upload-status></span>
+              </label>
+              ${textareaField("Description/details", "description", item.description || item.details, false)}
+            </div>
+            <footer class="modal-footer">
+              <button class="button button-secondary" type="button" data-registry-action="close-modal" data-registry-kind="${kind}">Cancel</button>
+              <button class="button" type="submit">Save ${config.singular}</button>
+            </footer>
+          </form>
+        </section>
       </div>
     `;
   }
@@ -2388,21 +2760,21 @@
 
     return `
       <div class="table-wrap project-table-wrap">
-        <table class="table project-table">
+        <table class="table project-table" data-project-resizable-table>
           <thead>
             <tr>
-              <th><input type="checkbox" aria-label="Select visible projects" data-project-select-all ${projects.every((project) => projectState.selected.has(project.id)) ? "checked" : ""} /></th>
-              <th>Title</th>
-              <th>Slug / ID</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th>Year</th>
-              <th>Featured</th>
-              <th>Image / document</th>
-              <th>Tags</th>
-              <th>Asset health</th>
-              <th>Updated</th>
-              <th>Actions</th>
+              <th data-col-key="select" data-resize-disabled="true"><input type="checkbox" aria-label="Select visible projects" data-project-select-all ${projects.every((project) => projectState.selected.has(project.id)) ? "checked" : ""} /></th>
+              <th data-col-key="title">Title</th>
+              <th data-col-key="slug">Slug / ID</th>
+              <th data-col-key="category">Category</th>
+              <th data-col-key="status">Status</th>
+              <th data-col-key="year">Year</th>
+              <th data-col-key="featured">Featured</th>
+              <th data-col-key="assets">Image / document</th>
+              <th data-col-key="tags">Tags</th>
+              <th data-col-key="health">Asset health</th>
+              <th data-col-key="updated">Updated</th>
+              <th data-col-key="actions" data-resize-disabled="true">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2443,6 +2815,95 @@
         </td>
       </tr>
     `;
+  }
+
+  function loadProjectColumnWidths() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(PROJECT_COLUMNS_STORAGE_KEY) || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveProjectColumnWidths(widths) {
+    try {
+      window.localStorage.setItem(PROJECT_COLUMNS_STORAGE_KEY, JSON.stringify(widths));
+    } catch {
+      // Column widths are optional UI preferences.
+    }
+  }
+
+  function initProjectTableResize() {
+    const table = app.querySelector("[data-project-resizable-table]");
+    if (!(table instanceof HTMLTableElement) || table.dataset.resizeBound === "1") return;
+    table.dataset.resizeBound = "1";
+    const widths = loadProjectColumnWidths();
+    const headers = Array.from(table.querySelectorAll("thead th"));
+    let colgroup = table.querySelector("colgroup");
+    if (!colgroup) {
+      colgroup = document.createElement("colgroup");
+      table.insertBefore(colgroup, table.firstChild);
+    }
+    while (colgroup.children.length < headers.length) colgroup.appendChild(document.createElement("col"));
+    headers.forEach((th, index) => {
+      const key = th.getAttribute("data-col-key") || `col_${index}`;
+      const col = colgroup.children[index];
+      const savedWidth = Number(widths[key]);
+      if (savedWidth > 0) setProjectColumnWidth(table, th, col, savedWidth);
+      if (th.getAttribute("data-resize-disabled") === "true") return;
+      const handle = document.createElement("button");
+      handle.type = "button";
+      handle.className = "col-resizer";
+      handle.setAttribute("aria-label", `Resize ${th.textContent || "column"}`);
+      handle.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        const startX = event.clientX;
+        const startWidth = th.getBoundingClientRect().width;
+        document.body.classList.add("col-resizing-active");
+        const onMove = (moveEvent) => {
+          setProjectColumnWidth(table, th, col, Math.max(56, startWidth + moveEvent.clientX - startX));
+        };
+        const onUp = () => {
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          document.body.classList.remove("col-resizing-active");
+          saveProjectColumnWidths(collectProjectColumnWidths(table));
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp, { once: true });
+      });
+      th.classList.add("is-resizable");
+      th.appendChild(handle);
+    });
+  }
+
+  function setProjectColumnWidth(table, th, col, width) {
+    const px = `${Math.round(width)}px`;
+    if (col) col.style.width = px;
+    th.style.width = px;
+    th.style.minWidth = px;
+    table.style.minWidth = "100%";
+  }
+
+  function collectProjectColumnWidths(table) {
+    const widths = {};
+    Array.from(table.querySelectorAll("thead th[data-col-key]")).forEach((th) => {
+      if (th.getAttribute("data-resize-disabled") === "true") return;
+      widths[th.getAttribute("data-col-key")] = Math.round(th.getBoundingClientRect().width);
+    });
+    return widths;
+  }
+
+  function resetProjectTableColumns() {
+    try {
+      window.localStorage.removeItem(PROJECT_COLUMNS_STORAGE_KEY);
+    } catch {
+      // Optional preference reset.
+    }
+    projectState.message = "Project table column widths reset.";
+    renderProjects();
+    initProjectTableResize();
   }
 
   function renderProjectModal(modal) {
@@ -2487,18 +2948,18 @@
                 <input type="checkbox" name="featured" ${project.featured ? "checked" : ""} ${readOnly ? "disabled" : ""} />
                 <span>Featured project</span>
               </label>
-              ${projectUploadField("Hero image path", "heroImage", project.heroImage, readOnly)}
-              ${projectUploadField("Thumbnail path", "thumbnailPath", project.thumbnailPath, readOnly)}
-              ${field("Document/PDF path", "documentPath", project.documentPath, "text", false, readOnly)}
+              ${projectAssetField("Hero image path", "heroImage", project.heroImage, "portfolio_image", readOnly, "Optional. If empty, public display should default to the first ordered gallery image.")}
+              ${projectAssetField("Thumbnail path", "thumbnailPath", project.thumbnailPath, "thumbnail", readOnly, "Required thumbnail source from /media/portfolio/thumbs.")}
+              ${projectAssetField("Document/PDF path", "documentPath", project.documentPath, "document_pdf", readOnly, "Required document source from /docs. Upload persistence requires DC_ADMIN_ASSETS_R2.")}
               ${field("Documentation URL", "documentationUrl", project.documentationUrl, "url", false, readOnly)}
               ${field("Live/detail link", "livePage", project.livePage, "text", false, readOnly)}
               ${field("Source folder", "sourceFolder", project.sourceFolder, "text", false, readOnly)}
               ${textareaField("Summary", "summary", project.summary, readOnly)}
               ${textareaField("Description", "description", project.description, readOnly)}
-              ${projectUploadTextarea("Gallery/image paths", "galleryPaths", project.galleryPaths.join("\n"), readOnly)}
+              ${projectGalleryField(project.galleryPaths, readOnly)}
               ${textareaField("Tags", "tags", project.tags.join("\n"), readOnly)}
-              ${textareaField("Studio", "studio", project.studio.join("\n"), readOnly)}
-              ${textareaField("Software", "software", project.software.join("\n"), readOnly)}
+              ${registryMultiSelectField("Company / studio", "companyIds", "companies", project.companyIds || project.studio, readOnly)}
+              ${registryMultiSelectField("Software / platforms", "platformIds", "platforms", project.platformIds || project.software, readOnly)}
               ${textareaField("Internal notes", "internalNotes", project.internalNotes, readOnly)}
             </div>
             <aside class="asset-status-box">
@@ -2527,32 +2988,96 @@
     `;
   }
 
-  function projectUploadField(label, name, value, readOnly = false) {
+  function projectAssetField(label, name, value, catalogType, readOnly = false, note = "") {
+    const accept = catalogType === "document_pdf" ? "application/pdf" : "image/jpeg,image/png,image/webp,image/gif";
     return `
       <label class="field project-upload-field">
         <span>${escapeHtml(label)}</span>
         <div class="input-with-action">
           <input class="input" type="text" name="${escapeHtml(name)}" value="${escapeHtml(value || "")}" ${readOnly ? "readonly" : ""} />
           ${readOnly ? "" : `<button class="button button-secondary" type="button" data-project-upload="${escapeHtml(name)}">Upload</button>`}
+          ${!readOnly && name === "heroImage" ? `<button class="button button-secondary" type="button" data-project-clear="${escapeHtml(name)}">Clear</button>` : ""}
         </div>
-        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-project-upload-input="${escapeHtml(name)}" />`}
+        ${readOnly ? "" : `<select class="input asset-picker" data-project-asset-select="${escapeHtml(name)}"><option value="">Choose existing asset</option>${catalogOptions(catalogType, value)}</select>`}
+        <span class="asset-preview">${assetPreview(value, label)}</span>
+        ${note ? `<small class="muted">${escapeHtml(note)}</small>` : ""}
+        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="${escapeHtml(accept)}" data-project-upload-input="${escapeHtml(name)}" />`}
         <span class="upload-status" data-project-upload-status="${escapeHtml(name)}"></span>
-        <span class="asset-preview" data-project-upload-preview="${escapeHtml(name)}"></span>
       </label>
     `;
   }
 
-  function projectUploadTextarea(label, name, value, readOnly = false) {
+  function projectGalleryField(paths, readOnly = false) {
+    const values = arrayFromValue(paths);
     return `
       <label class="field field-wide project-upload-field">
-        <span>${escapeHtml(label)}</span>
-        <textarea class="input textarea" name="${escapeHtml(name)}" rows="4" ${readOnly ? "readonly" : ""}>${escapeHtml(value || "")}</textarea>
-        ${readOnly ? "" : `<div class="field-actions"><button class="button button-secondary" type="button" data-project-upload="${escapeHtml(name)}">Upload image to gallery</button></div>`}
-        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-project-upload-input="${escapeHtml(name)}" />`}
-        <span class="upload-status" data-project-upload-status="${escapeHtml(name)}"></span>
-        <span class="asset-preview" data-project-upload-preview="${escapeHtml(name)}"></span>
+        <span>Gallery/image paths *</span>
+        <textarea class="input textarea gallery-paths-input" name="galleryPaths" rows="4" ${readOnly ? "readonly" : ""}>${escapeHtml(values.join("\n"))}</textarea>
+        <div class="gallery-grid" data-gallery-grid>
+          ${values.map((path, index) => galleryTile(path, index, readOnly)).join("") || `<span class="asset-preview-placeholder">No gallery images selected</span>`}
+        </div>
+        ${readOnly ? "" : `<div class="field-actions">
+          <select class="input asset-picker" data-project-gallery-select><option value="">Append existing /media/portfolio asset</option>${catalogOptions("portfolio_image")}</select>
+          <button class="button button-secondary" type="button" data-project-upload="galleryPaths">Upload image to gallery</button>
+        </div>`}
+        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-project-upload-input="galleryPaths" />`}
+        <span class="upload-status" data-project-upload-status="galleryPaths"></span>
       </label>
     `;
+  }
+
+  function galleryTile(path, index, readOnly = false) {
+    return `
+      <div class="gallery-tile" data-gallery-index="${index}">
+        ${assetPreview(path, `Gallery item ${index + 1}`)}
+        <code>${escapeHtml(path)}</code>
+        ${
+          readOnly
+            ? ""
+            : `<div class="row-actions">
+                <button class="button button-secondary" type="button" data-gallery-move="${index}" data-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button>
+                <button class="button button-secondary" type="button" data-gallery-move="${index}" data-direction="1">Down</button>
+                <button class="button button-danger" type="button" data-gallery-remove="${index}">Remove</button>
+              </div>`
+        }
+      </div>
+    `;
+  }
+
+  function registryMultiSelectField(label, name, kind, selectedValues, readOnly = false) {
+    const selected = new Set(normalizeProjectRegistryRefs(selectedValues).map(createSlug));
+    const options = activeRegistryItems(kind);
+    const chips = Array.from(selected)
+      .map((id) => {
+        const item = options.find((entry) => entry.id === id || entry.slug === id) || registryState[kind].items.find((entry) => entry.id === id || entry.slug === id);
+        if (!item) return "";
+        if (kind === "platforms") {
+          const logo = item.logoPath || platformLogoPath(item.name);
+          return `<span class="platform-chip" title="${escapeHtml(item.name)}">${logo ? `<img src="${escapeHtml(logo)}" alt="" />` : `<span>${escapeHtml(initialsFor(item.name))}</span>`}<span>${escapeHtml(item.name)}</span></span>`;
+        }
+        return badge(item.name);
+      })
+      .join("");
+    return `
+      <label class="field field-wide registry-select-field">
+        <span>${escapeHtml(label)} *</span>
+        <select class="input" name="${escapeHtml(name)}" multiple size="${Math.min(6, Math.max(3, options.length || 3))}" ${readOnly ? "disabled" : ""}>
+          ${options.map((item) => `<option value="${escapeHtml(item.id)}"${selected.has(item.id) || selected.has(item.slug) ? " selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
+        </select>
+        <div class="chip-row">${chips || badge(`No ${label.toLowerCase()} selected`, "warn")}</div>
+        <small class="muted">Options are managed on the ${kind === "companies" ? "Companies" : "Platforms"} page; custom text is not accepted here.</small>
+      </label>
+    `;
+  }
+
+  function initialsFor(value) {
+    return String(value || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "P";
   }
 
   function textareaField(label, name, value, readOnly = false) {
@@ -2911,6 +3436,10 @@
       renderProjects();
     } else if (route.page === "media") {
       renderMedia();
+    } else if (route.page === "companies") {
+      renderRegistryPage("companies");
+    } else if (route.page === "platforms") {
+      renderRegistryPage("platforms");
     } else if (route.page === "alerts") {
       renderAlerts();
     } else if (route.page === "settings") {
@@ -2919,6 +3448,7 @@
       renderOverview();
     }
 
+    if (route.page === "projects") initProjectTableResize();
     app.focus({ preventScroll: true });
     document.body.classList.remove("mobile-nav-open");
     navToggle.setAttribute("aria-expanded", String(!document.body.classList.contains("nav-collapsed")));
@@ -2932,7 +3462,46 @@
     }
 
     document.body.classList.toggle("nav-collapsed");
+    persistSidebarMode(document.body.classList.contains("nav-collapsed") ? "collapsed" : "expanded");
     navToggle.setAttribute("aria-expanded", String(!document.body.classList.contains("nav-collapsed")));
+  });
+
+  function applySidebarMode(mode) {
+    const normalized = ["expanded", "collapsed", "hidden"].includes(mode) ? mode : "expanded";
+    document.body.classList.toggle("nav-collapsed", normalized === "collapsed");
+    document.body.classList.toggle("nav-hidden", normalized === "hidden");
+    navToggle?.setAttribute("aria-expanded", String(normalized === "expanded"));
+    sidebarModeToggle?.setAttribute("aria-label", normalized === "hidden" ? "Show sidebar" : normalized === "collapsed" ? "Expand sidebar" : "Hide sidebar");
+    sidebarModeToggle?.setAttribute("title", sidebarModeToggle.getAttribute("aria-label") || "Cycle sidebar mode");
+  }
+
+  function persistSidebarMode(mode) {
+    applySidebarMode(mode);
+    try {
+      window.localStorage.setItem(SIDEBAR_MODE_STORAGE_KEY, mode);
+    } catch {
+      // Optional UI preference.
+    }
+  }
+
+  function initSidebarMode() {
+    let stored = "expanded";
+    try {
+      stored = window.localStorage.getItem(SIDEBAR_MODE_STORAGE_KEY) || "expanded";
+    } catch {
+      stored = "expanded";
+    }
+    applySidebarMode(stored);
+  }
+
+  sidebarModeToggle?.addEventListener("click", () => {
+    const current = document.body.classList.contains("nav-hidden")
+      ? "hidden"
+      : document.body.classList.contains("nav-collapsed")
+        ? "collapsed"
+        : "expanded";
+    const next = current === "expanded" ? "collapsed" : current === "collapsed" ? "hidden" : "expanded";
+    persistSidebarMode(next);
   });
 
   app.addEventListener("input", (event) => {
@@ -2953,6 +3522,14 @@
       alertsState.search = target.value;
       renderAlerts();
     }
+
+    if (target.matches("[data-registry-filter]")) {
+      const kind = target.getAttribute("data-registry-filter");
+      if (registryState[kind]) {
+        registryState[kind].search = target.value;
+        renderRegistryPage(kind);
+      }
+    }
   });
 
   app.addEventListener("change", (event) => {
@@ -2961,6 +3538,40 @@
 
     if (target.matches("[data-project-upload-input]")) {
       uploadProjectAsset(target, target.getAttribute("data-project-upload-input"));
+      return;
+    }
+
+    if (target.matches("[data-registry-upload-input]")) {
+      uploadRegistryLogo(target, target.getAttribute("data-registry-upload-input"));
+      return;
+    }
+
+    if (target.matches("[data-account-avatar-input]")) {
+      uploadAccountAvatar(target);
+      return;
+    }
+
+    if (target.matches("[data-project-asset-select]")) {
+      const fieldName = target.getAttribute("data-project-asset-select");
+      const form = target.closest("[data-project-form]");
+      if (form && fieldName && target.value) updateProjectAssetField(form, fieldName, target.value);
+      return;
+    }
+
+    if (target.matches("[data-project-gallery-select]")) {
+      const form = target.closest("[data-project-form]");
+      if (form && target.value) {
+        updateProjectAssetField(form, "galleryPaths", target.value);
+        renderProjectGalleryGrid(form);
+        target.value = "";
+      }
+      return;
+    }
+
+    if (target.matches("[data-registry-logo-select]")) {
+      const form = target.closest("[data-registry-form]");
+      const input = form?.querySelector("[name='logoPath']");
+      if (input && target.value) input.value = target.value;
       return;
     }
 
@@ -3155,9 +3766,22 @@
       return;
     }
 
+    if (form.matches("[data-account-profile-form]")) {
+      event.preventDefault();
+      saveCurrentProfile(form);
+      return;
+    }
+
     if (form.matches("[data-alert-form]")) {
       event.preventDefault();
       saveAlertFromForm(form);
+      return;
+    }
+
+    const registryKind = form.getAttribute("data-registry-form");
+    if (registryKind) {
+      event.preventDefault();
+      saveRegistryFromForm(registryKind, form);
       return;
     }
 
@@ -3168,15 +3792,19 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const uploadField = target.getAttribute("data-project-upload");
+    const clearField = target.getAttribute("data-project-clear");
     const mediaAction = target.getAttribute("data-media-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
+    const registryAction = target.getAttribute("data-registry-action");
+    const registryKind = target.getAttribute("data-registry-kind");
+    const registryId = target.getAttribute("data-registry-id");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
     const alertId = target.getAttribute("data-alert-id");
@@ -3188,8 +3816,37 @@
       return;
     }
 
+    if (accountAction === "upload-avatar") {
+      app.querySelector("[data-account-avatar-input]")?.click();
+      return;
+    }
+
     if (uploadField) {
       app.querySelector(`[data-project-upload-input="${CSS.escape(uploadField)}"]`)?.click();
+      return;
+    }
+
+    if (clearField) {
+      const form = target.closest("[data-project-form]");
+      const input = form?.querySelector(`[name="${CSS.escape(clearField)}"]`);
+      if (input) input.value = "";
+      return;
+    }
+
+    if (target.matches("[data-gallery-move]")) {
+      const form = target.closest("[data-project-form]");
+      moveGalleryItem(form, Number(target.getAttribute("data-gallery-move")), Number(target.getAttribute("data-direction")));
+      return;
+    }
+
+    if (target.matches("[data-gallery-remove]")) {
+      const form = target.closest("[data-project-form]");
+      removeGalleryItem(form, Number(target.getAttribute("data-gallery-remove")));
+      return;
+    }
+
+    if (registryAction) {
+      handleRegistryAction(registryKind, registryAction, registryId);
       return;
     }
 
@@ -3362,6 +4019,8 @@
       resetProjects();
     } else if (action === "sync-cms") {
       persistCmsCollection("projects", true, true);
+    } else if (action === "reset-columns") {
+      resetProjectTableColumns();
     }
   });
 
@@ -3412,6 +4071,90 @@
     renderSettings();
   }
 
+  function handleRegistryAction(kind, action, id) {
+    if (!registryState[kind]) return;
+    const config = registryConfig(kind);
+    if (action === "create") {
+      registryState[kind].modal = { mode: "create", item: normalizeRegistryItem({ id: "", name: "", status: "active" }) };
+      renderRegistryPage(kind);
+      return;
+    }
+    if (action === "edit") {
+      const item = registryState[kind].items.find((entry) => entry.id === id);
+      if (item) registryState[kind].modal = { mode: "edit", item };
+      renderRegistryPage(kind);
+      return;
+    }
+    if (action === "archive") {
+      const item = registryState[kind].items.find((entry) => entry.id === id);
+      if (!item) return;
+      const nextStatus = item.status === "archived" ? "active" : "archived";
+      if (nextStatus === "archived" && !window.confirm(`Archive ${item.name}? It will be hidden from Project editor selectors but retained for compatibility.`)) return;
+      item.status = nextStatus;
+      item.updatedAt = new Date().toISOString();
+      registryState[kind].message = `${config.singular} ${nextStatus === "archived" ? "archived" : "activated"}.`;
+      persistRegistryItems(kind);
+      renderRegistryPage(kind);
+      return;
+    }
+    if (action === "close-modal") {
+      registryState[kind].modal = null;
+      renderRegistryPage(kind);
+      return;
+    }
+    if (action === "sync-cms") {
+      persistCmsCollection(kind, true, true);
+      return;
+    }
+    if (action === "upload-logo") {
+      app.querySelector(`[data-registry-upload-input="${CSS.escape(kind)}"]`)?.click();
+    }
+  }
+
+  function saveRegistryFromForm(kind, form) {
+    const name = formValue(form, "name");
+    const id = createSlug(formValue(form, "id") || name);
+    if (!name || !id) {
+      registryState[kind].message = "Name and ID are required.";
+      renderRegistryPage(kind);
+      return;
+    }
+    const originalId = formValue(form, "originalId");
+    const existingIndex = registryState[kind].items.findIndex((item) => item.id === originalId);
+    const duplicate = registryState[kind].items.some((item, index) => item.id === id && index !== existingIndex);
+    if (duplicate) {
+      registryState[kind].message = "Another registry row already uses that ID.";
+      renderRegistryPage(kind);
+      return;
+    }
+    const saved = normalizeRegistryItem({
+      ...(existingIndex >= 0 ? registryState[kind].items[existingIndex] : {}),
+      id,
+      slug: id,
+      name,
+      logoPath: formValue(form, "logoPath"),
+      location: formValue(form, "location"),
+      vendor: formValue(form, "vendor"),
+      company: formValue(form, "vendor"),
+      website: formValue(form, "website"),
+      description: formValue(form, "description"),
+      details: formValue(form, "description"),
+      status: formValue(form, "status"),
+      sortOrder: Number(formValue(form, "sortOrder") || 1000),
+      updatedAt: new Date().toISOString()
+    });
+    if (existingIndex >= 0) {
+      registryState[kind].items[existingIndex] = saved;
+    } else {
+      registryState[kind].items.unshift(saved);
+    }
+    registryState[kind].items.sort(compareRegistryItems);
+    registryState[kind].modal = null;
+    registryState[kind].message = `Saved ${saved.name}.`;
+    persistRegistryItems(kind);
+    renderRegistryPage(kind);
+  }
+
   function removeAccountAccess(id) {
     const account = accountAccessState.accounts.find((item) => item.id === id);
     if (!account) return;
@@ -3452,9 +4195,40 @@
       const existing = textareaArray(target.value);
       if (!existing.includes(value)) existing.push(value);
       target.value = existing.join("\n");
+      renderProjectGalleryGrid(form);
       return;
     }
     target.value = value;
+  }
+
+  function renderProjectGalleryGrid(form) {
+    const textarea = form?.querySelector("[name='galleryPaths']");
+    const grid = form?.querySelector("[data-gallery-grid]");
+    if (!(textarea instanceof HTMLTextAreaElement) || !grid) return;
+    const values = textareaArray(textarea.value);
+    grid.innerHTML = values.map((path, index) => galleryTile(path, index, false)).join("") || `<span class="asset-preview-placeholder">No gallery images selected</span>`;
+  }
+
+  function moveGalleryItem(form, index, direction) {
+    const textarea = form?.querySelector("[name='galleryPaths']");
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    const values = textareaArray(textarea.value);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || index >= values.length || nextIndex >= values.length) return;
+    const [item] = values.splice(index, 1);
+    values.splice(nextIndex, 0, item);
+    textarea.value = values.join("\n");
+    renderProjectGalleryGrid(form);
+  }
+
+  function removeGalleryItem(form, index) {
+    const textarea = form?.querySelector("[name='galleryPaths']");
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    const values = textareaArray(textarea.value);
+    if (index < 0 || index >= values.length) return;
+    values.splice(index, 1);
+    textarea.value = values.join("\n");
+    renderProjectGalleryGrid(form);
   }
 
   async function uploadProjectAsset(input, fieldName) {
@@ -3480,13 +4254,109 @@
         input.value = "";
         return;
       }
-      const assetPath = result.url || result.key;
+      const assetPath = result.relativePath || result.path || result.url || result.key;
       updateProjectAssetField(form, fieldName, assetPath);
       setProjectUploadStatus(fieldName, `Uploaded ${result.originalName || file.name}.`, "success");
     } catch (error) {
       setProjectUploadStatus(fieldName, `Upload failed: ${error.message || "network_error"}`, "error");
     } finally {
       input.value = "";
+    }
+  }
+
+  async function uploadRegistryLogo(input, kind) {
+    const form = input.closest("[data-registry-form]");
+    const file = input.files?.[0];
+    const status = form?.querySelector("[data-registry-upload-status]");
+    if (!form || !file) return;
+    if (status) status.textContent = `Selected ${file.name}; uploading...`;
+    const payload = new FormData();
+    payload.set("file", file);
+    payload.set("projectSlug", formValue(form, "id") || formValue(form, "name") || kind || "registry");
+    payload.set("field", "gallery");
+    try {
+      const response = await fetch(assetUploadEndpoint(), { method: "POST", body: payload, credentials: "include" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        if (status) status.textContent = result.error === "storage_not_configured" ? "Asset storage not configured." : `Upload failed: ${result.error || response.status}`;
+        input.value = "";
+        return;
+      }
+      const logoInput = form.querySelector("[name='logoPath']");
+      if (logoInput) logoInput.value = result.relativePath || result.path || result.url || result.key || "";
+      if (status) status.textContent = `Uploaded ${result.originalName || file.name}.`;
+    } catch (error) {
+      if (status) status.textContent = `Upload failed: ${error.message || "network_error"}`;
+    } finally {
+      input.value = "";
+    }
+  }
+
+  async function uploadAccountAvatar(input) {
+    const form = input.closest("[data-account-profile-form]");
+    const file = input.files?.[0];
+    const status = form?.querySelector("[data-account-avatar-status]");
+    if (!form || !file) return;
+    if (status) status.textContent = `Selected ${file.name}; uploading...`;
+    const payload = new FormData();
+    payload.set("file", file);
+    payload.set("projectSlug", "current-user");
+    payload.set("field", "avatar");
+    try {
+      const response = await fetch(assetUploadEndpoint(), { method: "POST", body: payload, credentials: "include" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        if (status) status.textContent = result.error === "storage_not_configured" ? "Avatar storage not configured." : `Upload failed: ${result.error || response.status}`;
+        input.value = "";
+        return;
+      }
+      const avatarInput = form.querySelector("[name='avatarUrl']");
+      if (avatarInput) avatarInput.value = result.relativePath || result.path || result.url || result.key || "";
+      if (status) status.textContent = `Uploaded ${result.originalName || file.name}.`;
+    } catch (error) {
+      if (status) status.textContent = `Upload failed: ${error.message || "network_error"}`;
+    } finally {
+      input.value = "";
+    }
+  }
+
+  async function saveCurrentProfile(form) {
+    accountRegistryState.status = "saving";
+    accountRegistryState.message = "Saving current profile...";
+    renderAccounts();
+    try {
+      const response = await fetch(accountsEndpoint("profile"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          displayName: formValue(form, "displayName"),
+          avatarUrl: formValue(form, "avatarUrl")
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) {
+        accountRegistryState.status = "fallback";
+        accountRegistryState.message = `Profile save failed: ${payload.error || response.status}`;
+        renderAccounts();
+        return;
+      }
+      Object.assign(accountRegistryState, {
+        status: payload.storageConfigured ? "connected" : "not-configured",
+        message: "Profile overlay saved.",
+        accounts: Array.isArray(payload.accounts) ? payload.accounts : accountRegistryState.accounts,
+        meta: payload.meta || accountRegistryState.meta,
+        session: payload.session || accountRegistryState.session,
+        lastChecked: new Date().toISOString()
+      });
+      if (window.DC_ADMIN_AUTH?.refresh) {
+        window.DC_ADMIN_AUTH.refresh();
+      }
+      renderAccounts();
+    } catch {
+      accountRegistryState.status = "fallback";
+      accountRegistryState.message = "Profile save failed because Pages Functions are unavailable.";
+      renderAccounts();
     }
   }
 
@@ -3503,7 +4373,12 @@
     const originalId = formValue(form, "originalId");
     const originalProject = projectState.projects.find((project) => project.id === originalId);
     const protectedBaseline = originalProject && isBaselineProject(originalProject);
+    const companyIds = formSelectedValues(form, "companyIds");
+    const platformIds = formSelectedValues(form, "platformIds");
+    const companyLabels = selectedRegistryLabels("companies", companyIds);
+    const platformLabels = selectedRegistryLabels("platforms", platformIds);
     const saved = normalizeProject({
+      ...(originalProject || {}),
       id: protectedBaseline ? originalProject.id : slug,
       slug: protectedBaseline ? originalProject.slug : slug,
       title,
@@ -3525,8 +4400,12 @@
       description: formValue(form, "description"),
       galleryPaths: textareaArray(formValue(form, "galleryPaths")),
       tags: textareaArray(formValue(form, "tags")),
-      studio: textareaArray(formValue(form, "studio")),
-      software: textareaArray(formValue(form, "software")),
+      studio: companyLabels,
+      software: platformLabels,
+      companyIds,
+      companyLabels,
+      platformIds,
+      platformLabels,
       internalNotes: formValue(form, "internalNotes"),
       updatedAt: new Date().toISOString(),
       baselineProtected: protectedBaseline,
@@ -4095,6 +4974,9 @@
     render();
   }
   hydrateProjectBaseline(activePageIs("projects"));
+  initSidebarMode();
+  seedRegistriesFromProjects();
+  hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));

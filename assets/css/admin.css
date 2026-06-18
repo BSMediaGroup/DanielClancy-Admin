@@ -45,6 +45,7 @@
   --radius-sm: 8px;
   --radius-md: 10px;
   --sidebar-width: 288px;
+  --sidebar-collapsed-width: 72px;
   --topbar-height: 72px;
 }
 
@@ -161,7 +162,7 @@ a {
 
 .nav-link {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   min-height: 42px;
@@ -196,11 +197,66 @@ a {
   font-family: "SUSE Mono", monospace;
 }
 
-.nav-meta {
-  color: var(--soft);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.ui-mask-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+
+body.nav-collapsed .admin-shell {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+body.nav-collapsed .sidebar {
+  width: var(--sidebar-collapsed-width);
+}
+
+body.nav-collapsed .brand {
+  grid-template-columns: 1fr;
+  padding-inline: 12px;
+}
+
+body.nav-collapsed .brand span,
+body.nav-collapsed .nav-link > span:not(.nav-icon),
+body.nav-collapsed .sidebar-note {
+  display: none;
+}
+
+body.nav-collapsed .nav-link {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+body.nav-hidden .admin-shell {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+body.nav-hidden .sidebar {
+  width: 0;
+  min-width: 0;
+  border-right: 0;
+}
+
+.sidebar-mode-button {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sidebar-mode-button:hover,
+.sidebar-mode-button:focus-visible {
+  color: var(--text);
+  border-color: var(--line-strong);
+  outline: none;
 }
 
 .sidebar-note {
@@ -1064,6 +1120,123 @@ a {
   border-radius: var(--radius-sm);
 }
 
+.asset-preview,
+.selected-file-indicator,
+.asset-preview-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.asset-picker {
+  margin-top: 6px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.gallery-tile {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.gallery-tile code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.registry-select-field select {
+  min-height: 110px;
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.platform-chip img,
+.platform-chip > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  color: var(--accent);
+}
+
+.registry-logo-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.profile-form {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.topbar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.project-table th.is-resizable {
+  position: relative;
+}
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.col-resizer::after {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 100%;
+  margin-inline: auto;
+  background: transparent;
+}
+
+.project-table th.is-resizable:hover .col-resizer::after,
+.col-resizer:focus-visible::after,
+body.col-resizing-active .col-resizer::after {
+  background: var(--accent);
+}
+
+body.col-resizing-active {
+  cursor: col-resize;
+  user-select: none;
+}
+
 .checkbox-field {
   display: flex;
   align-items: center;
@@ -1414,7 +1587,7 @@ a {
 }
 
 body.nav-collapsed .admin-shell {
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }
 
 body.nav-collapsed .brand {
@@ -1424,7 +1597,6 @@ body.nav-collapsed .brand {
 
 body.nav-collapsed .brand span,
 body.nav-collapsed .nav-link span:not(.nav-icon),
-body.nav-collapsed .nav-meta,
 body.nav-collapsed .sidebar-note {
   display: none;
 }

@@ -5,7 +5,7 @@ const JSON_HEADERS = {
   "cache-control": "no-store"
 };
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]);
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -38,7 +38,8 @@ function safeFileName(value, mime) {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
-    "image/gif": ".gif"
+    "image/gif": ".gif",
+    "application/pdf": ".pdf"
   }[mime] || "";
   const cleaned = cleanText(value || "asset", 160)
     .toLowerCase()
@@ -99,8 +100,18 @@ export async function onRequest(context) {
   }
 
   const projectSlug = safeSlug(form.get("projectSlug") || form.get("slug"));
+  const field = safeSlug(form.get("field") || "gallery");
   const filename = safeFileName(file.name, file.type);
-  const key = `portfolio/projects/${projectSlug}/${Date.now()}-${crypto.randomUUID()}-${filename}`;
+  const keyPrefix =
+    field === "thumbnailpath" || field === "thumbnail"
+      ? `portfolio/thumbs/${projectSlug}`
+      : field === "documentpath" || field === "document"
+        ? `docs/projects/${projectSlug}`
+        : field === "avatar" || field === "avatarurl"
+          ? "accounts/avatars"
+          : `portfolio/projects/${projectSlug}`;
+  const key = `${keyPrefix}/${Date.now()}-${crypto.randomUUID()}-${filename}`;
+  const url = publicUrl(env, key);
   await bucket.put(key, file.stream(), {
     httpMetadata: { contentType: file.type },
     customMetadata: {
@@ -112,7 +123,9 @@ export async function onRequest(context) {
   return json({
     ok: true,
     key,
-    url: publicUrl(env, key),
+    url,
+    relativePath: url || `/${key}`,
+    path: url || `/${key}`,
     mime: file.type,
     size: file.size,
     originalName: cleanText(file.name, 180)

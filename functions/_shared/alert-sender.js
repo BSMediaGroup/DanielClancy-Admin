@@ -228,7 +228,7 @@ export async function postDanielClancyAlert(context, event) {
     account_type: cleanText(event.accountType || event.account_type || clientContext.account_type, 80),
     auth_provider: cleanText(event.authProvider || event.auth_provider || event.provider || clientContext.auth_provider, 80),
     payload: eventObjectOnly(event.payload),
-    context: eventObjectOnly({ ...clientContext, ...(event.context || {}) }),
+    context: { ...clientContext, ...eventObjectOnly(event.context) },
   };
 
   try {
