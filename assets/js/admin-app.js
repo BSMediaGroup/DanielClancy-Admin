@@ -456,6 +456,10 @@
     return `/api/admin/accounts${path ? `/${path}` : ""}`;
   }
 
+  function assetUploadEndpoint() {
+    return "/api/admin/assets/upload";
+  }
+
   function adminStatusEndpoint() {
     return "/api/admin/status";
   }
@@ -1418,6 +1422,103 @@
     `;
   }
 
+  const CITY_COORDINATES = {
+    "sydney|australia": { lat: -33.8688, lon: 151.2093 },
+    "sydney|au": { lat: -33.8688, lon: 151.2093 },
+    "perth|australia": { lat: -31.9523, lon: 115.8613 },
+    "perth|au": { lat: -31.9523, lon: 115.8613 },
+    "melbourne|australia": { lat: -37.8136, lon: 144.9631 },
+    "melbourne|au": { lat: -37.8136, lon: 144.9631 },
+    "brisbane|australia": { lat: -27.4698, lon: 153.0251 },
+    "brisbane|au": { lat: -27.4698, lon: 153.0251 },
+    "adelaide|australia": { lat: -34.9285, lon: 138.6007 },
+    "adelaide|au": { lat: -34.9285, lon: 138.6007 },
+    "canberra|australia": { lat: -35.2809, lon: 149.13 },
+    "canberra|au": { lat: -35.2809, lon: 149.13 },
+    "new york|united states": { lat: 40.7128, lon: -74.006 },
+    "new york|us": { lat: 40.7128, lon: -74.006 },
+    "los angeles|united states": { lat: 34.0522, lon: -118.2437 },
+    "los angeles|us": { lat: 34.0522, lon: -118.2437 },
+    "san francisco|united states": { lat: 37.7749, lon: -122.4194 },
+    "san francisco|us": { lat: 37.7749, lon: -122.4194 },
+    "chicago|united states": { lat: 41.8781, lon: -87.6298 },
+    "chicago|us": { lat: 41.8781, lon: -87.6298 },
+    "seattle|united states": { lat: 47.6062, lon: -122.3321 },
+    "seattle|us": { lat: 47.6062, lon: -122.3321 },
+    "london|united kingdom": { lat: 51.5072, lon: -0.1276 },
+    "london|gb": { lat: 51.5072, lon: -0.1276 },
+    "toronto|canada": { lat: 43.6532, lon: -79.3832 },
+    "toronto|ca": { lat: 43.6532, lon: -79.3832 },
+    "vancouver|canada": { lat: 49.2827, lon: -123.1207 },
+    "vancouver|ca": { lat: 49.2827, lon: -123.1207 },
+    "auckland|new zealand": { lat: -36.8509, lon: 174.7645 },
+    "auckland|nz": { lat: -36.8509, lon: 174.7645 },
+    "singapore|singapore": { lat: 1.3521, lon: 103.8198 },
+    "singapore|sg": { lat: 1.3521, lon: 103.8198 }
+  };
+
+  function cityCoordinate(row) {
+    const city = String(row?.city || "").trim().toLowerCase();
+    const country = String(row?.country || "").trim().toLowerCase();
+    if (!city) return null;
+    return CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[city] || null;
+  }
+
+  function mapPointStyle(coord) {
+    const x = ((coord.lon + 180) / 360) * 100;
+    const y = ((90 - coord.lat) / 180) * 100;
+    return `--x: ${Math.max(2, Math.min(98, x)).toFixed(2)}%; --y: ${Math.max(4, Math.min(96, y)).toFixed(2)}%;`;
+  }
+
+  function renderLocationMap(status, liveCities, liveCountries) {
+    const pageVisits = status?.pageVisits || {};
+    const location = status?.location || {};
+    const plottedCities = liveCities
+      .filter((row) => row.precision === "city" && cityCoordinate(row))
+      .slice(0, 20)
+      .map((row) => ({ row, coord: cityCoordinate(row) }));
+    const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
+    const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
+    const mapBody = plottedCities.length
+      ? plottedCities
+          .map(({ row, coord }) => {
+            const label = [row.city, row.region, row.country].filter(Boolean).join(", ");
+            return `
+              <span class="map-marker live" style="${mapPointStyle(coord)}" title="${escapeHtml(`${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - ${row.precision}`)}">
+                <span>${escapeHtml(row.city)}</span>
+              </span>
+            `;
+          })
+          .join("")
+      : `<div class="map-empty">${escapeHtml(hasEvents ? "City coordinates unavailable for current live rows." : "No live page-visit location events captured yet.")}</div>`;
+    return `
+      <section class="panel">
+        <header class="panel-header">
+          <div>
+            <h2>Live Location Map</h2>
+            <p>${escapeHtml(hasEvents ? "Live page-visit locations only. Unknown coordinates are not invented." : "No live page-visit location events captured yet.")}</p>
+          </div>
+          <div class="panel-actions">
+            ${badge(`Source: ${source}`, sourceTone(source))}
+            ${badge(location.precision || (liveCities.length ? "city" : liveCountries.length ? "country" : "unavailable"), liveCities.length ? "success" : "warn")}
+          </div>
+        </header>
+        <div class="panel-body">
+          <div class="location-metrics">
+            ${storageStatusCard("Tracked events", formatAnalyticsNumber(pageVisits.events || 0), "Bounded page_visit KV events.", pageVisits.configured ? "success" : "warn")}
+            ${storageStatusCard("City detail", formatAnalyticsNumber(pageVisits.cityEvents || 0), "Rows with Cloudflare request.cf.city.", pageVisits.cityEvents ? "success" : "warn")}
+            ${storageStatusCard("Country-only", formatAnalyticsNumber(pageVisits.countryOnlyEvents || 0), "Rows with country but no city.", pageVisits.countryOnlyEvents ? "warn" : "success")}
+            ${storageStatusCard("Plotted cities", formatAnalyticsNumber(plottedCities.length), "Exact built-in coordinate matches only.", plottedCities.length ? "success" : "warn")}
+          </div>
+          <div class="map-shell live-map" role="img" aria-label="Live page-visit location map-style panel">
+            <div class="map-graticule"></div>
+            ${mapBody}
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
   function renderAnalytics() {
     routeTitle.textContent = "Analytics";
     const status = analyticsStatusState.payload;
@@ -1431,11 +1532,11 @@
     const liveTopPages = hasRows(status?.topPages) ? status.topPages : [];
     const liveReferrers = hasRows(status?.referrers) ? status.referrers : [];
     const liveCities = hasRows(status?.cities) ? status.cities : [];
+    const liveCountries = hasRows(status?.countries) ? status.countries : [];
     const liveBrowsers = hasRows(status?.browsers) ? status.browsers : [];
     const liveDevices = hasRows(status?.devices) ? status.devices : [];
-    const hasLiveRows = hasRows(liveTopPages) || hasRows(liveReferrers) || hasRows(liveCities) || hasRows(liveBrowsers) || hasRows(liveDevices);
-    const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city && row.city !== "City detail unavailable from current data source");
-    const sampleMarkers = data.analytics.markers || [];
+    const hasLiveRows = hasRows(liveTopPages) || hasRows(liveReferrers) || hasRows(liveCities) || hasRows(liveCountries) || hasRows(liveBrowsers) || hasRows(liveDevices);
+    const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city);
     const sampleGeoRows = data.analytics.geoRows || [];
     const sampleRouteRows = data.analytics.routeRows || [];
     const operationalRows = [
@@ -1474,37 +1575,12 @@
           ${storageStatusCard("Page-visit events", formatAnalyticsNumber(totals.pageVisitEvents || 0), "KV event count from bounded recent storage.", pageVisits.configured ? "success" : "warn")}
         </section>
 
-        <section class="panel">
-          <header class="panel-header">
-            <div>
-              <h2>Location Precision Panel</h2>
-              <p>${escapeHtml(cityUnavailable ? "City detail unavailable from current data source" : "City-level page-visit detail is available from request geo metadata.")}</p>
-            </div>
-            <div class="panel-actions">
-              ${badge(cityUnavailable ? "City unavailable" : "City precision", cityUnavailable ? "warn" : "success")}
-              ${badge(hasLiveRows ? "Live source rows" : "Sample fallback only", hasLiveRows ? "success" : "warn")}
-            </div>
-          </header>
-          <div class="panel-body">
-            <div class="map-shell" role="img" aria-label="Scaffold map-style analytics panel">
-              ${sampleMarkers
-                .map(
-                  (marker) => `
-                    <span class="map-marker" style="--x: ${escapeHtml(marker.x)}; --y: ${escapeHtml(marker.y)};">
-                      <span>${escapeHtml(marker.label)}</span>
-                    </span>
-                  `
-                )
-                .join("")}
-            </div>
-            <p class="muted">${escapeHtml(hasLiveRows ? "Map markers are visual placeholders; the table below is the source of truth for precision and counts." : "Sample markers are visible only because no live source rows are available.")}</p>
-          </div>
-        </section>
+        ${renderLocationMap(status, liveCities, liveCountries)}
 
         <section class="grid analytics-grid">
           ${panel(
             "Location breakdown",
-            cityUnavailable ? "City detail unavailable from current data source" : "City rows are sourced from page-visit KV request geo metadata when available.",
+            cityUnavailable ? (pageVisits.emptyMessage || "City detail unavailable from current data source") : "City rows are sourced from page-visit KV request geo metadata when available.",
             analyticsTable(
               ["City", "Region", "Country", "Visits/Events", "Precision", "Source"],
               liveCities,
@@ -1518,7 +1594,7 @@
                   <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
                 </tr>
               `,
-              "City detail unavailable from current data source"
+              pageVisits.emptyMessage || "No city-level page-visit rows available."
             )
           )}
           ${panel(
@@ -1534,6 +1610,28 @@
               ${(status?.notes || data.analytics.notes)
                 .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
                 .join("")}
+            </div>`
+          )}
+        </section>
+
+        <section class="grid analytics-grid">
+          ${panel(
+            "Country precision",
+            hasRows(liveCountries) ? "Country-only rows remain labelled as country precision." : "No country precision rows available.",
+            analyticsTable(
+              ["Country", "Visits/Events", "Precision", "Source"],
+              liveCountries,
+              (row) => `<tr><td><strong>${escapeHtml(row.country || "Unavailable")}</strong></td><td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td><td>${badge(row.precision || "country", "warn")}</td><td>${badge(row.source || "unavailable", sourceTone(row.source))}</td></tr>`,
+              pageVisits.emptyMessage || "No country precision rows available."
+            )
+          )}
+          ${panel(
+            "Location source rules",
+            "City, region, and country precision are kept separate.",
+            `<div class="grid">
+              <article class="card">${badge("City", liveCities.length ? "success" : "warn")}<p>Rows require real Cloudflare request.cf.city or supported Cloudflare city data.</p></article>
+              <article class="card">${badge("Country", liveCountries.length ? "warn" : "success")}<p>Country-only rows are never labelled as city detail.</p></article>
+              <article class="card">${badge("Empty", "warn")}<p>${escapeHtml(pageVisits.emptyMessage || "No fake sample markers are shown as live map data.")}</p></article>
             </div>`
           )}
         </section>
@@ -2389,15 +2487,15 @@
                 <input type="checkbox" name="featured" ${project.featured ? "checked" : ""} ${readOnly ? "disabled" : ""} />
                 <span>Featured project</span>
               </label>
-              ${field("Hero image path", "heroImage", project.heroImage, "text", false, readOnly)}
-              ${field("Thumbnail path", "thumbnailPath", project.thumbnailPath, "text", false, readOnly)}
+              ${projectUploadField("Hero image path", "heroImage", project.heroImage, readOnly)}
+              ${projectUploadField("Thumbnail path", "thumbnailPath", project.thumbnailPath, readOnly)}
               ${field("Document/PDF path", "documentPath", project.documentPath, "text", false, readOnly)}
               ${field("Documentation URL", "documentationUrl", project.documentationUrl, "url", false, readOnly)}
               ${field("Live/detail link", "livePage", project.livePage, "text", false, readOnly)}
               ${field("Source folder", "sourceFolder", project.sourceFolder, "text", false, readOnly)}
               ${textareaField("Summary", "summary", project.summary, readOnly)}
               ${textareaField("Description", "description", project.description, readOnly)}
-              ${textareaField("Gallery/image paths", "galleryPaths", project.galleryPaths.join("\n"), readOnly)}
+              ${projectUploadTextarea("Gallery/image paths", "galleryPaths", project.galleryPaths.join("\n"), readOnly)}
               ${textareaField("Tags", "tags", project.tags.join("\n"), readOnly)}
               ${textareaField("Studio", "studio", project.studio.join("\n"), readOnly)}
               ${textareaField("Software", "software", project.software.join("\n"), readOnly)}
@@ -2425,6 +2523,34 @@
       <label class="field">
         <span>${escapeHtml(label)}${required ? " *" : ""}</span>
         <input class="input" type="${escapeHtml(type)}" name="${escapeHtml(name)}" value="${escapeHtml(value || "")}" ${required ? "required" : ""} ${readOnly ? "readonly" : ""} />
+      </label>
+    `;
+  }
+
+  function projectUploadField(label, name, value, readOnly = false) {
+    return `
+      <label class="field project-upload-field">
+        <span>${escapeHtml(label)}</span>
+        <div class="input-with-action">
+          <input class="input" type="text" name="${escapeHtml(name)}" value="${escapeHtml(value || "")}" ${readOnly ? "readonly" : ""} />
+          ${readOnly ? "" : `<button class="button button-secondary" type="button" data-project-upload="${escapeHtml(name)}">Upload</button>`}
+        </div>
+        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-project-upload-input="${escapeHtml(name)}" />`}
+        <span class="upload-status" data-project-upload-status="${escapeHtml(name)}"></span>
+        <span class="asset-preview" data-project-upload-preview="${escapeHtml(name)}"></span>
+      </label>
+    `;
+  }
+
+  function projectUploadTextarea(label, name, value, readOnly = false) {
+    return `
+      <label class="field field-wide project-upload-field">
+        <span>${escapeHtml(label)}</span>
+        <textarea class="input textarea" name="${escapeHtml(name)}" rows="4" ${readOnly ? "readonly" : ""}>${escapeHtml(value || "")}</textarea>
+        ${readOnly ? "" : `<div class="field-actions"><button class="button button-secondary" type="button" data-project-upload="${escapeHtml(name)}">Upload image to gallery</button></div>`}
+        ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-project-upload-input="${escapeHtml(name)}" />`}
+        <span class="upload-status" data-project-upload-status="${escapeHtml(name)}"></span>
+        <span class="asset-preview" data-project-upload-preview="${escapeHtml(name)}"></span>
       </label>
     `;
   }
@@ -2833,6 +2959,11 @@
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (target.matches("[data-project-upload-input]")) {
+      uploadProjectAsset(target, target.getAttribute("data-project-upload-input"));
+      return;
+    }
+
     if (target.matches("[data-project-filter='status']")) {
       projectState.status = target.value;
       renderProjects();
@@ -3037,10 +3168,11 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
+    const uploadField = target.getAttribute("data-project-upload");
     const mediaAction = target.getAttribute("data-media-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
@@ -3053,6 +3185,11 @@
 
     if (accountAction === "refresh") {
       hydrateAccountRegistry(true);
+      return;
+    }
+
+    if (uploadField) {
+      app.querySelector(`[data-project-upload-input="${CSS.escape(uploadField)}"]`)?.click();
       return;
     }
 
@@ -3285,6 +3422,72 @@
     persistAccountAccessScaffold();
     accountAccessState.message = "Removed local account access scaffold row.";
     renderSettings();
+  }
+
+  function setProjectUploadStatus(fieldName, message, tone = "") {
+    const status = app.querySelector(`[data-project-upload-status="${CSS.escape(fieldName)}"]`);
+    if (!status) return;
+    status.textContent = message || "";
+    status.dataset.tone = tone;
+  }
+
+  function setProjectUploadPreview(fieldName, file) {
+    const preview = app.querySelector(`[data-project-upload-preview="${CSS.escape(fieldName)}"]`);
+    if (!preview) return;
+    if (!file || !file.type?.startsWith("image/")) {
+      preview.innerHTML = "";
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `<img src="${url}" alt="Selected upload preview" />`;
+    const image = preview.querySelector("img");
+    if (image) image.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+  }
+
+  function updateProjectAssetField(form, fieldName, value) {
+    if (!value) return;
+    const target = form.querySelector(`[name="${CSS.escape(fieldName)}"]`);
+    if (!target) return;
+    if (fieldName === "galleryPaths") {
+      const existing = textareaArray(target.value);
+      if (!existing.includes(value)) existing.push(value);
+      target.value = existing.join("\n");
+      return;
+    }
+    target.value = value;
+  }
+
+  async function uploadProjectAsset(input, fieldName) {
+    const form = input.closest("[data-project-form]");
+    const file = input.files?.[0];
+    if (!form || !fieldName || !file) return;
+    setProjectUploadPreview(fieldName, file);
+    setProjectUploadStatus(fieldName, `Selected ${file.name}; uploading...`, "pending");
+    const payload = new FormData();
+    payload.set("file", file);
+    payload.set("projectSlug", formValue(form, "slug") || formValue(form, "title") || "project");
+    payload.set("field", fieldName);
+    try {
+      const response = await fetch(assetUploadEndpoint(), {
+        method: "POST",
+        body: payload,
+        credentials: "include"
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.ok) {
+        const error = result.error || `upload_http_${response.status}`;
+        setProjectUploadStatus(fieldName, error === "storage_not_configured" ? "Asset storage not configured." : `Upload failed: ${error}`, "error");
+        input.value = "";
+        return;
+      }
+      const assetPath = result.url || result.key;
+      updateProjectAssetField(form, fieldName, assetPath);
+      setProjectUploadStatus(fieldName, `Uploaded ${result.originalName || file.name}.`, "success");
+    } catch (error) {
+      setProjectUploadStatus(fieldName, `Upload failed: ${error.message || "network_error"}`, "error");
+    } finally {
+      input.value = "";
+    }
   }
 
   function saveProjectFromForm(form) {

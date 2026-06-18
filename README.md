@@ -56,6 +56,15 @@ Required Cloudflare KV binding:
 
 - `DC_ADMIN_KV` - production CMS persistence for Projects, Media, and Alerts
 
+Required shared analytics ingest secret:
+
+- `DANIELCLANCY_ANALYTICS_INGEST_SECRET` - generated server-only secret used by public DanielClancy Pages Functions to post page visits into Admin analytics. Generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` and set the same value in DanielClancy-Admin and DanielClancy public Pages Function env only.
+
+Optional Cloudflare R2 asset binding:
+
+- `DC_ADMIN_ASSETS_R2` - required for persistent Projects image uploads from the Admin CMS editor
+- `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - optional public base URL used to return browser-ready URLs after R2 upload; without it the upload API returns the stored R2 key
+
 Recommended shared-cookie env var:
 
 - `DC_AUTH_COOKIE_DOMAIN` - recommended `.danielclancy.net`
@@ -138,6 +147,7 @@ The Overview page uses this endpoint to show signed-in admin identity, account r
 Implemented endpoint:
 
 - `GET /api/admin/analytics`
+- `POST /api/analytics/ingest/page-visit`
 
 The Analytics page hydrates from this admin-session-protected Pages Function. Unauthenticated requests return `unauthenticated`, signed-in non-admin users return `admin_required`, and secret values are never returned. When Cloudflare Analytics configuration is missing, the endpoint returns `configured: false`, a clear `cloudflare_analytics_not_configured` source, `lastChecked`, and a `requiredConfig` / `missingConfig` list containing env var names only.
 
@@ -156,7 +166,11 @@ The same endpoint merges Cloudflare metrics with bounded page-visit analytics st
 
 The page-visit endpoint stores non-secret metadata only: timestamp, surface, page path/url/title, referrer host, country, region, city, timezone, colo, browser, device, platform, and safe admin/authenticated flags. It does not store raw client IP addresses.
 
-City-level location detail comes first from page-visit KV rows enriched with Cloudflare `request.cf.city`, then from any Cloudflare GraphQL city dataset that is available. If only region/country rows are available, the API and UI mark those rows with `precision: "region"` or `precision: "country"` and show “City detail unavailable from current data source” instead of pretending country rows are city rows. Sample fallback rows remain visible only in a clearly labelled sample fallback state and must not be read as real visitor counts.
+Public `danielclancy.net` page visits flow through the public repo's `POST /api/track/page-visit` Pages Function, which forwards server-side to `https://admin.danielclancy.net/api/analytics/ingest/page-visit` when `DANIELCLANCY_ADMIN_ANALYTICS_INGEST_URL` and `DANIELCLANCY_ANALYTICS_INGEST_SECRET` are configured in the public repo. The browser never receives the ingest secret. The admin ingest endpoint is intentionally not admin-session-gated because public visitors are anonymous, but it rejects requests without `X-DanielClancy-Analytics-Secret`.
+
+City-level location detail comes first from page-visit KV rows enriched with Cloudflare `request.cf.city`, then from any Cloudflare GraphQL city dataset that is available. If only region/country rows are available, the API and UI mark those rows with `precision: "region"` or `precision: "country"` and show “City detail unavailable from current data source” instead of pretending country rows are city rows. When zero page-visit events exist, the API/UI says “No page-visit events have been captured yet.”
+
+The Analytics map/location panel uses live location rows only. It does not fetch external map tiles/libraries and does not render sample markers as live data. Known city coordinates are plotted only for exact city/country matches in the built-in lookup; unknown city coordinates remain unplotted and country-only rows remain labelled as country precision.
 
 ## Admin CMS API
 
@@ -168,6 +182,7 @@ Implemented endpoints:
 - `PUT /api/admin/cms/media`
 - `GET /api/admin/cms/alerts`
 - `PUT /api/admin/cms/alerts`
+- `POST /api/admin/assets/upload`
 
 All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, and `alerts`.
 
@@ -185,6 +200,8 @@ When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configure
 Projects are handled differently from Media and Alerts. `assets/data/public-projects-baseline.json` is a generated snapshot from the public DanielClancy repo's WorkSet-derived portfolio pipeline (`cmsdata/wix/collection-tables/WorkSet.csv`, `src/content/workSetPortfolio.ts`, and the public portfolio routes). The Projects API loads that baseline first, then merges `cms:projects` KV data as admin edits, metadata, visibility/status changes, and admin-created additions. Legacy bare-array KV data and older partial scaffold rows are treated as overlays and must not collapse the Projects list to only those rows.
 
 Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
+
+`POST /api/admin/assets/upload` requires a signed admin session and `DC_ADMIN_ASSETS_R2`. It accepts multipart image uploads for Projects CMS image fields, validates common web image MIME types, enforces a 10MB cap, stores files under `portfolio/projects/<project-slug>/`, and returns the R2 key plus a URL only when `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` is configured. When R2 is missing, the API returns `storage_not_configured`; the Projects editor can still preview selected images locally and keeps manual path fields editable. Document/PDF upload remains a follow-up; the document path field remains editable.
 
 ## Cloudflare Setup Checkpoint
 
@@ -225,12 +242,18 @@ DanielClancy-Admin/
 ├── functions/
 │   ├── _shared/
 │   │   ├── admin-accounts.js
+│   │   ├── analytics-store.js
 │   │   ├── alert-sender.js
 │   │   └── turnstile.js
 │   └── api/
+│       ├── analytics/
+│       │   └── ingest/
+│       │       └── page-visit.js
 │       ├── admin/
 │       │   ├── accounts/
 │       │   │   └── [[path]].js
+│       │   ├── assets/
+│       │   │   └── upload.js
 │       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
@@ -243,6 +266,7 @@ DanielClancy-Admin/
 │           └── config.js
 ├── tests/
 │   ├── alerts-disabled.test.mjs
+│   ├── analytics-ingest-and-assets.test.mjs
 │   └── analytics-helpers.test.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
@@ -258,9 +282,9 @@ DanielClancy-Admin/
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins and master-only role/status/note actions.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
-- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and sample map/table rows remain labelled as fallback/demo data.
+- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and empty live analytics shows a real empty state instead of fake sample map markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, bulk actions, reset, and safe JSON copy/import controls.
+- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, R2-backed image upload controls for hero/thumbnail/gallery paths when `DC_ADMIN_ASSETS_R2` is configured, bulk actions, reset, and safe JSON copy/import controls.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.

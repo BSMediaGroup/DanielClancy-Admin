@@ -1,5 +1,5 @@
 import { postDanielClancyAlert } from "../../_shared/alert-sender.js";
-import { storePageVisitEvent } from "../admin/analytics.js";
+import { storePageVisitEvent } from "../../_shared/analytics-store.js";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",

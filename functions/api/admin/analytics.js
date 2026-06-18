@@ -14,7 +14,7 @@ const REQUIRED_CONFIG = [
 const GRAPHQL_ENDPOINT = "https://api.cloudflare.com/client/v4/graphql";
 const RECENT_VISITS_KEY = "analytics:page_visits:recent";
 const ROLLUP_KEY = "analytics:page_visits:rollup";
-const RECENT_VISIT_LIMIT = 500;
+const RECENT_VISIT_LIMIT = 1000;
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -169,6 +169,7 @@ export function aggregatePageVisitEvents(events = []) {
   const browsers = new Map();
   const devices = new Map();
   let cityCount = 0;
+  let countryOnlyCount = 0;
 
   for (const event of events) {
     mergeCount(pages, event.page_path || "/", {
@@ -201,6 +202,8 @@ export function aggregatePageVisitEvents(events = []) {
         source: "page_visit_kv",
         precision: "city"
       });
+    } else if (event.country) {
+      countryOnlyCount += 1;
     }
     if (event.browser) {
       mergeCount(browsers, event.browser, { browser: event.browser, source: "page_visit_kv" });
@@ -213,6 +216,7 @@ export function aggregatePageVisitEvents(events = []) {
   return {
     events: events.length,
     cityEvents: cityCount,
+    countryOnlyEvents: countryOnlyCount,
     topPages: topRows(pages),
     referrers: topRows(referrers),
     countries: topRows(countries),
@@ -478,16 +482,16 @@ export async function queryCloudflareAnalytics(env, fetchImpl = fetch) {
 function fallbackCityRows(pageVisit, cloudflare) {
   if (pageVisit.rollup.cities.length) return pageVisit.rollup.cities;
   if (cloudflare.cities?.length) return cloudflare.cities;
-  const fallback = pageVisit.rollup.regions.length
-    ? pageVisit.rollup.regions
-    : cloudflare.countries || pageVisit.rollup.countries || [];
-  return fallback.slice(0, 20).map((row) => ({
-    city: "City detail unavailable from current data source",
-    region: row.region || "",
-    country: row.country || "",
+  return [];
+}
+
+function countryRows(pageVisit, cloudflare) {
+  const rows = pageVisit.rollup.countries.length ? pageVisit.rollup.countries : cloudflare.countries || [];
+  return rows.slice(0, 20).map((row) => ({
+    country: row.country || "Unavailable",
     count: row.count ?? row.requests ?? row.visits ?? null,
     source: row.source || "unavailable",
-    precision: row.precision || (row.region ? "region" : "country")
+    precision: "country"
   }));
 }
 
@@ -498,18 +502,22 @@ export async function analyticsStatus(env, options = {}) {
     loadPageVisitAnalytics(env)
   ]);
   const cityRows = fallbackCityRows(pageVisit, cloudflare);
+  const countries = countryRows(pageVisit, cloudflare);
+  const zeroPageVisitEvents = !pageVisit.rollup.events;
   const notes = [
     ...(cloudflare.notes || []),
     ...(pageVisit.rollup.cityEvents
       ? [`City detail is available from ${pageVisit.rollup.cityEvents} page-visit event(s).`]
-      : ["City detail unavailable from current data source"]),
+      : zeroPageVisitEvents
+        ? ["No page-visit events have been captured yet."]
+        : ["City detail unavailable from current data source"]),
     "Secret values are never returned."
   ];
   const source = cloudflare.configured
     ? cloudflare.source
     : pageVisit.rollup.events
       ? "page_visit_kv"
-      : "sample_fallback_available";
+      : "unavailable";
   return {
     ok: true,
     configured: missingConfig.length === 0,
@@ -521,7 +529,7 @@ export async function analyticsStatus(env, options = {}) {
     },
     topPages: pageVisit.rollup.topPages.length ? pageVisit.rollup.topPages : cloudflare.topPages || [],
     referrers: pageVisit.rollup.referrers.length ? pageVisit.rollup.referrers : cloudflare.referrers || [],
-    countries: pageVisit.rollup.countries.length ? pageVisit.rollup.countries : cloudflare.countries || [],
+    countries,
     regions: pageVisit.rollup.regions.length ? pageVisit.rollup.regions : cloudflare.regions || [],
     cities: cityRows,
     devices: pageVisit.rollup.devices.length ? pageVisit.rollup.devices : cloudflare.devices || [],
@@ -538,7 +546,17 @@ export async function analyticsStatus(env, options = {}) {
       source: pageVisit.source,
       storage: pageVisit.storage,
       events: pageVisit.rollup.events || 0,
-      cityEvents: pageVisit.rollup.cityEvents || 0
+      cityEvents: pageVisit.rollup.cityEvents || 0,
+      countryOnlyEvents: pageVisit.rollup.countryOnlyEvents || 0,
+      emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
+    },
+    location: {
+      source: pageVisit.rollup.events ? "page_visit_kv" : cloudflare.configured ? cloudflare.source : "unavailable",
+      events: pageVisit.rollup.events || 0,
+      cityEvents: pageVisit.rollup.cityEvents || 0,
+      countryOnlyEvents: pageVisit.rollup.countryOnlyEvents || 0,
+      precision: cityRows.length ? "city" : countries.length ? "country" : "unavailable",
+      emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
     readiness: {
       cloudflare: Object.fromEntries(REQUIRED_CONFIG.map((key) => [key, hasEnv(env, key)])),

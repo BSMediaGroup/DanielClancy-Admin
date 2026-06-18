@@ -1023,6 +1023,47 @@ a {
   grid-column: 1 / -1;
 }
 
+.input-with-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.field-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.asset-file-input {
+  display: none;
+}
+
+.upload-status {
+  min-height: 16px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.upload-status[data-tone="success"] {
+  color: var(--success);
+}
+
+.upload-status[data-tone="error"] {
+  color: var(--danger);
+}
+
+.asset-preview img {
+  width: 96px;
+  height: 58px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
 .checkbox-field {
   display: flex;
   align-items: center;
@@ -1270,6 +1311,38 @@ a {
   transform: skew(-12deg);
 }
 
+.live-map {
+  margin-top: 14px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 22% 38%, rgba(219, 201, 166, 0.1), transparent 0 18%),
+    radial-gradient(circle at 76% 54%, rgba(128, 167, 196, 0.12), transparent 0 20%),
+    rgba(8, 11, 13, 0.92);
+  background-size: 12.5% 25%, 12.5% 25%, auto, auto, auto;
+}
+
+.live-map::before {
+  display: none;
+}
+
+.map-graticule {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(219, 201, 166, 0.12);
+  border-radius: var(--radius-sm);
+}
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .map-marker {
   position: absolute;
   left: var(--x);
@@ -1281,6 +1354,12 @@ a {
   box-shadow: 0 0 0 8px rgba(219, 201, 166, 0.1), 0 0 28px rgba(219, 201, 166, 0.42);
 }
 
+.map-marker.live {
+  background: var(--success);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 0 0 8px rgba(168, 208, 186, 0.15), 0 0 22px rgba(168, 208, 186, 0.32);
+}
+
 .map-marker span {
   position: absolute;
   left: 16px;
@@ -1288,6 +1367,12 @@ a {
   white-space: nowrap;
   color: var(--muted);
   font-size: 10px;
+}
+
+.location-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .settings-control {
@@ -1353,6 +1438,7 @@ body.nav-collapsed .nav-link {
   .grid-4,
   .grid-3,
   .hero-grid,
+  .location-metrics,
   .analytics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1407,7 +1493,12 @@ body.nav-collapsed .nav-link {
   .grid-3,
   .grid-2,
   .hero-grid,
+  .location-metrics,
   .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input-with-action {
     grid-template-columns: 1fr;
   }
 

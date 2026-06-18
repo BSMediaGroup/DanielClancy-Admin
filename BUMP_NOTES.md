@@ -1,5 +1,57 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Public Analytics Ingest, Live Location Map, And Projects Asset Upload Milestone
+
+### Technical Notes
+
+- Added shared page-visit analytics storage helper for bounded `DC_ADMIN_KV` recent events and rollups at `analytics:page_visits:recent` and `analytics:page_visits:rollup`, capped at 1000 recent events.
+- Added unauthenticated-but-secret-protected `POST /api/analytics/ingest/page-visit` for public DanielClancy page visits using `X-DanielClancy-Analytics-Secret` and server-side `DANIELCLANCY_ANALYTICS_INGEST_SECRET`.
+- Public/admin page visits now write the same page_visit KV shape with Cloudflare `request.cf` city/region/country/timezone/colo when Cloudflare provides it; raw IP addresses are still not stored.
+- Updated Analytics API output so zero page-visit events returns “No page-visit events have been captured yet.” and country-only rows remain `precision: "country"` instead of being represented as fake city rows.
+- Replaced the fake sample-dot map panel with a live map-style SVG/CSS panel driven by page_visit KV location rows; only exact known city coordinates are plotted and unknown city coordinates are not invented.
+- Added `POST /api/admin/assets/upload` with signed admin-session enforcement, `DC_ADMIN_ASSETS_R2` persistence, image MIME validation, 10MB size limit, structured project asset keys, optional `DC_ADMIN_ASSETS_PUBLIC_BASE_URL`, and honest `storage_not_configured` fallback.
+- Added Projects CMS upload controls for hero image, thumbnail, and gallery image paths while preserving manual path editing and appending gallery uploads instead of replacing existing paths.
+- Document/PDF path remains manually editable; PDF upload is a follow-up.
+- Added `.env.example` entries for `DANIELCLANCY_ANALYTICS_INGEST_SECRET` and `DC_ADMIN_ASSETS_PUBLIC_BASE_URL`, and documented the `DC_ADMIN_ASSETS_R2` binding.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- Alerts rule editor remains removed/disabled.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+- No MCP browser tests or Playwright MCP checks were run.
+
+### Human-Readable Notes
+
+- Admin Analytics can now accumulate usable city-level rows from real Cloudflare request geo metadata once the public site forwarding secret/URL are configured.
+- Empty analytics now shows a real empty state, not sample markers masquerading as live map data.
+- Projects editors can upload image assets when R2 is configured, or preview selected files and get a clear storage-not-configured error when it is not.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `functions/_shared/analytics-store.js`
+- `functions/api/analytics/ingest/page-visit.js`
+- `functions/api/admin/analytics.js`
+- `functions/api/admin/assets/upload.js`
+- `functions/api/track/page-visit.js`
+- `assets/js/admin-app.js`
+- `assets/css/admin.css`
+- `tests/analytics-ingest-and-assets.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check` on changed frontend JS and Pages Function/helper files.
+- Run `node --test tests/analytics-helpers.test.mjs tests/analytics-ingest-and-assets.test.mjs`.
+- Run `git diff --check`.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages verification is still required for live `request.cf` geo, KV writes, and R2 writes.
+- Public page visits require matching `DANIELCLANCY_ANALYTICS_INGEST_SECRET` and `DANIELCLANCY_ADMIN_ANALYTICS_INGEST_URL` in the public repo environment.
+- Unknown city coordinates remain intentionally unplotted until an authoritative coordinate source or explicit lookup expansion is added.
+- Document/PDF asset upload remains future work.
+
 ## Live Cloudflare Analytics And City Rollup Milestone
 
 ### Technical Notes
