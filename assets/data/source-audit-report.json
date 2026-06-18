@@ -1,0 +1,2575 @@
+{
+  "generatedAt": "2026-06-18T12:38:12.190Z",
+  "sourceRepo": "C:/NEPTUNE LOCAL/GIT/DanielClancy",
+  "adminRepo": "C:/NEPTUNE LOCAL/GIT/DanielClancy-Admin",
+  "scannedFiles": [
+    "src/pages/CvPage.tsx",
+    "src/pages/PortfolioPage.tsx",
+    "src/pages/PortfolioDetailPage.tsx",
+    "src/content/siteContent.ts",
+    "src/content/workSetPortfolio.ts",
+    "src/content/brandAssets.ts",
+    "src/lib/portfolio.ts",
+    "cmsdata/wix/collection-tables/WorkSet.csv",
+    "cmsdata/wix/collection-tables/Employment+History.csv",
+    "public/media/portfolio",
+    "public/media/portfolio/thumbs",
+    "public/docs",
+    "assets/logos",
+    "assets/icons",
+    "DanielClancy-Admin/assets/data/public-projects-baseline.json",
+    "DanielClancy-Admin/assets/data/public-asset-catalog.json"
+  ],
+  "companiesFound": [
+    {
+      "id": "richmond-ross",
+      "slug": "richmond-ross",
+      "name": "Richmond+Ross",
+      "rawValues": [
+        "Richmond+Ross"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a646f50f-eeba-46ac-959f-e10e16ca89d9",
+          "sourceField": "Company Name",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "meriton-group",
+      "slug": "meriton-group",
+      "name": "Meriton Group",
+      "rawValues": [
+        "Meriton Group"
+      ],
+      "logoPath": "./assets/logos/company-meriton-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "c8d8ca96-ae87-4224-a5fb-b634736bd304",
+          "sourceField": "Company Name",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "leffler-simes-architects",
+      "slug": "leffler-simes-architects",
+      "name": "Leffler Simes Architects",
+      "rawValues": [
+        "Leffler Simes Architects"
+      ],
+      "logoPath": "./assets/logos/company-lefflersimes-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a604cfa4-d498-4397-806f-d1ad3e574091",
+          "sourceField": "Company Name",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "fleetwood-australia",
+      "slug": "fleetwood-australia",
+      "name": "Fleetwood Australia",
+      "rawValues": [
+        "Fleetwood Australia"
+      ],
+      "logoPath": "./assets/logos/company-fleetwood-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Fleetwood Australia",
+          "normalizedId": "fleetwood-australia",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "4beb6983-ee39-43f9-9ec2-61405ebe6389",
+          "sourceField": "Company Name",
+          "rawValue": "Fleetwood Australia",
+          "normalizedId": "fleetwood-australia",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "place-laboratory",
+      "slug": "place-laboratory",
+      "name": "Place Laboratory",
+      "rawValues": [
+        "Place Laboratory",
+        "PLACE Laboratory"
+      ],
+      "logoPath": "./assets/logos/company-placelab-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "PLACE Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": "Canonical public logo alias: Place Laboratory"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "91185310-a4f5-422d-8420-4d590d590584",
+          "sourceField": "Company Name",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "dc-design-studio",
+      "slug": "dc-design-studio",
+      "name": "DC Design Studio",
+      "rawValues": [
+        "DC Design Studio"
+      ],
+      "logoPath": "./assets/logos/company-dcdesignstudio-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "b44da0e1-bdd9-49b1-8870-c44b4d0682d0",
+          "sourceField": "Company Name",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "urbis",
+      "slug": "urbis",
+      "name": "Urbis",
+      "rawValues": [
+        "Urbis Pty Ltd",
+        "Urbis"
+      ],
+      "logoPath": "./assets/logos/company-urbis-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Urbis Pty Ltd",
+          "normalizedId": "urbis",
+          "notes": "Canonical public logo alias: Urbis"
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Urbis",
+          "normalizedId": "urbis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "df505d0e-9be8-466b-aa25-47af54808b32",
+          "sourceField": "Company Name",
+          "rawValue": "Urbis Pty Ltd",
+          "normalizedId": "urbis",
+          "notes": "Canonical public logo alias: Urbis"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "company",
+          "rawValue": "Urbis",
+          "normalizedId": "urbis",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "acce",
+      "slug": "acce",
+      "name": "ACCE",
+      "rawValues": [
+        "ACCE Pty Ltd",
+        "ACCE"
+      ],
+      "logoPath": "./assets/logos/company-acce-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "ACCE Pty Ltd",
+          "normalizedId": "acce",
+          "notes": "Canonical public logo alias: ACCE"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "ece6e62b-4bb0-4977-9d93-f355ecacc093",
+          "sourceField": "Company Name",
+          "rawValue": "ACCE Pty Ltd",
+          "normalizedId": "acce",
+          "notes": "Canonical public logo alias: ACCE"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "ghd",
+      "slug": "ghd",
+      "name": "GHD",
+      "rawValues": [
+        "GHD Pty Ltd",
+        "GHD"
+      ],
+      "logoPath": "./assets/logos/company-ghd-0.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "GHD Pty Ltd",
+          "normalizedId": "ghd",
+          "notes": "Canonical public logo alias: GHD"
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "GHD",
+          "normalizedId": "ghd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a53d41af-2258-44e7-987d-6437f7804d93",
+          "sourceField": "Company Name",
+          "rawValue": "GHD Pty Ltd",
+          "normalizedId": "ghd",
+          "notes": "Canonical public logo alias: GHD"
+        }
+      ]
+    },
+    {
+      "id": "dawesville-3-pty-ltd",
+      "slug": "dawesville-3-pty-ltd",
+      "name": "Dawesville 3 Pty Ltd",
+      "rawValues": [
+        "Dawesville 3 Pty Ltd"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "client",
+          "rawValue": "Dawesville 3 Pty Ltd",
+          "normalizedId": "dawesville-3-pty-ltd",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "riley-consulting",
+      "slug": "riley-consulting",
+      "name": "Riley Consulting",
+      "rawValues": [
+        "Riley Consulting"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "company",
+          "rawValue": "Riley Consulting",
+          "normalizedId": "riley-consulting",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "company",
+          "rawValue": "Riley Consulting",
+          "normalizedId": "riley-consulting",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "ampol-australia-petroleum-pty-ltd",
+      "slug": "ampol-australia-petroleum-pty-ltd",
+      "name": "Ampol Australia Petroleum Pty Ltd",
+      "rawValues": [
+        "Ampol Australia Petroleum Pty Ltd"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "mra-now-developmentwa",
+      "slug": "mra-now-developmentwa",
+      "name": "MRA (Now DevelopmentWA)",
+      "rawValues": [
+        "MRA (Now DevelopmentWA)"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "curtin-university",
+      "slug": "curtin-university",
+      "name": "Curtin University",
+      "rawValues": [
+        "Curtin University"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "client",
+          "rawValue": "Curtin University",
+          "normalizedId": "curtin-university",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "landcorp-now-developmentwa",
+      "slug": "landcorp-now-developmentwa",
+      "name": "LandCorp (Now DevelopmentWA)",
+      "rawValues": [
+        "LandCorp (Now DevelopmentWA)"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "client",
+          "rawValue": "LandCorp (Now DevelopmentWA)",
+          "normalizedId": "landcorp-now-developmentwa",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "c-and-j-spratt",
+      "slug": "c-and-j-spratt",
+      "name": "C & J Spratt",
+      "rawValues": [
+        "C & J Spratt"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "client",
+          "rawValue": "C & J Spratt",
+          "normalizedId": "c-and-j-spratt",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "ktap-construction",
+      "slug": "ktap-construction",
+      "name": "KTAP Construction",
+      "rawValues": [
+        "KTAP Construction"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "client",
+          "rawValue": "KTAP Construction",
+          "normalizedId": "ktap-construction",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "buchan-group",
+      "slug": "buchan-group",
+      "name": "Buchan Group",
+      "rawValues": [
+        "Buchan Group"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "client",
+          "rawValue": "Buchan Group",
+          "normalizedId": "buchan-group",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "minderoo-foundation",
+      "slug": "minderoo-foundation",
+      "name": "Minderoo Foundation",
+      "rawValues": [
+        "Minderoo Foundation"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "client",
+          "rawValue": "Minderoo Foundation",
+          "normalizedId": "minderoo-foundation",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "fesa-now-department-of-fire-and-emergency-services",
+      "slug": "fesa-now-department-of-fire-and-emergency-services",
+      "name": "FESA (Now Department of Fire and Emergency Services)",
+      "rawValues": [
+        "FESA (Now Department of Fire and Emergency Services)"
+      ],
+      "logoPath": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "client",
+          "rawValue": "FESA (Now Department of Fire and Emergency Services)",
+          "normalizedId": "fesa-now-department-of-fire-and-emergency-services",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "positionsFound": [
+    {
+      "id": "richmond-ross-revit-draftsperson-and-technician",
+      "slug": "richmond-ross-revit-draftsperson-and-technician",
+      "title": "Revit Draftsperson & Technician",
+      "companyId": "richmond-ross",
+      "companyName": "Richmond+Ross",
+      "rawValue": "Richmond+Ross | October 2019 – November 2021 | Revit Draftsperson & Technician",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Richmond+Ross | October 2019 – November 2021 | Revit Draftsperson & Technician",
+          "normalizedId": "richmond-ross-revit-draftsperson-and-technician",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "meriton-group-structural-revit-draftsman",
+      "slug": "meriton-group-structural-revit-draftsman",
+      "title": "Structural Revit Draftsman",
+      "companyId": "meriton-group",
+      "companyName": "Meriton Group",
+      "rawValue": "Meriton Group | March 2019 – May 2019 | Structural Revit Draftsman",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Meriton Group | March 2019 – May 2019 | Structural Revit Draftsman",
+          "normalizedId": "meriton-group-structural-revit-draftsman",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "leffler-simes-architects-architectural-revit-draftsman",
+      "slug": "leffler-simes-architects-architectural-revit-draftsman",
+      "title": "Architectural Revit Draftsman",
+      "companyId": "leffler-simes-architects",
+      "companyName": "Leffler Simes Architects",
+      "rawValue": "Leffler Simes Architects | September 2018 – November 2018 | Architectural Revit Draftsman",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Leffler Simes Architects | September 2018 – November 2018 | Architectural Revit Draftsman",
+          "normalizedId": "leffler-simes-architects-architectural-revit-draftsman",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "fleetwood-australia-revit-draftsperson",
+      "slug": "fleetwood-australia-revit-draftsperson",
+      "title": "Revit Draftsperson",
+      "companyId": "fleetwood-australia",
+      "companyName": "Fleetwood Australia",
+      "rawValue": "Fleetwood Australia | July 2018 – August 2018 | Revit Draftsperson",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Fleetwood Australia | July 2018 – August 2018 | Revit Draftsperson",
+          "normalizedId": "fleetwood-australia-revit-draftsperson",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "place-laboratory-draftsman",
+      "slug": "place-laboratory-draftsman",
+      "title": "Draftsman",
+      "companyId": "place-laboratory",
+      "companyName": "Place Laboratory",
+      "rawValue": "Place Laboratory | January 2017 – January 2018 | Draftsman",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Place Laboratory | January 2017 – January 2018 | Draftsman",
+          "normalizedId": "place-laboratory-draftsman",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "dc-design-studio-design-consultant",
+      "slug": "dc-design-studio-design-consultant",
+      "title": "Design Consultant",
+      "companyId": "dc-design-studio",
+      "companyName": "DC Design Studio",
+      "rawValue": "DC Design Studio | June 2015 – May 2018 | Design Consultant",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "DC Design Studio | June 2015 – May 2018 | Design Consultant",
+          "normalizedId": "dc-design-studio-design-consultant",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "urbis-drafting-technician",
+      "slug": "urbis-drafting-technician",
+      "title": "Drafting Technician",
+      "companyId": "urbis",
+      "companyName": "Urbis",
+      "rawValue": "Urbis Pty Ltd | August 2014 – June 2015 | Drafting Technician",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Urbis Pty Ltd | August 2014 – June 2015 | Drafting Technician",
+          "normalizedId": "urbis-drafting-technician",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "acce-structural-draftsman",
+      "slug": "acce-structural-draftsman",
+      "title": "Structural Draftsman",
+      "companyId": "acce",
+      "companyName": "ACCE",
+      "rawValue": "ACCE Pty Ltd | January 2012 – March 2014 | Structural Draftsman",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "ACCE Pty Ltd | January 2012 – March 2014 | Structural Draftsman",
+          "normalizedId": "acce-structural-draftsman",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "ghd-draftsman",
+      "slug": "ghd-draftsman",
+      "title": "Draftsman",
+      "companyId": "ghd",
+      "companyName": "GHD",
+      "rawValue": "GHD Pty Ltd | August 2008 – November 2011 | Draftsman",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "GHD Pty Ltd | August 2008 – November 2011 | Draftsman",
+          "normalizedId": "ghd-draftsman",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "platformsFound": [
+    {
+      "id": "autodesk-autocad",
+      "slug": "autodesk-autocad",
+      "name": "Autodesk AutoCAD",
+      "rawValues": [
+        "Autodesk AutoCAD",
+        "AutoCAD"
+      ],
+      "logoPath": "./assets/logos/software-autocad.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        }
+      ]
+    },
+    {
+      "id": "autodesk-revit",
+      "slug": "autodesk-revit",
+      "name": "Autodesk Revit",
+      "rawValues": [
+        "Autodesk Revit",
+        "Revit"
+      ],
+      "logoPath": "./assets/logos/software-revit.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        }
+      ]
+    },
+    {
+      "id": "adobe-creative-cloud",
+      "slug": "adobe-creative-cloud",
+      "name": "Adobe Creative Cloud",
+      "rawValues": [
+        "Adobe Creative Cloud"
+      ],
+      "logoPath": "./assets/logos/software-creativecloud.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Adobe Creative Cloud",
+          "normalizedId": "adobe-creative-cloud",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Adobe Creative Cloud",
+          "normalizedId": "adobe-creative-cloud",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "trimble-sketchup",
+      "slug": "trimble-sketchup",
+      "name": "Trimble SketchUp",
+      "rawValues": [
+        "Trimble SketchUp",
+        "Sketchup"
+      ],
+      "logoPath": "./assets/logos/software-sketchup.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Trimble SketchUp",
+          "normalizedId": "trimble-sketchup",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Trimble SketchUp",
+          "normalizedId": "trimble-sketchup",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Sketchup",
+          "normalizedId": "trimble-sketchup",
+          "notes": "Canonical platform alias: Trimble SketchUp"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Sketchup",
+          "normalizedId": "trimble-sketchup",
+          "notes": "Canonical platform alias: Trimble SketchUp"
+        }
+      ]
+    },
+    {
+      "id": "microsoft-office",
+      "slug": "microsoft-office",
+      "name": "Microsoft Office",
+      "rawValues": [
+        "Microsoft Office"
+      ],
+      "logoPath": "./assets/logos/software-office365.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Microsoft Office",
+          "normalizedId": "microsoft-office",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Microsoft Office",
+          "normalizedId": "microsoft-office",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "qgis",
+      "slug": "qgis",
+      "name": "QGIS",
+      "rawValues": [
+        "QGIS"
+      ],
+      "logoPath": "./assets/logos/software-qgis.svg",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "projectsFound": [
+    {
+      "id": "proposed-retail-development-for-dawesville-iga",
+      "slug": "proposed-retail-development-for-dawesville-iga",
+      "title": "Dawesville IGA",
+      "rawValue": "Dawesville IGA",
+      "companyIds": [
+        "acce"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Dawesville IGA",
+        "normalizedId": "proposed-retail-development-for-dawesville-iga"
+      }
+    },
+    {
+      "id": "cue-roadhouse",
+      "slug": "cue-roadhouse",
+      "title": "Cue Roadhouse",
+      "rawValue": "Cue Roadhouse",
+      "companyIds": [
+        "riley-consulting"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cue Roadhouse",
+        "normalizedId": "cue-roadhouse"
+      }
+    },
+    {
+      "id": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "slug": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "title": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "rawValue": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "platformIds": [
+        "autodesk-revit",
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+        "normalizedId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south"
+      }
+    },
+    {
+      "id": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "slug": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "title": "Jull Street Boundary Realignment",
+      "rawValue": "Jull Street Boundary Realignment",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Jull Street Boundary Realignment",
+        "normalizedId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112"
+      }
+    },
+    {
+      "id": "curtin-creative-quarter-misc-details",
+      "slug": "curtin-creative-quarter-misc-details",
+      "title": "Curtin Creative Quarter",
+      "rawValue": "Curtin Creative Quarter",
+      "companyIds": [
+        "place-laboratory"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "autodesk-revit",
+        "trimble-sketchup"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Curtin Creative Quarter",
+        "normalizedId": "curtin-creative-quarter-misc-details"
+      }
+    },
+    {
+      "id": "lot-500-eighth-road-land-resumption",
+      "slug": "lot-500-eighth-road-land-resumption",
+      "title": "Eighth Road Land Resumption",
+      "rawValue": "Eighth Road Land Resumption",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Eighth Road Land Resumption",
+        "normalizedId": "lot-500-eighth-road-land-resumption"
+      }
+    },
+    {
+      "id": "cockburn-coast",
+      "slug": "cockburn-coast",
+      "title": "Cockburn Coast Streetscapes",
+      "rawValue": "Cockburn Coast Streetscapes",
+      "companyIds": [
+        "urbis"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cockburn Coast Streetscapes",
+        "normalizedId": "cockburn-coast"
+      }
+    },
+    {
+      "id": "spratt-residence-proposed-addition",
+      "slug": "spratt-residence-proposed-addition",
+      "title": "Spratt Residence - Proposed Addition",
+      "rawValue": "Spratt Residence - Proposed Addition",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Spratt Residence - Proposed Addition",
+        "normalizedId": "spratt-residence-proposed-addition"
+      }
+    },
+    {
+      "id": "upss-homebush-nsw",
+      "slug": "upss-homebush-nsw",
+      "title": "UPSS Homebush, NSW",
+      "rawValue": "UPSS Homebush, NSW",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "UPSS Homebush, NSW",
+        "normalizedId": "upss-homebush-nsw"
+      }
+    },
+    {
+      "id": "wungong-urban-water-master-plan",
+      "slug": "wungong-urban-water-master-plan",
+      "title": "Wungong Urban Water Master Plan",
+      "rawValue": "Wungong Urban Water Master Plan",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Wungong Urban Water Master Plan",
+        "normalizedId": "wungong-urban-water-master-plan"
+      }
+    },
+    {
+      "id": "upss-beacon-hill-nsw",
+      "slug": "upss-beacon-hill-nsw",
+      "title": "UPSS Beacon Hill, NSW",
+      "rawValue": "UPSS Beacon Hill, NSW",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "UPSS Beacon Hill, NSW",
+        "normalizedId": "upss-beacon-hill-nsw"
+      }
+    },
+    {
+      "id": "henry-street-residence-structural-documentation",
+      "slug": "henry-street-residence-structural-documentation",
+      "title": "Henry Street Residence - Structural Documentation",
+      "rawValue": "Henry Street Residence - Structural Documentation",
+      "companyIds": [
+        "acce"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Henry Street Residence - Structural Documentation",
+        "normalizedId": "henry-street-residence-structural-documentation"
+      }
+    },
+    {
+      "id": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "slug": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "title": "Lake Joondalup Baptist College",
+      "rawValue": "Lake Joondalup Baptist College",
+      "companyIds": [
+        "acce"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Lake Joondalup Baptist College",
+        "normalizedId": "lake-joondalup-baptist-college-new-arts-building-structural-plans"
+      }
+    },
+    {
+      "id": "cottesloe-beach-house-landscape-design",
+      "slug": "cottesloe-beach-house-landscape-design",
+      "title": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "Cottesloe Beach House - Landscape Design",
+      "companyIds": [
+        "place-laboratory"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "autodesk-revit",
+        "trimble-sketchup"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cottesloe Beach House - Landscape Design",
+        "normalizedId": "cottesloe-beach-house-landscape-design"
+      }
+    },
+    {
+      "id": "upss-wyoming-nsw",
+      "slug": "upss-wyoming-nsw",
+      "title": "UPSS Wyoming, NSW",
+      "rawValue": "UPSS Wyoming, NSW",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "UPSS Wyoming, NSW",
+        "normalizedId": "upss-wyoming-nsw"
+      }
+    },
+    {
+      "id": "geraldton-fire-station-structural-documentation",
+      "slug": "geraldton-fire-station-structural-documentation",
+      "title": "Geraldton Fire Station - Structural Documentation",
+      "rawValue": "Geraldton Fire Station - Structural Documentation",
+      "companyIds": [
+        "acce"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Geraldton Fire Station - Structural Documentation",
+        "normalizedId": "geraldton-fire-station-structural-documentation"
+      }
+    }
+  ],
+  "projectCompanyLinksFound": [
+    {
+      "projectId": "proposed-retail-development-for-dawesville-iga",
+      "projectTitle": "Dawesville IGA",
+      "rawValue": "ACCE",
+      "normalizedId": "acce",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "proposed-retail-development-for-dawesville-iga",
+      "projectTitle": "Dawesville IGA",
+      "rawValue": "Dawesville 3 Pty Ltd",
+      "normalizedId": "dawesville-3-pty-ltd",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "cue-roadhouse",
+      "projectTitle": "Cue Roadhouse",
+      "rawValue": "Riley Consulting",
+      "normalizedId": "riley-consulting",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "cue-roadhouse",
+      "projectTitle": "Cue Roadhouse",
+      "rawValue": "Riley Consulting",
+      "normalizedId": "riley-consulting",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "projectTitle": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "rawValue": "Richmond+Ross",
+      "normalizedId": "richmond-ross",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "projectTitle": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "rawValue": "Ampol Australia Petroleum Pty Ltd",
+      "normalizedId": "ampol-australia-petroleum-pty-ltd",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "projectTitle": "Jull Street Boundary Realignment",
+      "rawValue": "DC Design Studio",
+      "normalizedId": "dc-design-studio",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "projectTitle": "Jull Street Boundary Realignment",
+      "rawValue": "MRA (Now DevelopmentWA)",
+      "normalizedId": "mra-now-developmentwa",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "curtin-creative-quarter-misc-details",
+      "projectTitle": "Curtin Creative Quarter",
+      "rawValue": "Place Laboratory",
+      "normalizedId": "place-laboratory",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "curtin-creative-quarter-misc-details",
+      "projectTitle": "Curtin Creative Quarter",
+      "rawValue": "Curtin University",
+      "normalizedId": "curtin-university",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "lot-500-eighth-road-land-resumption",
+      "projectTitle": "Eighth Road Land Resumption",
+      "rawValue": "DC Design Studio",
+      "normalizedId": "dc-design-studio",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "lot-500-eighth-road-land-resumption",
+      "projectTitle": "Eighth Road Land Resumption",
+      "rawValue": "MRA (Now DevelopmentWA)",
+      "normalizedId": "mra-now-developmentwa",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "cockburn-coast",
+      "projectTitle": "Cockburn Coast Streetscapes",
+      "rawValue": "Urbis",
+      "normalizedId": "urbis",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "cockburn-coast",
+      "projectTitle": "Cockburn Coast Streetscapes",
+      "rawValue": "LandCorp (Now DevelopmentWA)",
+      "normalizedId": "landcorp-now-developmentwa",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "spratt-residence-proposed-addition",
+      "projectTitle": "Spratt Residence - Proposed Addition",
+      "rawValue": "DC Design Studio",
+      "normalizedId": "dc-design-studio",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "spratt-residence-proposed-addition",
+      "projectTitle": "Spratt Residence - Proposed Addition",
+      "rawValue": "C & J Spratt",
+      "normalizedId": "c-and-j-spratt",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "upss-homebush-nsw",
+      "projectTitle": "UPSS Homebush, NSW",
+      "rawValue": "Richmond+Ross",
+      "normalizedId": "richmond-ross",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "upss-homebush-nsw",
+      "projectTitle": "UPSS Homebush, NSW",
+      "rawValue": "Ampol Australia Petroleum Pty Ltd",
+      "normalizedId": "ampol-australia-petroleum-pty-ltd",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "wungong-urban-water-master-plan",
+      "projectTitle": "Wungong Urban Water Master Plan",
+      "rawValue": "DC Design Studio",
+      "normalizedId": "dc-design-studio",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "wungong-urban-water-master-plan",
+      "projectTitle": "Wungong Urban Water Master Plan",
+      "rawValue": "MRA (Now DevelopmentWA)",
+      "normalizedId": "mra-now-developmentwa",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "upss-beacon-hill-nsw",
+      "projectTitle": "UPSS Beacon Hill, NSW",
+      "rawValue": "Richmond+Ross",
+      "normalizedId": "richmond-ross",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "upss-beacon-hill-nsw",
+      "projectTitle": "UPSS Beacon Hill, NSW",
+      "rawValue": "Ampol Australia Petroleum Pty Ltd",
+      "normalizedId": "ampol-australia-petroleum-pty-ltd",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "henry-street-residence-structural-documentation",
+      "projectTitle": "Henry Street Residence - Structural Documentation",
+      "rawValue": "ACCE",
+      "normalizedId": "acce",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "henry-street-residence-structural-documentation",
+      "projectTitle": "Henry Street Residence - Structural Documentation",
+      "rawValue": "KTAP Construction",
+      "normalizedId": "ktap-construction",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "projectTitle": "Lake Joondalup Baptist College",
+      "rawValue": "ACCE",
+      "normalizedId": "acce",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "projectTitle": "Lake Joondalup Baptist College",
+      "rawValue": "Buchan Group",
+      "normalizedId": "buchan-group",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "cottesloe-beach-house-landscape-design",
+      "projectTitle": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "Place Laboratory",
+      "normalizedId": "place-laboratory",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "cottesloe-beach-house-landscape-design",
+      "projectTitle": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "Minderoo Foundation",
+      "normalizedId": "minderoo-foundation",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "upss-wyoming-nsw",
+      "projectTitle": "UPSS Wyoming, NSW",
+      "rawValue": "Richmond+Ross",
+      "normalizedId": "richmond-ross",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "upss-wyoming-nsw",
+      "projectTitle": "UPSS Wyoming, NSW",
+      "rawValue": "Ampol Australia Petroleum Pty Ltd",
+      "normalizedId": "ampol-australia-petroleum-pty-ltd",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    },
+    {
+      "projectId": "geraldton-fire-station-structural-documentation",
+      "projectTitle": "Geraldton Fire Station - Structural Documentation",
+      "rawValue": "ACCE",
+      "normalizedId": "acce",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "company"
+    },
+    {
+      "projectId": "geraldton-fire-station-structural-documentation",
+      "projectTitle": "Geraldton Fire Station - Structural Documentation",
+      "rawValue": "FESA (Now Department of Fire and Emergency Services)",
+      "normalizedId": "fesa-now-department-of-fire-and-emergency-services",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "client"
+    }
+  ],
+  "projectPlatformLinksFound": [
+    {
+      "projectId": "proposed-retail-development-for-dawesville-iga",
+      "projectTitle": "Dawesville IGA",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "cue-roadhouse",
+      "projectTitle": "Cue Roadhouse",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "projectTitle": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "rawValue": "Revit",
+      "normalizedId": "autodesk-revit",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+      "projectTitle": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "projectTitle": "Jull Street Boundary Realignment",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+      "projectTitle": "Jull Street Boundary Realignment",
+      "rawValue": "QGIS",
+      "normalizedId": "qgis",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "curtin-creative-quarter-misc-details",
+      "projectTitle": "Curtin Creative Quarter",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "curtin-creative-quarter-misc-details",
+      "projectTitle": "Curtin Creative Quarter",
+      "rawValue": "Revit",
+      "normalizedId": "autodesk-revit",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "curtin-creative-quarter-misc-details",
+      "projectTitle": "Curtin Creative Quarter",
+      "rawValue": "Sketchup",
+      "normalizedId": "trimble-sketchup",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "lot-500-eighth-road-land-resumption",
+      "projectTitle": "Eighth Road Land Resumption",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "lot-500-eighth-road-land-resumption",
+      "projectTitle": "Eighth Road Land Resumption",
+      "rawValue": "QGIS",
+      "normalizedId": "qgis",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "cockburn-coast",
+      "projectTitle": "Cockburn Coast Streetscapes",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "spratt-residence-proposed-addition",
+      "projectTitle": "Spratt Residence - Proposed Addition",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "upss-homebush-nsw",
+      "projectTitle": "UPSS Homebush, NSW",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "wungong-urban-water-master-plan",
+      "projectTitle": "Wungong Urban Water Master Plan",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "wungong-urban-water-master-plan",
+      "projectTitle": "Wungong Urban Water Master Plan",
+      "rawValue": "QGIS",
+      "normalizedId": "qgis",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "upss-beacon-hill-nsw",
+      "projectTitle": "UPSS Beacon Hill, NSW",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "henry-street-residence-structural-documentation",
+      "projectTitle": "Henry Street Residence - Structural Documentation",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+      "projectTitle": "Lake Joondalup Baptist College",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "cottesloe-beach-house-landscape-design",
+      "projectTitle": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "cottesloe-beach-house-landscape-design",
+      "projectTitle": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "Revit",
+      "normalizedId": "autodesk-revit",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "cottesloe-beach-house-landscape-design",
+      "projectTitle": "Cottesloe Beach House - Landscape Design",
+      "rawValue": "Sketchup",
+      "normalizedId": "trimble-sketchup",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "upss-wyoming-nsw",
+      "projectTitle": "UPSS Wyoming, NSW",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    },
+    {
+      "projectId": "geraldton-fire-station-structural-documentation",
+      "projectTitle": "Geraldton Fire Station - Structural Documentation",
+      "rawValue": "AutoCAD",
+      "normalizedId": "autodesk-autocad",
+      "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+      "sourceField": "softwarePlatform"
+    }
+  ],
+  "logosFound": [
+    {
+      "sourceFile": "assets/logos/company-acce-0.svg",
+      "rawValue": "company-acce-0.svg",
+      "normalizedId": "company-acce-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-acce.svg",
+      "rawValue": "company-acce.svg",
+      "normalizedId": "company-acce-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-dcdesignstudio-0.svg",
+      "rawValue": "company-dcdesignstudio-0.svg",
+      "normalizedId": "company-dcdesignstudio-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-dcdesignstudio.svg",
+      "rawValue": "company-dcdesignstudio.svg",
+      "normalizedId": "company-dcdesignstudio-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-fleetwood-0.svg",
+      "rawValue": "company-fleetwood-0.svg",
+      "normalizedId": "company-fleetwood-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-fleetwood.svg",
+      "rawValue": "company-fleetwood.svg",
+      "normalizedId": "company-fleetwood-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-ghd-0.svg",
+      "rawValue": "company-ghd-0.svg",
+      "normalizedId": "company-ghd-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-ghd.svg",
+      "rawValue": "company-ghd.svg",
+      "normalizedId": "company-ghd-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-lefflersimes-0.svg",
+      "rawValue": "company-lefflersimes-0.svg",
+      "normalizedId": "company-lefflersimes-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-lefflersimes.svg",
+      "rawValue": "company-lefflersimes.svg",
+      "normalizedId": "company-lefflersimes-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-lefflersimeslong-0.svg",
+      "rawValue": "company-lefflersimeslong-0.svg",
+      "normalizedId": "company-lefflersimeslong-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-lefflersimeslong.svg",
+      "rawValue": "company-lefflersimeslong.svg",
+      "normalizedId": "company-lefflersimeslong-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-meriton-0.svg",
+      "rawValue": "company-meriton-0.svg",
+      "normalizedId": "company-meriton-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-meriton.svg",
+      "rawValue": "company-meriton.svg",
+      "normalizedId": "company-meriton-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-placelab-0.svg",
+      "rawValue": "company-placelab-0.svg",
+      "normalizedId": "company-placelab-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-placelab.svg",
+      "rawValue": "company-placelab.svg",
+      "normalizedId": "company-placelab-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-richmondross-0.svg",
+      "rawValue": "company-richmondross-0.svg",
+      "normalizedId": "company-richmondross-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-richmondross.svg",
+      "rawValue": "company-richmondross.svg",
+      "normalizedId": "company-richmondross-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-urbis-0.svg",
+      "rawValue": "company-urbis-0.svg",
+      "normalizedId": "company-urbis-0-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/company-urbis.svg",
+      "rawValue": "company-urbis.svg",
+      "normalizedId": "company-urbis-svg",
+      "notes": "company logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-autocad.svg",
+      "rawValue": "software-autocad.svg",
+      "normalizedId": "software-autocad-svg",
+      "notes": "software logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-creativecloud.svg",
+      "rawValue": "software-creativecloud.svg",
+      "normalizedId": "software-creativecloud-svg",
+      "notes": "software logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-office365.svg",
+      "rawValue": "software-office365.svg",
+      "normalizedId": "software-office365-svg",
+      "notes": "software logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-qgis.svg",
+      "rawValue": "software-qgis.svg",
+      "normalizedId": "software-qgis-svg",
+      "notes": "software logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-revit.svg",
+      "rawValue": "software-revit.svg",
+      "normalizedId": "software-revit-svg",
+      "notes": "software logo"
+    },
+    {
+      "sourceFile": "assets/logos/software-sketchup.svg",
+      "rawValue": "software-sketchup.svg",
+      "normalizedId": "software-sketchup-svg",
+      "notes": "software logo"
+    }
+  ],
+  "assetsFound": [
+    {
+      "sourceFile": "public/media/portfolio/aqwest-bcp-laboratory.jpg",
+      "rawValue": "aqwest-bcp-laboratory.jpg",
+      "normalizedId": "aqwest-bcp-laboratory-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/aqwest-bcp-laboratory.webp",
+      "rawValue": "aqwest-bcp-laboratory.webp",
+      "normalizedId": "aqwest-bcp-laboratory-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/cottesloe-beach-house.jpg",
+      "rawValue": "cottesloe-beach-house.jpg",
+      "normalizedId": "cottesloe-beach-house-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/cottesloe-beach-house.webp",
+      "rawValue": "cottesloe-beach-house.webp",
+      "normalizedId": "cottesloe-beach-house-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/cue-roadhouse.jpg",
+      "rawValue": "cue-roadhouse.jpg",
+      "normalizedId": "cue-roadhouse-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/cue-roadhouse.webp",
+      "rawValue": "cue-roadhouse.webp",
+      "normalizedId": "cue-roadhouse-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-canopy.png",
+      "rawValue": "curtin-canopy.png",
+      "normalizedId": "curtin-canopy-png",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-canopy.webp",
+      "rawValue": "curtin-canopy.webp",
+      "normalizedId": "curtin-canopy-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-container-gallery.jpg",
+      "rawValue": "curtin-container-gallery.jpg",
+      "normalizedId": "curtin-container-gallery-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-container-gallery.webp",
+      "rawValue": "curtin-container-gallery.webp",
+      "normalizedId": "curtin-container-gallery-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-creative-quarter.png",
+      "rawValue": "curtin-creative-quarter.png",
+      "normalizedId": "curtin-creative-quarter-png",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-creative-quarter.webp",
+      "rawValue": "curtin-creative-quarter.webp",
+      "normalizedId": "curtin-creative-quarter-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-study-pod.png",
+      "rawValue": "curtin-study-pod.png",
+      "normalizedId": "curtin-study-pod-png",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/curtin-study-pod.webp",
+      "rawValue": "curtin-study-pod.webp",
+      "normalizedId": "curtin-study-pod-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/dawesville-p1.jpg",
+      "rawValue": "dawesville-p1.jpg",
+      "normalizedId": "dawesville-p1-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/dawesville-p2.jpg",
+      "rawValue": "dawesville-p2.jpg",
+      "normalizedId": "dawesville-p2-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/dawesville-p3.jpg",
+      "rawValue": "dawesville-p3.jpg",
+      "normalizedId": "dawesville-p3-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/eastern-creek.png",
+      "rawValue": "eastern-creek.png",
+      "normalizedId": "eastern-creek-png",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/eastern-creek.webp",
+      "rawValue": "eastern-creek.webp",
+      "normalizedId": "eastern-creek-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/fesa-fire01.jpg",
+      "rawValue": "fesa-fire01.jpg",
+      "normalizedId": "fesa-fire01-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/fesa-fire02.jpg",
+      "rawValue": "fesa-fire02.jpg",
+      "normalizedId": "fesa-fire02-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/fesa-fire03.jpg",
+      "rawValue": "fesa-fire03.jpg",
+      "normalizedId": "fesa-fire03-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/fesa-fire04.jpg",
+      "rawValue": "fesa-fire04.jpg",
+      "normalizedId": "fesa-fire04-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/lake-joondalup-baptist-college.jpg",
+      "rawValue": "lake-joondalup-baptist-college.jpg",
+      "normalizedId": "lake-joondalup-baptist-college-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/lake-joondalup-baptist-college.webp",
+      "rawValue": "lake-joondalup-baptist-college.webp",
+      "normalizedId": "lake-joondalup-baptist-college-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/pheasants-nest.jpg",
+      "rawValue": "pheasants-nest.jpg",
+      "normalizedId": "pheasants-nest-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/pheasants-nest.webp",
+      "rawValue": "pheasants-nest.webp",
+      "normalizedId": "pheasants-nest-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/rowell-residence.jpg",
+      "rawValue": "rowell-residence.jpg",
+      "normalizedId": "rowell-residence-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/rowell-residence.webp",
+      "rawValue": "rowell-residence.webp",
+      "normalizedId": "rowell-residence-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/south-perth-promenade.jpg",
+      "rawValue": "south-perth-promenade.jpg",
+      "normalizedId": "south-perth-promenade-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/south-perth-promenade.webp",
+      "rawValue": "south-perth-promenade.webp",
+      "normalizedId": "south-perth-promenade-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/spratt-residence.jpg",
+      "rawValue": "spratt-residence.jpg",
+      "normalizedId": "spratt-residence-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/spratt-residence.webp",
+      "rawValue": "spratt-residence.webp",
+      "normalizedId": "spratt-residence-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-beacon-hill.jpg",
+      "rawValue": "upss-beacon-hill.jpg",
+      "normalizedId": "upss-beacon-hill-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-beacon-hill.webp",
+      "rawValue": "upss-beacon-hill.webp",
+      "normalizedId": "upss-beacon-hill-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-brownsville.jpg",
+      "rawValue": "upss-brownsville.jpg",
+      "normalizedId": "upss-brownsville-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-brownsville.webp",
+      "rawValue": "upss-brownsville.webp",
+      "normalizedId": "upss-brownsville-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-grafton.jpg",
+      "rawValue": "upss-grafton.jpg",
+      "normalizedId": "upss-grafton-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-grafton.webp",
+      "rawValue": "upss-grafton.webp",
+      "normalizedId": "upss-grafton-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-homebush.jpg",
+      "rawValue": "upss-homebush.jpg",
+      "normalizedId": "upss-homebush-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-homebush.webp",
+      "rawValue": "upss-homebush.webp",
+      "normalizedId": "upss-homebush-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-north-richmond.jpg",
+      "rawValue": "upss-north-richmond.jpg",
+      "normalizedId": "upss-north-richmond-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-north-richmond.webp",
+      "rawValue": "upss-north-richmond.webp",
+      "normalizedId": "upss-north-richmond-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-wyoming.jpg",
+      "rawValue": "upss-wyoming.jpg",
+      "normalizedId": "upss-wyoming-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/upss-wyoming.webp",
+      "rawValue": "upss-wyoming.webp",
+      "normalizedId": "upss-wyoming-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/wungong-master-plan.jpg",
+      "rawValue": "wungong-master-plan.jpg",
+      "normalizedId": "wungong-master-plan-jpg",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/wungong-master-plan.webp",
+      "rawValue": "wungong-master-plan.webp",
+      "normalizedId": "wungong-master-plan-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/fesa-fire-thumb.webp",
+      "rawValue": "fesa-fire-thumb.webp",
+      "normalizedId": "fesa-fire-thumb-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-beacon-hill.webp",
+      "rawValue": "upss-beacon-hill.webp",
+      "normalizedId": "upss-beacon-hill-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-brownsville.webp",
+      "rawValue": "upss-brownsville.webp",
+      "normalizedId": "upss-brownsville-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-grafton.webp",
+      "rawValue": "upss-grafton.webp",
+      "normalizedId": "upss-grafton-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-homebush.webp",
+      "rawValue": "upss-homebush.webp",
+      "normalizedId": "upss-homebush-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-north-richmond.webp",
+      "rawValue": "upss-north-richmond.webp",
+      "normalizedId": "upss-north-richmond-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/media/portfolio/thumbs/upss-wyoming.webp",
+      "rawValue": "upss-wyoming.webp",
+      "normalizedId": "upss-wyoming-webp",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/docs/Daniel_Clancy_CV_2026.pdf",
+      "rawValue": "Daniel_Clancy_CV_2026.pdf",
+      "normalizedId": "daniel-clancy-cv-2026-pdf",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/docs/Daniel_Clancy_CV_2026_Light.pdf",
+      "rawValue": "Daniel_Clancy_CV_2026_Light.pdf",
+      "normalizedId": "daniel-clancy-cv-2026-light-pdf",
+      "notes": ""
+    }
+  ],
+  "documentsFound": [
+    {
+      "sourceFile": "public/docs/Daniel_Clancy_CV_2026.pdf",
+      "rawValue": "Daniel_Clancy_CV_2026.pdf",
+      "normalizedId": "daniel-clancy-cv-2026-pdf",
+      "notes": ""
+    },
+    {
+      "sourceFile": "public/docs/Daniel_Clancy_CV_2026_Light.pdf",
+      "rawValue": "Daniel_Clancy_CV_2026_Light.pdf",
+      "normalizedId": "daniel-clancy-cv-2026-light-pdf",
+      "notes": ""
+    }
+  ],
+  "warnings": [
+    "No company logo matched for Richmond+Ross.",
+    "No company logo matched for Dawesville 3 Pty Ltd.",
+    "No company logo matched for Riley Consulting.",
+    "No company logo matched for Ampol Australia Petroleum Pty Ltd.",
+    "No company logo matched for MRA (Now DevelopmentWA).",
+    "No company logo matched for Curtin University.",
+    "No company logo matched for LandCorp (Now DevelopmentWA).",
+    "No company logo matched for C & J Spratt.",
+    "No company logo matched for KTAP Construction.",
+    "No company logo matched for Buchan Group.",
+    "No company logo matched for Minderoo Foundation.",
+    "No company logo matched for FESA (Now Department of Fire and Emergency Services)."
+  ],
+  "unmatchedCompanyLogos": [
+    {
+      "id": "richmond-ross",
+      "name": "Richmond+Ross",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "dawesville-3-pty-ltd",
+      "name": "Dawesville 3 Pty Ltd",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "riley-consulting",
+      "name": "Riley Consulting",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "ampol-australia-petroleum-pty-ltd",
+      "name": "Ampol Australia Petroleum Pty Ltd",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "mra-now-developmentwa",
+      "name": "MRA (Now DevelopmentWA)",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "curtin-university",
+      "name": "Curtin University",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "landcorp-now-developmentwa",
+      "name": "LandCorp (Now DevelopmentWA)",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "c-and-j-spratt",
+      "name": "C & J Spratt",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "ktap-construction",
+      "name": "KTAP Construction",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "buchan-group",
+      "name": "Buchan Group",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "minderoo-foundation",
+      "name": "Minderoo Foundation",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "fesa-now-department-of-fire-and-emergency-services",
+      "name": "FESA (Now Department of Fire and Emergency Services)",
+      "reason": "No matching company-* SVG logo exists in public/Admin assets."
+    }
+  ],
+  "unmatchedPlatformLogos": [
+    {
+      "id": "drafting-and-bim",
+      "name": "Drafting and BIM",
+      "reason": "No matching software-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "presentation-and-coordination",
+      "name": "Presentation and coordination",
+      "reason": "No matching software-* SVG logo exists in public/Admin assets."
+    },
+    {
+      "id": "spatial-and-modelling-support",
+      "name": "Spatial and modelling support",
+      "reason": "No matching software-* SVG logo exists in public/Admin assets."
+    }
+  ],
+  "unmatchedProjectCompanies": [],
+  "unmatchedProjectPlatforms": []
+}

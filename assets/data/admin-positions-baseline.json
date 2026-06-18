@@ -1,0 +1,316 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-18T12:37:11.672Z",
+    "sourceRepo": "DanielClancy",
+    "count": 9,
+    "sourceFilesUsed": [
+      "src/pages/CvPage.tsx",
+      "src/pages/PortfolioPage.tsx",
+      "src/pages/PortfolioDetailPage.tsx",
+      "src/content/siteContent.ts",
+      "src/content/workSetPortfolio.ts",
+      "src/content/brandAssets.ts",
+      "src/lib/portfolio.ts",
+      "cmsdata/wix/collection-tables/WorkSet.csv",
+      "cmsdata/wix/collection-tables/Employment+History.csv",
+      "public/media/portfolio",
+      "public/media/portfolio/thumbs",
+      "public/docs",
+      "assets/logos",
+      "assets/icons",
+      "DanielClancy-Admin/assets/data/public-projects-baseline.json",
+      "DanielClancy-Admin/assets/data/public-asset-catalog.json"
+    ]
+  },
+  "positions": [
+    {
+      "id": "richmond-ross-revit-draftsperson-and-technician",
+      "slug": "richmond-ross-revit-draftsperson-and-technician",
+      "title": "Revit Draftsperson & Technician",
+      "companyId": "richmond-ross",
+      "companyName": "Richmond+Ross",
+      "location": "Crows Nest, NSW",
+      "startDate": "2019-10-01",
+      "endDate": "2021-11-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [
+        "autodesk-revit"
+      ],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 10,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Richmond+Ross | October 2019 – November 2021 | Revit Draftsperson & Technician",
+          "normalizedId": "richmond-ross-revit-draftsperson-and-technician",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "meriton-group-structural-revit-draftsman",
+      "slug": "meriton-group-structural-revit-draftsman",
+      "title": "Structural Revit Draftsman",
+      "companyId": "meriton-group",
+      "companyName": "Meriton Group",
+      "location": "Sydney, NSW",
+      "startDate": "2019-03-01",
+      "endDate": "2019-05-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [
+        "autodesk-revit"
+      ],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 20,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Meriton Group | March 2019 – May 2019 | Structural Revit Draftsman",
+          "normalizedId": "meriton-group-structural-revit-draftsman",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "leffler-simes-architects-architectural-revit-draftsman",
+      "slug": "leffler-simes-architects-architectural-revit-draftsman",
+      "title": "Architectural Revit Draftsman",
+      "companyId": "leffler-simes-architects",
+      "companyName": "Leffler Simes Architects",
+      "location": "Melbourne, VIC",
+      "startDate": "2018-09-01",
+      "endDate": "2018-11-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [
+        "autodesk-revit"
+      ],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 30,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Leffler Simes Architects | September 2018 – November 2018 | Architectural Revit Draftsman",
+          "normalizedId": "leffler-simes-architects-architectural-revit-draftsman",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "fleetwood-australia-revit-draftsperson",
+      "slug": "fleetwood-australia-revit-draftsperson",
+      "title": "Revit Draftsperson",
+      "companyId": "fleetwood-australia",
+      "companyName": "Fleetwood Australia",
+      "location": "Melbourne, VIC",
+      "startDate": "2018-07-01",
+      "endDate": "2018-08-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [
+        "autodesk-revit"
+      ],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 40,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Fleetwood Australia | July 2018 – August 2018 | Revit Draftsperson",
+          "normalizedId": "fleetwood-australia-revit-draftsperson",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "place-laboratory-draftsman",
+      "slug": "place-laboratory-draftsman",
+      "title": "Draftsman",
+      "companyId": "place-laboratory",
+      "companyName": "Place Laboratory",
+      "location": "Perth, WA",
+      "startDate": "2017-01-01",
+      "endDate": "2018-01-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 50,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Place Laboratory | January 2017 – January 2018 | Draftsman",
+          "normalizedId": "place-laboratory-draftsman",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "dc-design-studio-design-consultant",
+      "slug": "dc-design-studio-design-consultant",
+      "title": "Design Consultant",
+      "companyId": "dc-design-studio",
+      "companyName": "DC Design Studio",
+      "location": "Perth, WA",
+      "startDate": "2015-06-01",
+      "endDate": "2018-05-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 60,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "DC Design Studio | June 2015 – May 2018 | Design Consultant",
+          "normalizedId": "dc-design-studio-design-consultant",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "urbis-drafting-technician",
+      "slug": "urbis-drafting-technician",
+      "title": "Drafting Technician",
+      "companyId": "urbis",
+      "companyName": "Urbis",
+      "location": "Perth, WA",
+      "startDate": "2014-08-01",
+      "endDate": "2015-06-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 70,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "Urbis Pty Ltd | August 2014 – June 2015 | Drafting Technician",
+          "normalizedId": "urbis-drafting-technician",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "acce-structural-draftsman",
+      "slug": "acce-structural-draftsman",
+      "title": "Structural Draftsman",
+      "companyId": "acce",
+      "companyName": "ACCE",
+      "location": "Como, WA",
+      "startDate": "2012-01-01",
+      "endDate": "2014-03-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 80,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "ACCE Pty Ltd | January 2012 – March 2014 | Structural Draftsman",
+          "normalizedId": "acce-structural-draftsman",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "ghd-draftsman",
+      "slug": "ghd-draftsman",
+      "title": "Draftsman",
+      "companyId": "ghd",
+      "companyName": "GHD",
+      "location": "Geraldton & Perth, WA",
+      "startDate": "2008-08-01",
+      "endDate": "2011-11-01",
+      "current": false,
+      "employmentType": "",
+      "summary": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+      "responsibilities": [],
+      "highlights": [],
+      "platformIds": [],
+      "projectIds": [],
+      "status": "active",
+      "sortOrder": 90,
+      "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company/period/role/location/summary/url",
+          "rawValue": "GHD Pty Ltd | August 2008 – November 2011 | Draftsman",
+          "normalizedId": "ghd-draftsman",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    }
+  ]
+}

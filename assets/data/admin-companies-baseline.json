@@ -1,0 +1,775 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-18T12:37:11.672Z",
+    "sourceRepo": "DanielClancy",
+    "count": 20,
+    "sourceFilesUsed": [
+      "src/pages/CvPage.tsx",
+      "src/pages/PortfolioPage.tsx",
+      "src/pages/PortfolioDetailPage.tsx",
+      "src/content/siteContent.ts",
+      "src/content/workSetPortfolio.ts",
+      "src/content/brandAssets.ts",
+      "src/lib/portfolio.ts",
+      "cmsdata/wix/collection-tables/WorkSet.csv",
+      "cmsdata/wix/collection-tables/Employment+History.csv",
+      "public/media/portfolio",
+      "public/media/portfolio/thumbs",
+      "public/docs",
+      "assets/logos",
+      "assets/icons",
+      "DanielClancy-Admin/assets/data/public-projects-baseline.json",
+      "DanielClancy-Admin/assets/data/public-asset-catalog.json"
+    ]
+  },
+  "companies": [
+    {
+      "id": "richmond-ross",
+      "slug": "richmond-ross",
+      "name": "Richmond+Ross",
+      "logoPath": "./assets/logos/company-richmondross-0.svg",
+      "location": "Crows Nest, NSW",
+      "website": "https://www.richmondross.com.au/",
+      "description": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+      "status": "active",
+      "sortOrder": 10,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a646f50f-eeba-46ac-959f-e10e16ca89d9",
+          "sourceField": "Company Name",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-nsw",
+          "sourceField": "company",
+          "rawValue": "Richmond+Ross",
+          "normalizedId": "richmond-ross",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "meriton-group",
+      "slug": "meriton-group",
+      "name": "Meriton Group",
+      "logoPath": "./assets/logos/company-meriton-0.svg",
+      "location": "Sydney, NSW",
+      "website": "https://www.meriton.com.au/",
+      "description": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+      "status": "active",
+      "sortOrder": 20,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "c8d8ca96-ae87-4224-a5fb-b634736bd304",
+          "sourceField": "Company Name",
+          "rawValue": "Meriton Group",
+          "normalizedId": "meriton-group",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "leffler-simes-architects",
+      "slug": "leffler-simes-architects",
+      "name": "Leffler Simes Architects",
+      "logoPath": "./assets/logos/company-lefflersimes-0.svg",
+      "location": "Melbourne, VIC",
+      "website": "https://www.lefflersimes.com.au/",
+      "description": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+      "status": "active",
+      "sortOrder": 30,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a604cfa4-d498-4397-806f-d1ad3e574091",
+          "sourceField": "Company Name",
+          "rawValue": "Leffler Simes Architects",
+          "normalizedId": "leffler-simes-architects",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "fleetwood-australia",
+      "slug": "fleetwood-australia",
+      "name": "Fleetwood Australia",
+      "logoPath": "./assets/logos/company-fleetwood-0.svg",
+      "location": "Melbourne, VIC",
+      "website": "https://www.fleetwood.com.au/",
+      "description": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+      "status": "active",
+      "sortOrder": 40,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Fleetwood Australia",
+          "normalizedId": "fleetwood-australia",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "4beb6983-ee39-43f9-9ec2-61405ebe6389",
+          "sourceField": "Company Name",
+          "rawValue": "Fleetwood Australia",
+          "normalizedId": "fleetwood-australia",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "place-laboratory",
+      "slug": "place-laboratory",
+      "name": "Place Laboratory",
+      "logoPath": "./assets/logos/company-placelab-0.svg",
+      "location": "Perth, WA",
+      "website": "https://www.placelaboratory.com/",
+      "description": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+      "status": "active",
+      "sortOrder": 50,
+      "sourceNotes": "Canonical public logo alias: Place Laboratory",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "PLACE Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": "Canonical public logo alias: Place Laboratory"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "91185310-a4f5-422d-8420-4d590d590584",
+          "sourceField": "Company Name",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "company",
+          "rawValue": "Place Laboratory",
+          "normalizedId": "place-laboratory",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "dc-design-studio",
+      "slug": "dc-design-studio",
+      "name": "DC Design Studio",
+      "logoPath": "./assets/logos/company-dcdesignstudio-0.svg",
+      "location": "Perth, WA",
+      "website": "https://www.danielclancy.net/",
+      "description": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+      "status": "active",
+      "sortOrder": 60,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "b44da0e1-bdd9-49b1-8870-c44b4d0682d0",
+          "sourceField": "Company Name",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "company",
+          "rawValue": "DC Design Studio",
+          "normalizedId": "dc-design-studio",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "urbis",
+      "slug": "urbis",
+      "name": "Urbis",
+      "logoPath": "./assets/logos/company-urbis-0.svg",
+      "location": "Perth, WA",
+      "website": "https://urbis.com.au/",
+      "description": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+      "status": "active",
+      "sortOrder": 70,
+      "sourceNotes": "Canonical public logo alias: Urbis",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "Urbis Pty Ltd",
+          "normalizedId": "urbis",
+          "notes": "Canonical public logo alias: Urbis"
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "Urbis",
+          "normalizedId": "urbis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "df505d0e-9be8-466b-aa25-47af54808b32",
+          "sourceField": "Company Name",
+          "rawValue": "Urbis Pty Ltd",
+          "normalizedId": "urbis",
+          "notes": "Canonical public logo alias: Urbis"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "company",
+          "rawValue": "Urbis",
+          "normalizedId": "urbis",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "acce",
+      "slug": "acce",
+      "name": "ACCE",
+      "logoPath": "./assets/logos/company-acce-0.svg",
+      "location": "Como, WA",
+      "website": "https://www.acce.net.au/",
+      "description": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+      "status": "active",
+      "sortOrder": 80,
+      "sourceNotes": "Canonical public logo alias: ACCE",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "ACCE Pty Ltd",
+          "normalizedId": "acce",
+          "notes": "Canonical public logo alias: ACCE"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "ece6e62b-4bb0-4977-9d93-f355ecacc093",
+          "sourceField": "Company Name",
+          "rawValue": "ACCE Pty Ltd",
+          "normalizedId": "acce",
+          "notes": "Canonical public logo alias: ACCE"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "company",
+          "rawValue": "ACCE",
+          "normalizedId": "acce",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "ghd",
+      "slug": "ghd",
+      "name": "GHD",
+      "logoPath": "./assets/logos/company-ghd-0.svg",
+      "location": "Geraldton & Perth, WA",
+      "website": "https://www.ghd.com/",
+      "description": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+      "status": "active",
+      "sortOrder": 90,
+      "sourceNotes": "Canonical public logo alias: GHD",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "experienceItems",
+          "sourceField": "company",
+          "rawValue": "GHD Pty Ltd",
+          "normalizedId": "ghd",
+          "notes": "Canonical public logo alias: GHD"
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "featuredEmployers",
+          "sourceField": "featuredEmployers[]",
+          "rawValue": "GHD",
+          "normalizedId": "ghd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+          "sourceSection": "a53d41af-2258-44e7-987d-6437f7804d93",
+          "sourceField": "Company Name",
+          "rawValue": "GHD Pty Ltd",
+          "normalizedId": "ghd",
+          "notes": "Canonical public logo alias: GHD"
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "dawesville-3-pty-ltd",
+      "slug": "dawesville-3-pty-ltd",
+      "name": "Dawesville 3 Pty Ltd",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 509,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "client",
+          "rawValue": "Dawesville 3 Pty Ltd",
+          "normalizedId": "dawesville-3-pty-ltd",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "riley-consulting",
+      "slug": "riley-consulting",
+      "name": "Riley Consulting",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 510,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "company",
+          "rawValue": "Riley Consulting",
+          "normalizedId": "riley-consulting",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "company",
+          "rawValue": "Riley Consulting",
+          "normalizedId": "riley-consulting",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "ampol-australia-petroleum-pty-ltd",
+      "slug": "ampol-australia-petroleum-pty-ltd",
+      "name": "Ampol Australia Petroleum Pty Ltd",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 511,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-nsw",
+          "sourceField": "client",
+          "rawValue": "Ampol Australia Petroleum Pty Ltd",
+          "normalizedId": "ampol-australia-petroleum-pty-ltd",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "mra-now-developmentwa",
+      "slug": "mra-now-developmentwa",
+      "name": "MRA (Now DevelopmentWA)",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 512,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "client",
+          "rawValue": "MRA (Now DevelopmentWA)",
+          "normalizedId": "mra-now-developmentwa",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "curtin-university",
+      "slug": "curtin-university",
+      "name": "Curtin University",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 513,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "client",
+          "rawValue": "Curtin University",
+          "normalizedId": "curtin-university",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "landcorp-now-developmentwa",
+      "slug": "landcorp-now-developmentwa",
+      "name": "LandCorp (Now DevelopmentWA)",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 514,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "client",
+          "rawValue": "LandCorp (Now DevelopmentWA)",
+          "normalizedId": "landcorp-now-developmentwa",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "c-and-j-spratt",
+      "slug": "c-and-j-spratt",
+      "name": "C & J Spratt",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 515,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "client",
+          "rawValue": "C & J Spratt",
+          "normalizedId": "c-and-j-spratt",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "ktap-construction",
+      "slug": "ktap-construction",
+      "name": "KTAP Construction",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 516,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "client",
+          "rawValue": "KTAP Construction",
+          "normalizedId": "ktap-construction",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "buchan-group",
+      "slug": "buchan-group",
+      "name": "Buchan Group",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 517,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "client",
+          "rawValue": "Buchan Group",
+          "normalizedId": "buchan-group",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "minderoo-foundation",
+      "slug": "minderoo-foundation",
+      "name": "Minderoo Foundation",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 518,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "client",
+          "rawValue": "Minderoo Foundation",
+          "normalizedId": "minderoo-foundation",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    },
+    {
+      "id": "fesa-now-department-of-fire-and-emergency-services",
+      "slug": "fesa-now-department-of-fire-and-emergency-services",
+      "name": "FESA (Now Department of Fire and Emergency Services)",
+      "logoPath": "",
+      "location": "",
+      "website": "",
+      "description": "",
+      "status": "active",
+      "sortOrder": 519,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "client",
+          "rawValue": "FESA (Now Department of Fire and Emergency Services)",
+          "normalizedId": "fesa-now-department-of-fire-and-emergency-services",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:11.672Z"
+    }
+  ]
+}

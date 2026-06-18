@@ -1,0 +1,411 @@
+{
+  "meta": {
+    "generatedAt": "2026-06-18T12:37:45.837Z",
+    "sourceRepo": "DanielClancy",
+    "count": 6,
+    "sourceFilesUsed": [
+      "src/pages/CvPage.tsx",
+      "src/pages/PortfolioPage.tsx",
+      "src/pages/PortfolioDetailPage.tsx",
+      "src/content/siteContent.ts",
+      "src/content/workSetPortfolio.ts",
+      "src/content/brandAssets.ts",
+      "src/lib/portfolio.ts",
+      "cmsdata/wix/collection-tables/WorkSet.csv",
+      "cmsdata/wix/collection-tables/Employment+History.csv",
+      "public/media/portfolio",
+      "public/media/portfolio/thumbs",
+      "public/docs",
+      "assets/logos",
+      "assets/icons",
+      "DanielClancy-Admin/assets/data/public-projects-baseline.json",
+      "DanielClancy-Admin/assets/data/public-asset-catalog.json"
+    ]
+  },
+  "platforms": [
+    {
+      "id": "autodesk-autocad",
+      "slug": "autodesk-autocad",
+      "name": "Autodesk AutoCAD",
+      "vendor": "Autodesk",
+      "company": "Autodesk",
+      "logoPath": "./assets/logos/software-autocad.svg",
+      "website": "",
+      "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+      "status": "active",
+      "sortOrder": 10,
+      "sourceNotes": "Canonical platform alias: Autodesk AutoCAD",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-retail-development-for-dawesville-iga",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cue-roadhouse",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-26-south",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-2c-armadale-6112",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cockburn-coast",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "spratt-residence-proposed-addition",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-homebush-2c-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-beacon-hill-2c-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "henry-street-residence-structural-documentation",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "upss-wyoming-2c-nsw",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "geraldton-fire-station-structural-documentation",
+          "sourceField": "softwarePlatform",
+          "rawValue": "AutoCAD",
+          "normalizedId": "autodesk-autocad",
+          "notes": "Canonical platform alias: Autodesk AutoCAD"
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    },
+    {
+      "id": "autodesk-revit",
+      "slug": "autodesk-revit",
+      "name": "Autodesk Revit",
+      "vendor": "Autodesk",
+      "company": "Autodesk",
+      "logoPath": "./assets/logos/software-revit.svg",
+      "website": "",
+      "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+      "status": "active",
+      "sortOrder": 20,
+      "sourceNotes": "Canonical platform alias: Autodesk Revit",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Autodesk Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-26-south",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Revit",
+          "normalizedId": "autodesk-revit",
+          "notes": "Canonical platform alias: Autodesk Revit"
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    },
+    {
+      "id": "adobe-creative-cloud",
+      "slug": "adobe-creative-cloud",
+      "name": "Adobe Creative Cloud",
+      "vendor": "Adobe",
+      "company": "Adobe",
+      "logoPath": "./assets/logos/software-creativecloud.svg",
+      "website": "",
+      "description": "Software/platform value listed by the public CV source.",
+      "status": "active",
+      "sortOrder": 30,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Adobe Creative Cloud",
+          "normalizedId": "adobe-creative-cloud",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Adobe Creative Cloud",
+          "normalizedId": "adobe-creative-cloud",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    },
+    {
+      "id": "trimble-sketchup",
+      "slug": "trimble-sketchup",
+      "name": "Trimble SketchUp",
+      "vendor": "Trimble",
+      "company": "Trimble",
+      "logoPath": "./assets/logos/software-sketchup.svg",
+      "website": "",
+      "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+      "status": "active",
+      "sortOrder": 40,
+      "sourceNotes": "Canonical platform alias: Trimble SketchUp",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Trimble SketchUp",
+          "normalizedId": "trimble-sketchup",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Trimble SketchUp",
+          "normalizedId": "trimble-sketchup",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "curtin-creative-quarter-misc-details",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Sketchup",
+          "normalizedId": "trimble-sketchup",
+          "notes": "Canonical platform alias: Trimble SketchUp"
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "cottesloe-beach-house-landscape-design",
+          "sourceField": "softwarePlatform",
+          "rawValue": "Sketchup",
+          "normalizedId": "trimble-sketchup",
+          "notes": "Canonical platform alias: Trimble SketchUp"
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    },
+    {
+      "id": "microsoft-office",
+      "slug": "microsoft-office",
+      "name": "Microsoft Office",
+      "vendor": "Microsoft",
+      "company": "Microsoft",
+      "logoPath": "./assets/logos/software-office365.svg",
+      "website": "",
+      "description": "Software/platform value listed by the public CV source.",
+      "status": "active",
+      "sortOrder": 50,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Microsoft Office",
+          "normalizedId": "microsoft-office",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "Microsoft Office",
+          "normalizedId": "microsoft-office",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    },
+    {
+      "id": "qgis",
+      "slug": "qgis",
+      "name": "QGIS",
+      "vendor": "QGIS",
+      "company": "QGIS",
+      "logoPath": "./assets/logos/software-qgis.svg",
+      "website": "",
+      "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+      "status": "active",
+      "sortOrder": 60,
+      "sourceNotes": "",
+      "provenance": [
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "src/content/siteContent.ts",
+          "sourceSection": "platformList",
+          "sourceField": "items[]",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-2c-armadale-6112",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "lot-500-eighth-road-land-resumption",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        },
+        {
+          "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+          "sourceSection": "wungong-urban-water-master-plan",
+          "sourceField": "softwarePlatform",
+          "rawValue": "QGIS",
+          "normalizedId": "qgis",
+          "notes": ""
+        }
+      ],
+      "updatedAt": "2026-06-18T12:37:45.837Z"
+    }
+  ]
+}

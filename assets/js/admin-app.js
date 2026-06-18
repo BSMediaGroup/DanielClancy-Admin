@@ -190,35 +190,1431 @@
     lastPath: ""
   };
   const CV_COMPANY_SEED = [
-    { id: "richmond-ross", name: "Richmond+Ross", logoPath: "./assets/logos/company-richmondross-0.svg", location: "Crows Nest, NSW", website: "https://www.richmondross.com.au/", description: "Retail, public domain, fuel, tourism, and industrial documentation practice referenced by the public CV.", sortOrder: 10 },
-    { id: "meriton-group", name: "Meriton Group", logoPath: "./assets/logos/company-meriton-0.svg", location: "Sydney, NSW", website: "https://www.meriton.com.au/", description: "Residential developer-builder referenced by the public CV.", sortOrder: 20 },
-    { id: "leffler-simes-architects", name: "Leffler Simes Architects", logoPath: "./assets/logos/company-lefflersimes-0.svg", location: "Melbourne, VIC", website: "https://www.lefflersimes.com.au/", description: "Retail-focused architectural practice referenced by the public CV.", sortOrder: 30 },
-    { id: "fleetwood-australia", name: "Fleetwood Australia", logoPath: "./assets/logos/company-fleetwood-0.svg", location: "Melbourne, VIC", website: "https://www.fleetwood.com.au/", description: "Modular construction company referenced by the public CV.", sortOrder: 40 },
-    { id: "place-laboratory", name: "Place Laboratory", logoPath: "./assets/logos/company-placelab-0.svg", location: "Perth, WA", website: "https://www.placelaboratory.com/", description: "Public realm, urban, and landscape practice referenced by the public CV.", sortOrder: 50 },
-    { id: "dc-design-studio", name: "DC Design Studio", logoPath: "./assets/logos/company-dcdesignstudio-0.svg", location: "Perth, WA", website: "https://www.danielclancy.net/", description: "Boutique design documentation consultancy referenced by the public CV.", sortOrder: 60 },
-    { id: "urbis", name: "Urbis", logoPath: "./assets/logos/company-urbis-0.svg", location: "Perth, WA", website: "https://urbis.com.au/", description: "Multidisciplinary property, city, and community consultancy referenced by the public CV.", sortOrder: 70 },
-    { id: "acce", name: "ACCE", logoPath: "./assets/logos/company-acce-0.svg", location: "Como, WA", website: "https://www.acce.net.au/", description: "Structural consulting engineering practice referenced by the public CV.", sortOrder: 80 },
-    { id: "ghd", name: "GHD", logoPath: "./assets/logos/company-ghd-0.svg", location: "Geraldton & Perth, WA", website: "https://www.ghd.com/", description: "Multidisciplinary professional services company referenced by the public CV.", sortOrder: 90 },
-    { id: "riley-consulting", name: "Riley Consulting", logoPath: "", location: "", website: "", description: "Project company/studio present in the public WorkSet portfolio source.", sortOrder: 120 }
+      {
+          "id": "richmond-ross",
+          "slug": "richmond-ross",
+          "name": "Richmond+Ross",
+          "logoPath": "./assets/logos/company-richmondross-0.svg",
+          "location": "Crows Nest, NSW",
+          "website": "https://www.richmondross.com.au/",
+          "description": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+          "status": "active",
+          "sortOrder": 10,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a646f50f-eeba-46ac-959f-e10e16ca89d9",
+                  "sourceField": "Company Name",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+                  "sourceField": "company",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-homebush-nsw",
+                  "sourceField": "company",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-beacon-hill-nsw",
+                  "sourceField": "company",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-wyoming-nsw",
+                  "sourceField": "company",
+                  "rawValue": "Richmond+Ross",
+                  "normalizedId": "richmond-ross",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "meriton-group",
+          "slug": "meriton-group",
+          "name": "Meriton Group",
+          "logoPath": "./assets/logos/company-meriton-0.svg",
+          "location": "Sydney, NSW",
+          "website": "https://www.meriton.com.au/",
+          "description": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+          "status": "active",
+          "sortOrder": 20,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Meriton Group",
+                  "normalizedId": "meriton-group",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "Meriton Group",
+                  "normalizedId": "meriton-group",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "c8d8ca96-ae87-4224-a5fb-b634736bd304",
+                  "sourceField": "Company Name",
+                  "rawValue": "Meriton Group",
+                  "normalizedId": "meriton-group",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "leffler-simes-architects",
+          "slug": "leffler-simes-architects",
+          "name": "Leffler Simes Architects",
+          "logoPath": "./assets/logos/company-lefflersimes-0.svg",
+          "location": "Melbourne, VIC",
+          "website": "https://www.lefflersimes.com.au/",
+          "description": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+          "status": "active",
+          "sortOrder": 30,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Leffler Simes Architects",
+                  "normalizedId": "leffler-simes-architects",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "Leffler Simes Architects",
+                  "normalizedId": "leffler-simes-architects",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a604cfa4-d498-4397-806f-d1ad3e574091",
+                  "sourceField": "Company Name",
+                  "rawValue": "Leffler Simes Architects",
+                  "normalizedId": "leffler-simes-architects",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "fleetwood-australia",
+          "slug": "fleetwood-australia",
+          "name": "Fleetwood Australia",
+          "logoPath": "./assets/logos/company-fleetwood-0.svg",
+          "location": "Melbourne, VIC",
+          "website": "https://www.fleetwood.com.au/",
+          "description": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+          "status": "active",
+          "sortOrder": 40,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Fleetwood Australia",
+                  "normalizedId": "fleetwood-australia",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "4beb6983-ee39-43f9-9ec2-61405ebe6389",
+                  "sourceField": "Company Name",
+                  "rawValue": "Fleetwood Australia",
+                  "normalizedId": "fleetwood-australia",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "place-laboratory",
+          "slug": "place-laboratory",
+          "name": "Place Laboratory",
+          "logoPath": "./assets/logos/company-placelab-0.svg",
+          "location": "Perth, WA",
+          "website": "https://www.placelaboratory.com/",
+          "description": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+          "status": "active",
+          "sortOrder": 50,
+          "sourceNotes": "Canonical public logo alias: Place Laboratory",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "PLACE Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "notes": "Canonical public logo alias: Place Laboratory"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "91185310-a4f5-422d-8420-4d590d590584",
+                  "sourceField": "Company Name",
+                  "rawValue": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "curtin-creative-quarter-misc-details",
+                  "sourceField": "company",
+                  "rawValue": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cottesloe-beach-house-landscape-design",
+                  "sourceField": "company",
+                  "rawValue": "Place Laboratory",
+                  "normalizedId": "place-laboratory",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "dc-design-studio",
+          "slug": "dc-design-studio",
+          "name": "DC Design Studio",
+          "logoPath": "./assets/logos/company-dcdesignstudio-0.svg",
+          "location": "Perth, WA",
+          "website": "https://www.danielclancy.net/",
+          "description": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+          "status": "active",
+          "sortOrder": 60,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "b44da0e1-bdd9-49b1-8870-c44b4d0682d0",
+                  "sourceField": "Company Name",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+                  "sourceField": "company",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lot-500-eighth-road-land-resumption",
+                  "sourceField": "company",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "spratt-residence-proposed-addition",
+                  "sourceField": "company",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "wungong-urban-water-master-plan",
+                  "sourceField": "company",
+                  "rawValue": "DC Design Studio",
+                  "normalizedId": "dc-design-studio",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "urbis",
+          "slug": "urbis",
+          "name": "Urbis",
+          "logoPath": "./assets/logos/company-urbis-0.svg",
+          "location": "Perth, WA",
+          "website": "https://urbis.com.au/",
+          "description": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+          "status": "active",
+          "sortOrder": 70,
+          "sourceNotes": "Canonical public logo alias: Urbis",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "Urbis Pty Ltd",
+                  "normalizedId": "urbis",
+                  "notes": "Canonical public logo alias: Urbis"
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "Urbis",
+                  "normalizedId": "urbis",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "df505d0e-9be8-466b-aa25-47af54808b32",
+                  "sourceField": "Company Name",
+                  "rawValue": "Urbis Pty Ltd",
+                  "normalizedId": "urbis",
+                  "notes": "Canonical public logo alias: Urbis"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cockburn-coast",
+                  "sourceField": "company",
+                  "rawValue": "Urbis",
+                  "normalizedId": "urbis",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "acce",
+          "slug": "acce",
+          "name": "ACCE",
+          "logoPath": "./assets/logos/company-acce-0.svg",
+          "location": "Como, WA",
+          "website": "https://www.acce.net.au/",
+          "description": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+          "status": "active",
+          "sortOrder": 80,
+          "sourceNotes": "Canonical public logo alias: ACCE",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "ACCE Pty Ltd",
+                  "normalizedId": "acce",
+                  "notes": "Canonical public logo alias: ACCE"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "ece6e62b-4bb0-4977-9d93-f355ecacc093",
+                  "sourceField": "Company Name",
+                  "rawValue": "ACCE Pty Ltd",
+                  "normalizedId": "acce",
+                  "notes": "Canonical public logo alias: ACCE"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-retail-development-for-dawesville-iga",
+                  "sourceField": "company",
+                  "rawValue": "ACCE",
+                  "normalizedId": "acce",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "henry-street-residence-structural-documentation",
+                  "sourceField": "company",
+                  "rawValue": "ACCE",
+                  "normalizedId": "acce",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+                  "sourceField": "company",
+                  "rawValue": "ACCE",
+                  "normalizedId": "acce",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "geraldton-fire-station-structural-documentation",
+                  "sourceField": "company",
+                  "rawValue": "ACCE",
+                  "normalizedId": "acce",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "ghd",
+          "slug": "ghd",
+          "name": "GHD",
+          "logoPath": "./assets/logos/company-ghd-0.svg",
+          "location": "Geraldton & Perth, WA",
+          "website": "https://www.ghd.com/",
+          "description": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+          "status": "active",
+          "sortOrder": 90,
+          "sourceNotes": "Canonical public logo alias: GHD",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company",
+                  "rawValue": "GHD Pty Ltd",
+                  "normalizedId": "ghd",
+                  "notes": "Canonical public logo alias: GHD"
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "featuredEmployers",
+                  "sourceField": "featuredEmployers[]",
+                  "rawValue": "GHD",
+                  "normalizedId": "ghd",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/Employment+History.csv",
+                  "sourceSection": "a53d41af-2258-44e7-987d-6437f7804d93",
+                  "sourceField": "Company Name",
+                  "rawValue": "GHD Pty Ltd",
+                  "normalizedId": "ghd",
+                  "notes": "Canonical public logo alias: GHD"
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "dawesville-3-pty-ltd",
+          "slug": "dawesville-3-pty-ltd",
+          "name": "Dawesville 3 Pty Ltd",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 509,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-retail-development-for-dawesville-iga",
+                  "sourceField": "client",
+                  "rawValue": "Dawesville 3 Pty Ltd",
+                  "normalizedId": "dawesville-3-pty-ltd",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "riley-consulting",
+          "slug": "riley-consulting",
+          "name": "Riley Consulting",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 510,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cue-roadhouse",
+                  "sourceField": "company",
+                  "rawValue": "Riley Consulting",
+                  "normalizedId": "riley-consulting",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cue-roadhouse",
+                  "sourceField": "company",
+                  "rawValue": "Riley Consulting",
+                  "normalizedId": "riley-consulting",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "ampol-australia-petroleum-pty-ltd",
+          "slug": "ampol-australia-petroleum-pty-ltd",
+          "name": "Ampol Australia Petroleum Pty Ltd",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 511,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+                  "sourceField": "client",
+                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
+                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-homebush-nsw",
+                  "sourceField": "client",
+                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
+                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-beacon-hill-nsw",
+                  "sourceField": "client",
+                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
+                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-wyoming-nsw",
+                  "sourceField": "client",
+                  "rawValue": "Ampol Australia Petroleum Pty Ltd",
+                  "normalizedId": "ampol-australia-petroleum-pty-ltd",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "mra-now-developmentwa",
+          "slug": "mra-now-developmentwa",
+          "name": "MRA (Now DevelopmentWA)",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 512,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+                  "sourceField": "client",
+                  "rawValue": "MRA (Now DevelopmentWA)",
+                  "normalizedId": "mra-now-developmentwa",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lot-500-eighth-road-land-resumption",
+                  "sourceField": "client",
+                  "rawValue": "MRA (Now DevelopmentWA)",
+                  "normalizedId": "mra-now-developmentwa",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "wungong-urban-water-master-plan",
+                  "sourceField": "client",
+                  "rawValue": "MRA (Now DevelopmentWA)",
+                  "normalizedId": "mra-now-developmentwa",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "curtin-university",
+          "slug": "curtin-university",
+          "name": "Curtin University",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 513,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "curtin-creative-quarter-misc-details",
+                  "sourceField": "client",
+                  "rawValue": "Curtin University",
+                  "normalizedId": "curtin-university",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "landcorp-now-developmentwa",
+          "slug": "landcorp-now-developmentwa",
+          "name": "LandCorp (Now DevelopmentWA)",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 514,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cockburn-coast",
+                  "sourceField": "client",
+                  "rawValue": "LandCorp (Now DevelopmentWA)",
+                  "normalizedId": "landcorp-now-developmentwa",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "c-and-j-spratt",
+          "slug": "c-and-j-spratt",
+          "name": "C & J Spratt",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 515,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "spratt-residence-proposed-addition",
+                  "sourceField": "client",
+                  "rawValue": "C & J Spratt",
+                  "normalizedId": "c-and-j-spratt",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "ktap-construction",
+          "slug": "ktap-construction",
+          "name": "KTAP Construction",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 516,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "henry-street-residence-structural-documentation",
+                  "sourceField": "client",
+                  "rawValue": "KTAP Construction",
+                  "normalizedId": "ktap-construction",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "buchan-group",
+          "slug": "buchan-group",
+          "name": "Buchan Group",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 517,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+                  "sourceField": "client",
+                  "rawValue": "Buchan Group",
+                  "normalizedId": "buchan-group",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "minderoo-foundation",
+          "slug": "minderoo-foundation",
+          "name": "Minderoo Foundation",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 518,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cottesloe-beach-house-landscape-design",
+                  "sourceField": "client",
+                  "rawValue": "Minderoo Foundation",
+                  "normalizedId": "minderoo-foundation",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "fesa-now-department-of-fire-and-emergency-services",
+          "slug": "fesa-now-department-of-fire-and-emergency-services",
+          "name": "FESA (Now Department of Fire and Emergency Services)",
+          "logoPath": "",
+          "location": "",
+          "website": "",
+          "description": "",
+          "status": "active",
+          "sortOrder": 519,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "geraldton-fire-station-structural-documentation",
+                  "sourceField": "client",
+                  "rawValue": "FESA (Now Department of Fire and Emergency Services)",
+                  "normalizedId": "fesa-now-department-of-fire-and-emergency-services",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      }
   ];
   const CV_PLATFORM_SEED = [
-    { id: "autodesk-autocad", name: "Autodesk AutoCAD", company: "Autodesk", vendor: "Autodesk", logoPath: "./assets/logos/software-autocad.svg", description: "Production drafting platform listed by the public CV.", sortOrder: 10 },
-    { id: "autodesk-revit", name: "Autodesk Revit", company: "Autodesk", vendor: "Autodesk", logoPath: "./assets/logos/software-revit.svg", description: "BIM/documentation platform listed by the public CV.", sortOrder: 20 },
-    { id: "adobe-creative-cloud", name: "Adobe Creative Cloud", company: "Adobe", vendor: "Adobe", logoPath: "./assets/logos/software-creativecloud.svg", description: "Presentation and creative software group listed by the public CV.", sortOrder: 30 },
-    { id: "trimble-sketchup", name: "Trimble SketchUp", company: "Trimble", vendor: "Trimble", logoPath: "./assets/logos/software-sketchup.svg", description: "Concept modelling platform listed by the public CV.", sortOrder: 40 },
-    { id: "microsoft-office", name: "Microsoft Office", company: "Microsoft", vendor: "Microsoft", logoPath: "./assets/logos/software-office365.svg", description: "Document/reporting software listed by the public CV.", sortOrder: 50 },
-    { id: "qgis", name: "QGIS", company: "QGIS", vendor: "QGIS", logoPath: "./assets/logos/software-qgis.svg", description: "Spatial/GIS platform listed by the public CV.", sortOrder: 60 }
+      {
+          "id": "autodesk-autocad",
+          "slug": "autodesk-autocad",
+          "name": "Autodesk AutoCAD",
+          "vendor": "Autodesk",
+          "company": "Autodesk",
+          "logoPath": "./assets/logos/software-autocad.svg",
+          "website": "",
+          "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+          "status": "active",
+          "sortOrder": 10,
+          "sourceNotes": "Canonical platform alias: Autodesk AutoCAD",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Autodesk AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Autodesk AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-retail-development-for-dawesville-iga",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cue-roadhouse",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "curtin-creative-quarter-misc-details",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lot-500-eighth-road-land-resumption",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cockburn-coast",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "spratt-residence-proposed-addition",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-homebush-nsw",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "wungong-urban-water-master-plan",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-beacon-hill-nsw",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "henry-street-residence-structural-documentation",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cottesloe-beach-house-landscape-design",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "upss-wyoming-nsw",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "geraldton-fire-station-structural-documentation",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "AutoCAD",
+                  "normalizedId": "autodesk-autocad",
+                  "notes": "Canonical platform alias: Autodesk AutoCAD"
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      },
+      {
+          "id": "autodesk-revit",
+          "slug": "autodesk-revit",
+          "name": "Autodesk Revit",
+          "vendor": "Autodesk",
+          "company": "Autodesk",
+          "logoPath": "./assets/logos/software-revit.svg",
+          "website": "",
+          "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+          "status": "active",
+          "sortOrder": 20,
+          "sourceNotes": "Canonical platform alias: Autodesk Revit",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Autodesk Revit",
+                  "normalizedId": "autodesk-revit",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Autodesk Revit",
+                  "normalizedId": "autodesk-revit",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "Revit",
+                  "normalizedId": "autodesk-revit",
+                  "notes": "Canonical platform alias: Autodesk Revit"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "curtin-creative-quarter-misc-details",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "Revit",
+                  "normalizedId": "autodesk-revit",
+                  "notes": "Canonical platform alias: Autodesk Revit"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cottesloe-beach-house-landscape-design",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "Revit",
+                  "normalizedId": "autodesk-revit",
+                  "notes": "Canonical platform alias: Autodesk Revit"
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      },
+      {
+          "id": "adobe-creative-cloud",
+          "slug": "adobe-creative-cloud",
+          "name": "Adobe Creative Cloud",
+          "vendor": "Adobe",
+          "company": "Adobe",
+          "logoPath": "./assets/logos/software-creativecloud.svg",
+          "website": "",
+          "description": "Software/platform value listed by the public CV source.",
+          "status": "active",
+          "sortOrder": 30,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Adobe Creative Cloud",
+                  "normalizedId": "adobe-creative-cloud",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Adobe Creative Cloud",
+                  "normalizedId": "adobe-creative-cloud",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      },
+      {
+          "id": "trimble-sketchup",
+          "slug": "trimble-sketchup",
+          "name": "Trimble SketchUp",
+          "vendor": "Trimble",
+          "company": "Trimble",
+          "logoPath": "./assets/logos/software-sketchup.svg",
+          "website": "",
+          "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+          "status": "active",
+          "sortOrder": 40,
+          "sourceNotes": "Canonical platform alias: Trimble SketchUp",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Trimble SketchUp",
+                  "normalizedId": "trimble-sketchup",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Trimble SketchUp",
+                  "normalizedId": "trimble-sketchup",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "curtin-creative-quarter-misc-details",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "Sketchup",
+                  "normalizedId": "trimble-sketchup",
+                  "notes": "Canonical platform alias: Trimble SketchUp"
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "cottesloe-beach-house-landscape-design",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "Sketchup",
+                  "normalizedId": "trimble-sketchup",
+                  "notes": "Canonical platform alias: Trimble SketchUp"
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      },
+      {
+          "id": "microsoft-office",
+          "slug": "microsoft-office",
+          "name": "Microsoft Office",
+          "vendor": "Microsoft",
+          "company": "Microsoft",
+          "logoPath": "./assets/logos/software-office365.svg",
+          "website": "",
+          "description": "Software/platform value listed by the public CV source.",
+          "status": "active",
+          "sortOrder": 50,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Microsoft Office",
+                  "normalizedId": "microsoft-office",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "Microsoft Office",
+                  "normalizedId": "microsoft-office",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      },
+      {
+          "id": "qgis",
+          "slug": "qgis",
+          "name": "QGIS",
+          "vendor": "QGIS",
+          "company": "QGIS",
+          "logoPath": "./assets/logos/software-qgis.svg",
+          "website": "",
+          "description": "Software/platform value found in the public CV and/or WorkSet portfolio source.",
+          "status": "active",
+          "sortOrder": 60,
+          "sourceNotes": "",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "QGIS",
+                  "normalizedId": "qgis",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "platformList",
+                  "sourceField": "items[]",
+                  "rawValue": "QGIS",
+                  "normalizedId": "qgis",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "QGIS",
+                  "normalizedId": "qgis",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "lot-500-eighth-road-land-resumption",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "QGIS",
+                  "normalizedId": "qgis",
+                  "notes": ""
+              },
+              {
+                  "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+                  "sourceSection": "wungong-urban-water-master-plan",
+                  "sourceField": "softwarePlatform",
+                  "rawValue": "QGIS",
+                  "normalizedId": "qgis",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:45.837Z"
+      }
   ];
   const CV_POSITION_SEED = [
-    { id: "richmond-ross-revit-draftsperson-technician", title: "Revit Draftsperson & Technician", companyId: "richmond-ross", companyName: "Richmond+Ross", location: "Crows Nest, NSW", startDate: "2019-10-01", endDate: "2021-11-01", current: false, summary: "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.", sortOrder: 10 },
-    { id: "meriton-group-structural-revit-draftsman", title: "Structural Revit Draftsman", companyId: "meriton-group", companyName: "Meriton Group", location: "Sydney, NSW", startDate: "2019-03-01", endDate: "2019-05-01", current: false, summary: "Residential tower and apartment documentation within a major east coast developer-builder environment.", sortOrder: 20 },
-    { id: "leffler-simes-architects-architectural-revit-draftsman", title: "Architectural Revit Draftsman", companyId: "leffler-simes-architects", companyName: "Leffler Simes Architects", location: "Melbourne, VIC", startDate: "2018-09-01", endDate: "2018-11-01", current: false, summary: "Retail-focused architectural drafting for a long-established Australian practice with national reach.", sortOrder: 30 },
-    { id: "fleetwood-australia-revit-draftsperson", title: "Revit Draftsperson", companyId: "fleetwood-australia", companyName: "Fleetwood Australia", location: "Melbourne, VIC", startDate: "2018-07-01", endDate: "2018-08-01", current: false, summary: "Modular construction documentation support tied to housing and community infrastructure delivery.", sortOrder: 40 },
-    { id: "place-laboratory-draftsman", title: "Draftsman", companyId: "place-laboratory", companyName: "Place Laboratory", location: "Perth, WA", startDate: "2017-01-01", endDate: "2018-01-01", current: false, summary: "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.", sortOrder: 50 },
-    { id: "dc-design-studio-design-consultant", title: "Design Consultant", companyId: "dc-design-studio", companyName: "DC Design Studio", location: "Perth, WA", startDate: "2015-06-01", endDate: "2018-05-01", current: false, summary: "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.", sortOrder: 60 },
-    { id: "urbis-drafting-technician", title: "Drafting Technician", companyId: "urbis", companyName: "Urbis", location: "Perth, WA", startDate: "2014-08-01", endDate: "2015-06-01", current: false, summary: "Property, city, and community documentation work within a multidisciplinary consulting environment.", sortOrder: 70 },
-    { id: "acce-structural-draftsman", title: "Structural Draftsman", companyId: "acce", companyName: "ACCE", location: "Como, WA", startDate: "2012-01-01", endDate: "2014-03-01", current: false, summary: "Structural documentation across residential, commercial, industrial, and institutional projects.", sortOrder: 80 },
-    { id: "ghd-draftsman", title: "Draftsman", companyId: "ghd", companyName: "GHD", location: "Geraldton & Perth, WA", startDate: "2008-08-01", endDate: "2011-11-01", current: false, summary: "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.", sortOrder: 90 }
+      {
+          "id": "richmond-ross-revit-draftsperson-and-technician",
+          "slug": "richmond-ross-revit-draftsperson-and-technician",
+          "title": "Revit Draftsperson & Technician",
+          "companyId": "richmond-ross",
+          "companyName": "Richmond+Ross",
+          "location": "Crows Nest, NSW",
+          "startDate": "2019-10-01",
+          "endDate": "2021-11-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [
+              "autodesk-revit"
+          ],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 10,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Richmond+Ross | October 2019 – November 2021 | Revit Draftsperson & Technician",
+                  "normalizedId": "richmond-ross-revit-draftsperson-and-technician",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "meriton-group-structural-revit-draftsman",
+          "slug": "meriton-group-structural-revit-draftsman",
+          "title": "Structural Revit Draftsman",
+          "companyId": "meriton-group",
+          "companyName": "Meriton Group",
+          "location": "Sydney, NSW",
+          "startDate": "2019-03-01",
+          "endDate": "2019-05-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Residential tower and apartment documentation within a major east coast developer-builder environment.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [
+              "autodesk-revit"
+          ],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 20,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Meriton Group | March 2019 – May 2019 | Structural Revit Draftsman",
+                  "normalizedId": "meriton-group-structural-revit-draftsman",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "leffler-simes-architects-architectural-revit-draftsman",
+          "slug": "leffler-simes-architects-architectural-revit-draftsman",
+          "title": "Architectural Revit Draftsman",
+          "companyId": "leffler-simes-architects",
+          "companyName": "Leffler Simes Architects",
+          "location": "Melbourne, VIC",
+          "startDate": "2018-09-01",
+          "endDate": "2018-11-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Retail-focused architectural drafting for a long-established Australian practice with national reach.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [
+              "autodesk-revit"
+          ],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 30,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Leffler Simes Architects | September 2018 – November 2018 | Architectural Revit Draftsman",
+                  "normalizedId": "leffler-simes-architects-architectural-revit-draftsman",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "fleetwood-australia-revit-draftsperson",
+          "slug": "fleetwood-australia-revit-draftsperson",
+          "title": "Revit Draftsperson",
+          "companyId": "fleetwood-australia",
+          "companyName": "Fleetwood Australia",
+          "location": "Melbourne, VIC",
+          "startDate": "2018-07-01",
+          "endDate": "2018-08-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Modular construction documentation support tied to housing and community infrastructure delivery.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [
+              "autodesk-revit"
+          ],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 40,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Fleetwood Australia | July 2018 – August 2018 | Revit Draftsperson",
+                  "normalizedId": "fleetwood-australia-revit-draftsperson",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "place-laboratory-draftsman",
+          "slug": "place-laboratory-draftsman",
+          "title": "Draftsman",
+          "companyId": "place-laboratory",
+          "companyName": "Place Laboratory",
+          "location": "Perth, WA",
+          "startDate": "2017-01-01",
+          "endDate": "2018-01-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 50,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Place Laboratory | January 2017 – January 2018 | Draftsman",
+                  "normalizedId": "place-laboratory-draftsman",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "dc-design-studio-design-consultant",
+          "slug": "dc-design-studio-design-consultant",
+          "title": "Design Consultant",
+          "companyId": "dc-design-studio",
+          "companyName": "DC Design Studio",
+          "location": "Perth, WA",
+          "startDate": "2015-06-01",
+          "endDate": "2018-05-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [
+              "autodesk-autocad"
+          ],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 60,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "DC Design Studio | June 2015 – May 2018 | Design Consultant",
+                  "normalizedId": "dc-design-studio-design-consultant",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "urbis-drafting-technician",
+          "slug": "urbis-drafting-technician",
+          "title": "Drafting Technician",
+          "companyId": "urbis",
+          "companyName": "Urbis",
+          "location": "Perth, WA",
+          "startDate": "2014-08-01",
+          "endDate": "2015-06-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Property, city, and community documentation work within a multidisciplinary consulting environment.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 70,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "Urbis Pty Ltd | August 2014 – June 2015 | Drafting Technician",
+                  "normalizedId": "urbis-drafting-technician",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "acce-structural-draftsman",
+          "slug": "acce-structural-draftsman",
+          "title": "Structural Draftsman",
+          "companyId": "acce",
+          "companyName": "ACCE",
+          "location": "Como, WA",
+          "startDate": "2012-01-01",
+          "endDate": "2014-03-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Structural documentation across residential, commercial, industrial, and institutional projects.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 80,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "ACCE Pty Ltd | January 2012 – March 2014 | Structural Draftsman",
+                  "normalizedId": "acce-structural-draftsman",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      },
+      {
+          "id": "ghd-draftsman",
+          "slug": "ghd-draftsman",
+          "title": "Draftsman",
+          "companyId": "ghd",
+          "companyName": "GHD",
+          "location": "Geraldton & Perth, WA",
+          "startDate": "2008-08-01",
+          "endDate": "2011-11-01",
+          "current": false,
+          "employmentType": "",
+          "summary": "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.",
+          "responsibilities": [],
+          "highlights": [],
+          "platformIds": [],
+          "projectIds": [],
+          "status": "active",
+          "sortOrder": 90,
+          "sourceNotes": "Derived from public CV experienceItems; dates parsed from the source period label.",
+          "provenance": [
+              {
+                  "sourceFile": "src/content/siteContent.ts",
+                  "sourceSection": "experienceItems",
+                  "sourceField": "company/period/role/location/summary/url",
+                  "rawValue": "GHD Pty Ltd | August 2008 – November 2011 | Draftsman",
+                  "normalizedId": "ghd-draftsman",
+                  "notes": ""
+              }
+          ],
+          "updatedAt": "2026-06-18T12:37:11.672Z"
+      }
   ];
   let loadingCount = 0;
 
@@ -386,6 +1782,25 @@
       .replace(/^-+|-+$/g, "") || "project-scaffold";
   }
 
+  function platformRegistryId(value) {
+    const id = createSlug(value);
+    const aliases = {
+      autocad: "autodesk-autocad",
+      "autodesk-autocad": "autodesk-autocad",
+      revit: "autodesk-revit",
+      "autodesk-revit": "autodesk-revit",
+      sketchup: "trimble-sketchup",
+      "trimble-sketchup": "trimble-sketchup",
+      "adobe-creative-cloud": "adobe-creative-cloud",
+      "creative-cloud": "adobe-creative-cloud",
+      "microsoft-office": "microsoft-office",
+      "microsoft-office-365": "microsoft-office",
+      office: "microsoft-office",
+      qgis: "qgis"
+    };
+    return aliases[id] || id;
+  }
+
   function loadProjects() {
     const seed = Array.isArray(data.projects) ? data.projects.map(normalizeProject) : [];
 
@@ -521,7 +1936,7 @@
   }
 
   function logoPathForPlatform(nameOrId) {
-    const id = createSlug(nameOrId);
+    const id = platformRegistryId(nameOrId);
     const item = (registryState.platforms.items || []).find((entry) => entry.id === id || entry.slug === id || createSlug(entry.name) === id);
     return item?.logoPath || platformLogoPath(nameOrId);
   }
@@ -547,7 +1962,7 @@
         companyById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index }));
       });
       normalizeProjectRegistryRefs(project.software || project.platformLabels || project.platformIds).forEach((name, index) => {
-        const id = createSlug(name);
+        const id = platformRegistryId(name);
         if (!id || platformById.has(id)) return;
         platformById.set(id, normalizeRegistryItem({ id, name, status: "active", sortOrder: 100 + index, logoPath: platformLogoPath(name) }));
       });
@@ -567,7 +1982,7 @@
   function registryLabel(kind, idOrName) {
     const value = String(idOrName || "").trim();
     if (!value) return "";
-    const id = createSlug(value);
+    const id = kind === "platforms" ? platformRegistryId(value) : createSlug(value);
     const found = (registryState[kind]?.items || []).find((item) => item.id === id || item.slug === id || item.name === value);
     return found?.name || value;
   }
@@ -1044,9 +2459,19 @@
     const value = String(path || "").trim();
     if (!value) return `<span class="asset-preview-placeholder">No asset selected</span>`;
     if (/\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(value)) {
-      return `<img src="${escapeHtml(value)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+      return `<img src="${escapeHtml(adminAssetPreviewUrl(value))}" alt="${escapeHtml(alt)}" loading="lazy" />`;
     }
     return `<span class="selected-file-indicator">${escapeHtml(value.split("/").pop() || value)}</span>`;
+  }
+
+  function adminAssetPreviewUrl(path) {
+    const value = String(path || "").trim();
+    if (!value) return "";
+    if (/^(https?:|data:|blob:)/i.test(value)) return value;
+    if (value.startsWith("/media/") || value.startsWith("/docs/")) return `./public${value}`;
+    if (value.startsWith("media/") || value.startsWith("docs/")) return `./public/${value}`;
+    if (/^[^/]+\.(png|jpe?g|webp|gif)$/i.test(value)) return `./public/media/portfolio/${value}`;
+    return value;
   }
 
   async function persistCmsCollection(collection, renderAfter = false, force = false) {
@@ -2373,8 +3798,8 @@
   function renderPositionRow(item) {
     const company = registryLabel("companies", item.companyId) || item.companyName || "Company not recorded";
     return `
-      <tr class="project-click-row" data-project-row-id="${escapeHtml(project.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(project.title)}">
-        <td><strong>${escapeHtml(item.title)}</strong><br><span>${escapeHtml(item.summary || "No summary recorded")}</span></td>
+      <tr>
+        <td><strong>${escapeHtml(item.title)}</strong><br><span>${escapeHtml(item.summary || "No summary recorded")}</span><br>${sourceBadge(item)}</td>
         <td>${escapeHtml(company)}</td>
         <td>${escapeHtml([item.startDate, item.endDate || (item.current ? "Current" : "")].filter(Boolean).join(" - ") || "Dates not recorded")}</td>
         <td>${escapeHtml(item.location || "Not recorded")}</td>
@@ -2455,7 +3880,7 @@
     const logo = registryLogoMarkup(kind, item);
     return `
       <tr>
-        <td><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.description || item.details || "No details recorded")}</span></td>
+        <td><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.description || item.details || "No details recorded")}</span><br>${sourceBadge(item)}</td>
         <td><code>${escapeHtml(item.id)}</code></td>
         <td>${badge(item.status, item.status === "active" ? "success" : "warn")}</td>
         <td><div class="registry-logo-cell">${logo}<span>${escapeHtml(kind === "companies" ? item.location : item.vendor || item.company || "")}</span></div></td>
@@ -2464,9 +3889,15 @@
         <td><div class="row-actions">
           <button class="button button-secondary" type="button" data-registry-action="edit" data-registry-kind="${kind}" data-registry-id="${escapeHtml(item.id)}">Edit</button>
           <button class="button button-danger" type="button" data-registry-action="archive" data-registry-kind="${kind}" data-registry-id="${escapeHtml(item.id)}">${item.status === "archived" ? "Activate" : "Archive"}</button>
+          <button class="button button-danger" type="button" data-registry-action="delete" data-registry-kind="${kind}" data-registry-id="${escapeHtml(item.id)}">Delete</button>
         </div></td>
       </tr>
     `;
+  }
+
+  function sourceBadge(item) {
+    const label = item?.source === "admin_created" ? "Admin-created" : item?.provenance ? "Source-audited" : item?.source || item?.sourceNotes || "Source";
+    return badge(label, item?.source === "admin_created" ? "warn" : "success");
   }
 
   function renderRegistryModal(kind, modal) {
@@ -3085,7 +4516,7 @@
     const issueLabel = issues.length ? issues.join(", ") : "complete fields";
     const baseline = isBaselineProject(project);
     return `
-      <tr>
+      <tr data-project-row-id="${escapeHtml(project.id)}" tabindex="0">
         <td><input type="checkbox" aria-label="Select ${escapeHtml(project.title)}" data-project-select="${escapeHtml(project.id)}" ${projectState.selected.has(project.id) ? "checked" : ""} /></td>
         <td><strong>${escapeHtml(project.title)}</strong><br><span>${escapeHtml(project.client || "No client field")}</span><br>${baseline ? badge("Protected baseline", "success") : badge("Admin-created", "warn")}</td>
         <td><code>${escapeHtml(project.slug)}</code></td>
@@ -3340,7 +4771,7 @@
   }
 
   function registryMultiSelectField(label, name, kind, selectedValues, readOnly = false) {
-    const selected = new Set(normalizeProjectRegistryRefs(selectedValues).map(createSlug));
+    const selected = new Set(normalizeProjectRegistryRefs(selectedValues).map((value) => (kind === "platforms" ? platformRegistryId(value) : createSlug(value))));
     const options = activeRegistryItems(kind);
     const chips = Array.from(selected)
       .map((id) => {
@@ -3368,7 +4799,7 @@
   function platformChips(values) {
     return normalizeProjectRegistryRefs(values)
       .map((value) => {
-        const id = createSlug(value);
+        const id = platformRegistryId(value);
         const item = registryState.platforms.items.find((entry) => entry.id === id || entry.slug === id || createSlug(entry.name) === id);
         if (!item) return "";
         const logo = logoPathForPlatform(item.id);
@@ -4474,6 +5905,26 @@
       item.status = nextStatus;
       item.updatedAt = new Date().toISOString();
       registryState[kind].message = `${config.singular} ${nextStatus === "archived" ? "archived" : "activated"}.`;
+      persistRegistryItems(kind);
+      renderRegistryPage(kind);
+      return;
+    }
+    if (action === "delete") {
+      const item = registryState[kind].items.find((entry) => entry.id === id);
+      if (!item) return;
+      const isSourceDerived = item.source === "public_cv_source" || item.provenance || item.sourceNotes;
+      if (isSourceDerived) {
+        if (!window.confirm(`${item.name} is source-derived. Archive it instead of deleting the source baseline row?`)) return;
+        item.status = "archived";
+        item.updatedAt = new Date().toISOString();
+        registryState[kind].message = `${config.singular} archived; source-derived registry rows are retained for provenance.`;
+        persistRegistryItems(kind);
+        renderRegistryPage(kind);
+        return;
+      }
+      if (!window.confirm(`Delete admin-created ${config.singular.toLowerCase()} "${item.name}"? This does not change the public CV or portfolio source.`)) return;
+      registryState[kind].items = registryState[kind].items.filter((entry) => entry.id !== id);
+      registryState[kind].message = `Deleted ${item.name}.`;
       persistRegistryItems(kind);
       renderRegistryPage(kind);
       return;

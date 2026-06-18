@@ -204,6 +204,8 @@ When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configure
 
 Projects are handled differently from Media, Companies, Platforms, and disabled Alerts compatibility. `assets/data/public-projects-baseline.json` is a generated snapshot from the public DanielClancy repo's WorkSet-derived portfolio pipeline (`cmsdata/wix/collection-tables/WorkSet.csv`, `src/content/workSetPortfolio.ts`, and the public portfolio routes). The Projects API loads that baseline first, then merges `cms:projects` KV data as admin edits, metadata, visibility/status changes, and admin-created additions. Legacy bare-array KV data and older partial scaffold rows are treated as overlays and must not collapse the Projects list to only those rows.
 
+`assets/data/source-audit-report.json` records the current read-only source audit against the public DanielClancy CV/portfolio source and copied Admin preview catalogs. `assets/data/admin-companies-baseline.json`, `assets/data/admin-platforms-baseline.json`, and `assets/data/admin-positions-baseline.json` are complete generated registry baselines from that audit. These registries are source-derived only; blank optional fields indicate missing source facts, not invented replacements. Companies, Platforms, Positions, and Projects should be rechecked with focused Node completeness tests plus MCP/browser validation whenever these baselines are regenerated or route-loading behavior is repaired.
+
 Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
 
 `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs` contain copied preview files from the public DanielClancy repo at the same relative public paths. This lets Admin editor previews resolve `/media/portfolio/thumbs/...`, `/media/portfolio/...`, and `/docs/...` locally without remote URLs or embedded assets. `assets/data/public-asset-catalog.json` is regenerated from those copied Admin files and records the original `DanielClancy` source repo/source directories.
@@ -239,8 +241,12 @@ DanielClancy-Admin/
 │   ├── css/
 │   │   └── admin.css
 │   ├── data/
+│   │   ├── admin-companies-baseline.json
+│   │   ├── admin-platforms-baseline.json
+│   │   ├── admin-positions-baseline.json
 │   │   ├── public-asset-catalog.json
-│   │   └── public-projects-baseline.json
+│   │   ├── public-projects-baseline.json
+│   │   └── source-audit-report.json
 │   ├── fonts/
 │   │   ├── Recharge-Bold.otf
 │   │   ├── SuiGeneris-Regular.otf
@@ -284,7 +290,8 @@ DanielClancy-Admin/
 ├── tests/
 │   ├── alerts-disabled.test.mjs
 │   ├── analytics-ingest-and-assets.test.mjs
-│   └── analytics-helpers.test.mjs
+│   ├── analytics-helpers.test.mjs
+│   └── source-audit-completeness.test.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html

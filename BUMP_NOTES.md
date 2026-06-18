@@ -1,5 +1,56 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Source Audit Registry Completion And Route Repair Milestone
+
+### Technical Notes
+
+- Audited the read-only DanielClancy public CV/portfolio source, WorkSet CSV-derived project data, brand/logo references, copied Admin preview assets, and existing Admin baseline JSON before repairing Admin behavior.
+- Generated `assets/data/source-audit-report.json` with provenance for every extracted company, platform/software, position, project, project-company link, project-platform link, logo, asset, document, and warning.
+- Replaced incomplete inline/Admin seed data with complete source-derived Companies, Platforms, Positions, and Projects baselines: 20 companies, 6 platforms/software records, 9 employment positions, and 16 protected public project records.
+- Normalized legacy project software labels such as `AutoCAD`, `Revit`, and `Sketchup` to audited platform registry IDs without adding duplicate runtime platform rows.
+- Restored Projects table row-open behavior by keeping `data-project-row-id` on rendered project rows while preserving interactive-control exclusions.
+- Added display-only Admin asset preview URL resolution so stored public project paths remain unchanged while local/Admin previews render from copied `public/media` and `public/docs` files.
+- Added `tests/source-audit-completeness.test.mjs` to fail when audited companies, platforms, positions, project relationships, required routes/nav entries, or copied asset catalog paths drift from generated Admin baselines.
+- Companies, Platforms, Positions, Projects, Media, Overview, Analytics, Accounts, and Settings routes were validated in a local Wrangler Pages preview with temporary local-only bindings and local KV.
+- Alerts rule editor remains removed/disabled and is not restored as a normal nav item.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- DanielClancy public website was read-only for this repair; no CV/employment/company/software facts were invented.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Admin now has complete source-derived Companies, Platforms, and Positions registries instead of partial scaffold data.
+- Projects editor selectors use the complete company and platform registries, support multiple platforms, and open from row clicks without hijacking buttons, inputs, checkboxes, links, or resize controls.
+- Company logos render as current-color masks, software logos stay full color, and project asset previews load from Admin-local copied preview files.
+
+### Files / Areas Changed
+
+- `assets/data/admin-companies-baseline.json`
+- `assets/data/admin-platforms-baseline.json`
+- `assets/data/admin-positions-baseline.json`
+- `assets/data/public-projects-baseline.json`
+- `assets/data/source-audit-report.json`
+- `assets/js/admin-app.js`
+- `tests/source-audit-completeness.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Ran `node --check assets/js/admin-app.js`.
+- Ran `node --check assets/js/admin-auth.js`.
+- Ran `node --test tests/alerts-disabled.test.mjs tests/source-audit-completeness.test.mjs`.
+- Ran `git diff --check`; only Git line-ending normalization warnings were reported.
+- Ran `npm run check --if-present` and `npm run build --if-present`; both exited cleanly with no scripts configured.
+- Ran Playwright MCP browser validation against a local Wrangler Pages preview on `http://127.0.0.1:4176/` with temporary local-only admin bindings and local KV. The final pass verified required routes, shell controls, sidebar/topbar/footer, source-derived counts, all source company/platform/position labels, project row-click editor open, complete project registry selectors, multi-platform selector, rendered asset previews, and zero current-tab console errors.
+
+### Risks / Follow-Ups
+
+- The audit preserves missing/ambiguous source fields as blank values plus provenance instead of inventing facts.
+- Several source project gallery/document page filenames exist as source references but are not all copied as standalone local preview images; the completeness guard verifies copied asset catalog paths that are present in Admin preview folders.
+- Production KV/R2 behavior still depends on deployed Cloudflare bindings and should be rechecked after deployment.
+
 ## Admin Shell, Assets, Registries, Positions, And Analytics Polish Milestone
 
 ### Technical Notes

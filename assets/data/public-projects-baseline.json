@@ -2,7 +2,7 @@
   "meta": {
     "sourceRepo": "DanielClancy",
     "sourceDescription": "Generated from the public DanielClancy WorkSet.csv portfolio pipeline used by src/content/workSetPortfolio.ts and public /portfolio detail routes.",
-    "generatedAt": "2026-06-14T23:01:44.538Z",
+    "generatedAt": "2026-06-18T12:38:03.556Z",
     "projectCount": 16,
     "sourceFilesUsed": [
       "cmsdata/wix/collection-tables/WorkSet.csv",
@@ -10,7 +10,8 @@
       "src/content/siteContent.ts",
       "src/pages/PortfolioPage.tsx",
       "src/pages/PortfolioDetailPage.tsx"
-    ]
+    ],
+    "sourceAuditReport": "/assets/data/source-audit-report.json"
   },
   "projects": [
     {
@@ -28,8 +29,8 @@
       "role": null,
       "summary": "Structural engineering documentation including footing and ground slab plans, strip footings, pad footings, wall panel base fixing details, slab control joints, and typical concrete panel elevations...",
       "description": "Structural engineering documentation including footing and ground slab plans, strip footings, pad footings, wall panel base fixing details, slab control joints, and typical concrete panel elevations for a proposed retail development. Drawings show reinforcement details, construction notes, and typical sections for the main building structure.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Dawesville IGA_Page_1.jpg",
         "Dawesville IGA_Page_2.jpg",
@@ -56,7 +57,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "acce"
+      ],
+      "companyLabels": [
+        "ACCE"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Dawesville IGA",
+        "normalizedId": "proposed-retail-development-for-dawesville-iga"
+      },
+      "sortOrder": 10
     },
     {
       "id": "cue-roadhouse",
@@ -100,7 +120,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "riley-consulting"
+      ],
+      "companyLabels": [
+        "Riley Consulting"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cue Roadhouse",
+        "normalizedId": "cue-roadhouse"
+      },
+      "sortOrder": 20
     },
     {
       "id": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south",
@@ -204,7 +243,31 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "companyLabels": [
+        "Richmond+Ross"
+      ],
+      "platformIds": [
+        "autodesk-revit",
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Revit",
+        "AutoCAD",
+        "Autodesk Revit",
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "existing admin baseline",
+        "rawValue": "Redevelopment of Highway Service Center Pheasants Nest (M31) North & South",
+        "normalizedId": "redevelopment-of-highway-service-center-pheasants-nest-m31-north-and-south"
+      },
+      "sortOrder": 30,
+      "location": "Hume Hwy & M31, Berrima NSW 2577, Australia"
     },
     {
       "id": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112",
@@ -221,8 +284,8 @@
       "role": null,
       "summary": "General arrangement and amalgamation plan showing the proposed boundary re-alignment of Lot 1 at 234 Jull Street, Armadale. Includes existing and proposed lot boundaries, easements, reserves,...",
       "description": "General arrangement and amalgamation plan showing the proposed boundary re-alignment of Lot 1 at 234 Jull Street, Armadale. Includes existing and proposed lot boundaries, easements, reserves, surface contours, services, and surrounding road context such as Commerce Ave, Fourth Rd, Jull St, and Armadale Station. The drawing identifies consolidation of the right-of-way, total area calculations, and the proposed WAPC application area.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Jull Street Boundary Realignment.jpg"
       ],
@@ -247,7 +310,30 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "companyLabels": [
+        "DC Design Studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "platformLabels": [
+        "AutoCAD",
+        "QGIS",
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "existing admin baseline",
+        "rawValue": "Jull Street Boundary Realignment",
+        "normalizedId": "proposed-boundary-re-alignment-of-lot-1-on-dp-d073414-234-jull-st-armadale-6112"
+      },
+      "sortOrder": 40,
+      "location": "234 Jull St, Armadale WA 6112, Australia"
     },
     {
       "id": "curtin-creative-quarter-misc-details",
@@ -367,7 +453,30 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "place-laboratory"
+      ],
+      "companyLabels": [
+        "Place Laboratory"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "autodesk-revit",
+        "trimble-sketchup"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD",
+        "Autodesk Revit",
+        "Trimble SketchUp"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Curtin Creative Quarter",
+        "normalizedId": "curtin-creative-quarter-misc-details"
+      },
+      "sortOrder": 50
     },
     {
       "id": "lot-500-eighth-road-land-resumption",
@@ -384,8 +493,8 @@
       "role": null,
       "summary": "General arrangement plan illustrating the proposed land resumption area for Lot 500 on Eighth Road. Includes boundary extents, resumption area measurements, building footprint, and contextual location...",
       "description": "General arrangement plan illustrating the proposed land resumption area for Lot 500 on Eighth Road. Includes boundary extents, resumption area measurements, building footprint, and contextual location plan prepared for informational purposes only.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Eighth Road Land Resumption.jpg"
       ],
@@ -410,7 +519,28 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "companyLabels": [
+        "DC Design Studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD",
+        "QGIS"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Eighth Road Land Resumption",
+        "normalizedId": "lot-500-eighth-road-land-resumption"
+      },
+      "sortOrder": 60
     },
     {
       "id": "cockburn-coast",
@@ -427,8 +557,8 @@
       "role": null,
       "summary": "Technical landscape and civil documentation showing streetscape layouts, tree planting, paving treatments, verge works and boundary fence details for the Cockburn Coast development area. Drawings include...",
       "description": "Technical landscape and civil documentation showing streetscape layouts, tree planting, paving treatments, verge works and boundary fence details for the Cockburn Coast development area. Drawings include multiple stage extents, planting layouts, and detailed fence plan and elevation.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Cockburn Coast_Page_1.jpg",
         "Cockburn Coast_Page_3.jpg",
@@ -472,7 +602,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "urbis"
+      ],
+      "companyLabels": [
+        "Urbis"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cockburn Coast Streetscapes",
+        "normalizedId": "cockburn-coast"
+      },
+      "sortOrder": 70
     },
     {
       "id": "spratt-residence-proposed-addition",
@@ -517,7 +666,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "companyLabels": [
+        "DC Design Studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Spratt Residence - Proposed Addition",
+        "normalizedId": "spratt-residence-proposed-addition"
+      },
+      "sortOrder": 80
     },
     {
       "id": "upss-homebush-nsw",
@@ -564,7 +732,28 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "companyLabels": [
+        "Richmond+Ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "AutoCAD",
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "existing admin baseline",
+        "rawValue": "UPSS Homebush, NSW",
+        "normalizedId": "upss-homebush-nsw"
+      },
+      "sortOrder": 90,
+      "location": "Parramatta Rd & Courallie Ave, Homebush West NSW 2127, Australia"
     },
     {
       "id": "wungong-urban-water-master-plan",
@@ -608,7 +797,28 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "dc-design-studio"
+      ],
+      "companyLabels": [
+        "DC Design Studio"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "qgis"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD",
+        "QGIS"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Wungong Urban Water Master Plan",
+        "normalizedId": "wungong-urban-water-master-plan"
+      },
+      "sortOrder": 100
     },
     {
       "id": "upss-beacon-hill-nsw",
@@ -655,7 +865,28 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "companyLabels": [
+        "Richmond+Ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "AutoCAD",
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "existing admin baseline",
+        "rawValue": "UPSS Beacon Hill, NSW",
+        "normalizedId": "upss-beacon-hill-nsw"
+      },
+      "sortOrder": 110,
+      "location": "Warringah Rd & Cornish Ave, Beacon Hill NSW 2100, Australia"
     },
     {
       "id": "henry-street-residence-structural-documentation",
@@ -672,8 +903,8 @@
       "role": null,
       "summary": "A structural engineering drawing set for a multi-unit residential development on Henry Street in Fremantle WA. The package includes ground slab and footing layouts suspended slab...",
       "description": "A structural engineering drawing set for a multi-unit residential development on Henry Street in Fremantle WA. The package includes ground slab and footing layouts suspended slab plans roof steel framing layouts and various structural details including screen walls brick piers slab steps anchor details steel post connections and wall junction sections. The drawings include structural notes material specifications reinforcement details and stair sections.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Henry Street Residence_Page_3.jpg",
         "Henry Street Residence_Page_1.jpg",
@@ -706,7 +937,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "acce"
+      ],
+      "companyLabels": [
+        "ACCE"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Henry Street Residence - Structural Documentation",
+        "normalizedId": "henry-street-residence-structural-documentation"
+      },
+      "sortOrder": 120
     },
     {
       "id": "lake-joondalup-baptist-college-new-arts-building-structural-plans",
@@ -755,7 +1005,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "acce"
+      ],
+      "companyLabels": [
+        "ACCE"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Lake Joondalup Baptist College",
+        "normalizedId": "lake-joondalup-baptist-college-new-arts-building-structural-plans"
+      },
+      "sortOrder": 130
     },
     {
       "id": "cottesloe-beach-house-landscape-design",
@@ -772,8 +1041,8 @@
       "role": null,
       "summary": "Comprehensive landscape architecture documentation for the redevelopment of the Cottesloe Beach House at 1 Rosendo Street. The package includes general notes lower ground ground and first...",
       "description": "Comprehensive landscape architecture documentation for the redevelopment of the Cottesloe Beach House at 1 Rosendo Street. The package includes general notes lower ground ground and first floor landscape plans detailed levels and grading softscape layouts tree pit construction rooftop planting systems and extensive tree transplanting specifications. Sections and elevations illustrate retaining structures design levels heritage interfaces and the relationship between planting beds and architectural elements.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Cottesloe Beach House_Page_8.jpg",
         "Cottesloe Beach House_Page_3.jpg",
@@ -811,7 +1080,30 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "place-laboratory"
+      ],
+      "companyLabels": [
+        "Place Laboratory"
+      ],
+      "platformIds": [
+        "autodesk-autocad",
+        "autodesk-revit",
+        "trimble-sketchup"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD",
+        "Autodesk Revit",
+        "Trimble SketchUp"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Cottesloe Beach House - Landscape Design",
+        "normalizedId": "cottesloe-beach-house-landscape-design"
+      },
+      "sortOrder": 140
     },
     {
       "id": "upss-wyoming-nsw",
@@ -856,7 +1148,28 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "richmond-ross"
+      ],
+      "companyLabels": [
+        "Richmond+Ross"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "AutoCAD",
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "existing admin baseline",
+        "rawValue": "UPSS Wyoming, NSW",
+        "normalizedId": "upss-wyoming-nsw"
+      },
+      "sortOrder": 150,
+      "location": "Pacific Hwy, Wyoming NSW 2250, Australia"
     },
     {
       "id": "geraldton-fire-station-structural-documentation",
@@ -873,8 +1186,8 @@
       "role": null,
       "summary": "A detailed structural engineering documentation package for the Geraldton Fire Station including mezzanine beam plans roof framing layouts pad footings structural bracing block screen walls and...",
       "description": "A detailed structural engineering documentation package for the Geraldton Fire Station including mezzanine beam plans roof framing layouts pad footings structural bracing block screen walls and various roof and slab connection details. The drawings include structural notes design loads steelwork details flybrace arrangements bracing specifications and cross sections required for new works and retrofits.",
-      "heroImage": null,
-      "thumbnailPath": null,
+      "heroImage": "",
+      "thumbnailPath": "",
       "galleryPaths": [
         "Geraldton Fire Station_Page_3.jpg",
         "Geraldton Fire Station_Page_2.jpg",
@@ -903,7 +1216,26 @@
       ],
       "sourceConfidence": "Medium",
       "sourceUpdatedAt": null,
-      "updatedAt": null
+      "updatedAt": "2026-06-18T12:37:11.672Z",
+      "companyIds": [
+        "acce"
+      ],
+      "companyLabels": [
+        "ACCE"
+      ],
+      "platformIds": [
+        "autodesk-autocad"
+      ],
+      "platformLabels": [
+        "Autodesk AutoCAD"
+      ],
+      "provenance": {
+        "sourceFile": "cmsdata/wix/collection-tables/WorkSet.csv",
+        "sourceField": "projectTitle/Project Page (Item)",
+        "rawValue": "Geraldton Fire Station - Structural Documentation",
+        "normalizedId": "geraldton-fire-station-structural-documentation"
+      },
+      "sortOrder": 160
     }
   ]
 }
