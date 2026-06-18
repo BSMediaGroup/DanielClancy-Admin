@@ -206,6 +206,26 @@ a {
   mask: var(--icon-url) center / contain no-repeat;
 }
 
+.ui-img-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: invert(82%) sepia(21%) saturate(450%) hue-rotate(355deg) brightness(99%) contrast(91%);
+  opacity: 0.95;
+}
+
+.nav-link:hover .ui-img-icon,
+.nav-link:focus-visible .ui-img-icon,
+.nav-link.is-active .ui-img-icon,
+.sidebar-mode-button:hover .ui-img-icon,
+.sidebar-mode-button:focus-visible .ui-img-icon,
+.sidebar-reopen-button:hover .ui-img-icon,
+.sidebar-reopen-button:focus-visible .ui-img-icon {
+  filter: invert(98%) sepia(9%) saturate(768%) hue-rotate(341deg) brightness(104%) contrast(93%);
+  opacity: 1;
+}
+
 body.nav-collapsed .admin-shell {
   grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }

@@ -5,9 +5,10 @@
 ### Technical Notes
 
 - Hotfixed Admin shell startup so Positions seed data is loaded after `CV_POSITION_SEED` is initialized, preventing the `Cannot access 'CV_POSITION_SEED' before initialization` crash that blocked the entire shell.
+- Replaced brittle sidebar/topbar UI icon mask rendering with direct local SVG image rendering plus dark-theme filtering so the icon files visibly paint in the Admin shell.
 - Copied DanielClancy public preview assets into matching Admin public paths under `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs`, then regenerated `assets/data/public-asset-catalog.json` from those Admin-local files while retaining `DanielClancy` source metadata.
 - Copied public `company-*` and `software-*` SVG logo assets into Admin `assets/logos`.
-- Fixed sidebar/topbar icon rendering to use local `assets/icons/ui` SVG masks/currentColor instead of missing or invisible placeholders.
+- Fixed sidebar/topbar icon rendering to use local `assets/icons/ui` SVG images instead of missing or invisible placeholders.
 - Moved the topbar loader to the bottom edge of the topbar and matched the StreamSuites-Dashboard purple gradient/motion pattern.
 - Split sidebar controls into persisted collapse and hide actions, added a hidden-mode reopen button, kept icon-only collapsed navigation, removed redundant OPEN-style navigation copy, and kept brand subtext as `ADMIN DASHBOARD`.
 - Corrected footer/topbar/sidebar shell quality toward StreamSuites-Dashboard behavior without copying StreamSuites branding.

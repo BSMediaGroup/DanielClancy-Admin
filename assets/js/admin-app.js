@@ -1584,7 +1584,7 @@
         const icon = `./assets/icons/ui/${route.icon || route.fallbackIcon || "dashboard.svg"}`;
         return `
           <a class="${classes}" href="${href}" title="${escapeHtml(route.label)}" ${route.disabled ? 'aria-disabled="true"' : ""}>
-            <span class="nav-icon" aria-hidden="true"><span class="ui-mask-icon" style="--icon-url: url('${escapeHtml(icon)}')"></span></span>
+            <span class="nav-icon" aria-hidden="true"><img class="ui-img-icon" src="${escapeHtml(icon)}" alt="" loading="lazy" /></span>
             <span>${escapeHtml(route.label)}</span>
           </a>
         `;
