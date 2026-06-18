@@ -226,6 +226,41 @@ Projects now use autocomplete/dropdowns and previews for thumbnail (`/media/port
 
 `POST /api/admin/assets/upload` requires a signed admin session and `DC_ADMIN_ASSETS_R2`. It accepts multipart image uploads for Projects image fields, registry logos, and account avatars, plus PDF uploads for document paths; validates common web image MIME types and `application/pdf`; enforces a 10MB cap; and stores files under `portfolio/thumbs/<project-slug>/`, `portfolio/projects/<project-slug>/`, `docs/projects/<project-slug>/`, or `accounts/avatars/` depending on the field. It returns the R2 key and a browser-ready URL only when `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` is configured. When R2 is missing, the API returns `storage_not_configured`; the editor keeps manual/autocomplete path fields and unsaved form data intact.
 
+## Public Site-Data Export
+
+Implemented endpoint:
+
+- `GET /api/public/site-data`
+
+This endpoint is intentionally public and read-only. It does not require an admin session because it exposes only sanitized data needed by `danielclancy.net` public rendering. It does not expose account registry rows, auth/session state, secrets, KV binding names, overlay wrappers, excluded-row internals, draft/edit-only metadata, or admin-only implementation details.
+
+The response contract is stable JSON:
+
+- `ok`
+- `schemaVersion: "danielclancy-public-site-data.v1"`
+- `generatedAt`
+- `source: "admin_kv_reconciled" | "admin_baseline_reconciled"`
+- `collections.projects`
+- `collections.companies`
+- `collections.platforms`
+- `collections.positions`
+- `assets.portfolioThumbs`
+- `assets.portfolioImages`
+- `assets.docs`
+- `warnings`
+
+Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
+
+CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use `Cache-Control: public, max-age=300, stale-while-revalidate=1800`; errors use `no-store`.
+
+Public asset paths are metadata-only and must stay clean:
+
+- thumbnails: `/media/portfolio/thumbs/...`
+- gallery/hero images: `/media/portfolio/...`
+- documents: `/docs/...`
+
+Absolute HTTPS CDN/R2 URLs may pass through when they are already stored in public-safe fields. Binary assets are not embedded in the response.
+
 ## Cloudflare Setup Checkpoint
 
 After local smoke testing, stop for Cloudflare setup before real OAuth/live auth testing:
@@ -276,6 +311,7 @@ DanielClancy-Admin/
 │   │   ├── admin-accounts.js
 │   │   ├── analytics-store.js
 │   │   ├── alert-sender.js
+│   │   ├── public-site-data.js
 │   │   ├── registry-reconciliation.js
 │   │   └── turnstile.js
 │   └── api/
@@ -293,6 +329,8 @@ DanielClancy-Admin/
 │       │   └── status.js
 │       ├── auth/
 │       │   └── [[path]].js
+│       ├── public/
+│       │   └── site-data.js
 │       ├── track/
 │       │   └── page-visit.js
 │       └── turnstile/
@@ -301,6 +339,7 @@ DanielClancy-Admin/
 │   ├── alerts-disabled.test.mjs
 │   ├── analytics-ingest-and-assets.test.mjs
 │   ├── analytics-helpers.test.mjs
+│   ├── public-site-data-export.test.mjs
 │   ├── registry-overlay-persistence.test.mjs
 │   ├── registry-reconciliation.test.mjs
 │   └── source-audit-completeness.test.mjs

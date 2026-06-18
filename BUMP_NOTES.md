@@ -1,5 +1,48 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Public Site-Data Export Milestone
+
+### Technical Notes
+
+- Added `GET /api/public/site-data` as a public, read-only, sanitized Cloudflare Pages Function endpoint for DanielClancy.net hydration.
+- Added `functions/_shared/public-site-data.js` to build the export from protected Projects baseline plus safe `cms:projects` KV overlay, and from reconciled Companies/Platforms/Positions using the existing `registry-overlay.v3` layer.
+- Public export returns explicit `danielclancy-public-site-data.v1` shape with `projects`, `companies`, `platforms`, `positions`, public asset catalogs, generated timestamp, source label, and warnings.
+- Client-only Companies remain excluded from public Companies; Riley Consulting remains project client/provenance metadata only when source data intends it.
+- Fleetwood Australia and GHD continue to be restored from source baselines when present in source data.
+- The endpoint does not expose admin sessions, account registry data, auth state, secrets, KV binding names, overlay wrappers, excluded-row internals, edit-only metadata, or draft/private rows.
+- CORS allows only public DanielClancy origins and local Vite/preview origins for GET/OPTIONS. Unsafe methods are rejected.
+- Successful responses use short public caching with stale-while-revalidate; errors use `no-store`.
+- If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baselines plus warnings rather than breaking public site hydration.
+- Added `tests/public-site-data-export.test.mjs` covering collection/asset presence, Riley exclusion, Fleetwood/GHD inclusion, internal-field leakage prevention, KV overlay merge, and baseline fallback.
+- Alerts editor remains removed/disabled.
+- OAuth users are still not auto-promoted.
+- Manual env-backed admin access remains preserved.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin can now publish a safe public data feed for DanielClancy.net without making the public site depend on admin login or raw CMS internals.
+- The export is designed to fail soft: public website fallback data remains authoritative when Admin storage or the endpoint is unavailable.
+
+### Files / Areas Changed
+
+- `functions/_shared/public-site-data.js`
+- `functions/api/public/site-data.js`
+- `tests/public-site-data-export.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Run `node --check functions/_shared/public-site-data.js functions/api/public/site-data.js`.
+- Run `node --test tests/public-site-data-export.test.mjs tests/registry-reconciliation.test.mjs tests/source-audit-completeness.test.mjs`.
+- Run `git diff --check`.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages validation should confirm live CORS, cache headers, and fallback behavior against real `DC_ADMIN_KV`.
+- Public project rows still need clean `/media/portfolio/...` and `/docs/...` paths configured where old source filenames or OneDrive links remain.
+
 ## Emergency Registry Overlay v3 Persistence Hotfix
 
 ### Technical Notes
