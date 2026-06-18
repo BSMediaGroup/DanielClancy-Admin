@@ -1,5 +1,36 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Auth Turnstile Removal And Alert Geo Context Milestone
+
+### Technical Notes
+
+- Removed Turnstile from admin login/signup/OAuth auth flows; `assets/js/admin-auth.js` no longer renders the auth Turnstile widget, disables sign-in on a Turnstile token, or appends `turnstileToken` to OAuth starts.
+- Removed server-side Turnstile verification from manual login, signup scaffold, and OAuth start in `functions/api/auth/[[path]].js`; password/secret comparison and signed session cookies are unchanged.
+- Preserved env-backed master admins through `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1` and `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`.
+- Expanded the admin alert sender to forward sanitized Cloudflare request metadata, including host/origin, page/referrer fields, request method, client IP, user agent, browser/device/platform, timezone, colo, `geo.*`, country flag, display/user/account fields, and auth provider.
+- Auth, CMS, and page_visit alerts remain event-only and continue stripping rule/configuration/manifest fields before posting to StreamSuites.
+- OAuth users are still not auto-promoted, and the Alerts editor remains removed/disabled.
+
+### Human-Readable Notes
+
+- Admin login and OAuth access no longer depend on a fragile Turnstile token lifecycle.
+- StreamSuites alert templates can now receive real Cloudflare location/client context from admin auth, CMS, and page visits.
+
+### Files / Areas Changed
+
+- `assets/js/admin-auth.js`
+- `functions/_shared/alert-sender.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `functions/api/auth/[[path]].js`
+- `functions/api/track/page-visit.js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation
+
+- Run `node --check` on changed frontend JS and Pages Function/helper files.
+- Run `git diff --check`.
+
 ## Public Analytics Ingest, Live Location Map, And Projects Asset Upload Milestone
 
 ### Technical Notes

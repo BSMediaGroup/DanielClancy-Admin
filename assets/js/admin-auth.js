@@ -17,11 +17,7 @@
     mode: "signin",
     emailOpen: false,
     email: "",
-    password: "",
-    turnstileToken: "",
-    turnstileTokenIssuedAt: 0,
-    turnstileMessage: "Loading security check...",
-    turnstileController: null
+    password: ""
   };
   const PROVIDERS = [
     { id: "github", label: "GitHub", icon: "./assets/icons/github.svg" },
@@ -31,10 +27,6 @@
 
   function endpoint(path) {
     return `${AUTH_ORIGIN}/api/auth/${path}`;
-  }
-
-  function turnstileConfigEndpoint() {
-    return `${AUTH_ORIGIN}/api/turnstile/config`;
   }
 
   function oauthReturnMessage() {
@@ -132,35 +124,6 @@
       .join("");
   }
 
-  function resetTurnstile() {
-    authUiState.turnstileToken = "";
-    authUiState.turnstileTokenIssuedAt = 0;
-    if (authUiState.turnstileController) {
-      authUiState.turnstileController.reset();
-    }
-  }
-
-  function mountTurnstile() {
-    const target = document.querySelector("[data-auth-turnstile-widget]");
-    const messageTarget = document.querySelector("[data-auth-turnstile-message]");
-    if (!target || !window.DCTurnstile) return;
-    if (authUiState.turnstileController) {
-      authUiState.turnstileController.remove();
-      authUiState.turnstileController = null;
-    }
-    authUiState.turnstileController = window.DCTurnstile.create({
-      configUrl: turnstileConfigEndpoint(),
-      actionLabel: authUiState.mode === "signup" ? "create an account" : "sign in",
-      onChange: function (token, message, issuedAt) {
-        authUiState.turnstileToken = token || "";
-        authUiState.turnstileTokenIssuedAt = token ? issuedAt || Date.now() : 0;
-        authUiState.turnstileMessage = message || "";
-        if (messageTarget) messageTarget.textContent = authUiState.turnstileMessage;
-      }
-    });
-    authUiState.turnstileController.mount(target);
-  }
-
   function renderSignedInIdentity() {
     const session = sessionState.session;
     if (!session?.authenticated) return "";
@@ -199,10 +162,6 @@
         <div class="auth-provider-grid">
           ${providerLinks()}
         </div>
-        <div class="auth-turnstile">
-          <div class="auth-turnstile-widget" data-auth-turnstile-widget></div>
-          <p class="auth-turnstile-message" data-auth-turnstile-message>${escapeHtml(authUiState.turnstileMessage)}</p>
-        </div>
         <div class="auth-divider"><span>or</span></div>
         <div class="auth-email-section">
           <button class="auth-email-toggle" type="button" data-auth-action="toggle-email" aria-expanded="${authUiState.emailOpen}">
@@ -220,7 +179,7 @@
                     <span>Password</span>
                     <input name="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required value="${escapeHtml(authUiState.password)}" />
                   </label>
-                  <button class="button" type="submit" ${authUiState.turnstileToken ? "" : "disabled"}>${signup ? "Request email signup" : "Sign in with email"}</button>
+                  <button class="button" type="submit">${signup ? "Request email signup" : "Sign in with email"}</button>
                   <p class="auth-note">${signup ? "Email signup is not available yet." : "Use an approved admin account."}</p>
                 </form>`
               : ""
@@ -236,7 +195,6 @@
         }
       </section>
     `;
-    mountTurnstile();
   }
 
   function updateAuthModeCopy() {
@@ -312,34 +270,27 @@
       setStatus("required", null, "Email and password are required.");
       return;
     }
-    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
-      setStatus("required", null, "Complete the security check before continuing.");
-      return;
-    }
     updateAuthMessage("Checking server-side credentials...");
     try {
       const response = await fetch(endpoint("login"), {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password, turnstileToken: authUiState.turnstileToken })
+        body: JSON.stringify({ email, password })
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.session) {
         setStatus("required", null, payload?.message || "Sign in failed. Check credentials and try again.");
-        resetTurnstile();
         return;
       }
       if (!payload.session.is_admin) {
         setStatus("denied", payload.session, "Signed in, but this account is not marked as admin.");
-        resetTurnstile();
         return;
       }
       authUiState.password = "";
       setStatus("allowed", payload.session, "Admin session verified.");
     } catch {
       setStatus("required", null, "Auth endpoint is not reachable yet.");
-      resetTurnstile();
     }
   }
 
@@ -353,17 +304,13 @@
       setStatus("required", sessionState.session, "Email is required before checking signup availability.");
       return;
     }
-    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
-      setStatus("required", sessionState.session, "Complete the security check before continuing.");
-      return;
-    }
     updateAuthMessage("Checking account creation availability...");
     try {
       const response = await fetch(endpoint("signup"), {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, turnstileToken: authUiState.turnstileToken })
+        body: JSON.stringify({ email })
       });
       const payload = await response.json().catch(() => null);
       setStatus(
@@ -377,18 +324,11 @@
         sessionState.session,
         "Email signup is not available yet."
       );
-    } finally {
-      resetTurnstile();
     }
   }
 
   function startOAuth(provider) {
-    if (!authUiState.turnstileToken || !authUiState.turnstileTokenIssuedAt) {
-      setStatus(sessionState.status === "denied" ? "denied" : "required", sessionState.session, "Complete the security check before continuing with OAuth.");
-      return;
-    }
     const target = new URL(endpoint(`oauth/${provider}/start`));
-    target.searchParams.set("turnstileToken", authUiState.turnstileToken);
     window.location.assign(target.toString());
   }
 

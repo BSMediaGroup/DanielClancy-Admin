@@ -1,4 +1,3 @@
-import { verifyTurnstileToken } from "../../_shared/turnstile.js";
 import { postDanielClancyAlert } from "../../_shared/alert-sender.js";
 import { registerOAuthAccount, resolveSession } from "../../_shared/admin-accounts.js";
 
@@ -28,8 +27,6 @@ const OAUTH_PROVIDERS = {
     scope: "users.read tweet.read offline.access"
   }
 };
-const TURNSTILE_AUTH_MESSAGE = "Security check failed. Please refresh the challenge and try again.";
-
 function logAlertFailure(event, result) {
   if (!result?.ok && result?.configured) {
     console.error(JSON.stringify({ event, status: result.status || 0, error: result.error || "alert_failed" }));
@@ -228,14 +225,6 @@ async function handleLogin(context) {
   }
   const email = String(payload.email || "").trim().toLowerCase();
   const password = String(payload.password || "");
-  const turnstileResult = await verifyTurnstileToken({
-    env,
-    token: payload.turnstileToken || payload["cf-turnstile-response"],
-    remoteIp: request.headers.get("CF-Connecting-IP") || ""
-  });
-  if (!turnstileResult.ok) {
-    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
-  }
   const candidates = [
     [env.DC_ADMIN_EMAIL_1, env.DC_ADMIN_SECRET_1],
     [env.DC_ADMIN_EMAIL_2, env.DC_ADMIN_SECRET_2]
@@ -264,9 +253,18 @@ async function handleLogin(context) {
       message: `Admin password login accepted for ${email}.`,
       tags: ["auth", "admin", "danielclancy"],
       linkUrl: "https://admin.danielclancy.net/#/overview",
+      pagePath: "/api/auth/login",
+      pageUrl: "https://admin.danielclancy.net/api/auth/login",
+      displayName: email,
+      userEmail: email,
+      userType: "admin",
+      accountType: "admin",
+      authProvider: "password",
       payload: {
         email,
         provider: "password",
+        user_type: "admin",
+        account_type: "admin",
       },
     }),
   );
@@ -294,14 +292,6 @@ async function handleSignup(request, env) {
   } catch {
     return json({ ok: false, error: "invalid_request" }, { status: 400 });
   }
-  const turnstileResult = await verifyTurnstileToken({
-    env,
-    token: payload.turnstileToken || payload["cf-turnstile-response"],
-    remoteIp: request.headers.get("CF-Connecting-IP") || ""
-  });
-  if (!turnstileResult.ok) {
-    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
-  }
   return json(
     {
       ok: false,
@@ -320,15 +310,6 @@ function buildCallbackUrl(request, env, provider) {
 async function handleOAuthStart(request, env, provider) {
   const config = OAUTH_PROVIDERS[provider];
   if (!config) return json({ ok: false, error: "unknown_provider" }, { status: 404 });
-  const url = new URL(request.url);
-  const turnstileResult = await verifyTurnstileToken({
-    env,
-    token: url.searchParams.get("turnstileToken"),
-    remoteIp: request.headers.get("CF-Connecting-IP") || ""
-  });
-  if (!turnstileResult.ok) {
-    return json({ ok: false, error: turnstileResult.code || "auth_failed", message: turnstileResult.message || TURNSTILE_AUTH_MESSAGE }, { status: 403 });
-  }
   const clientId = String(env[config.clientId] || "").trim();
   const clientSecret = String(env[config.clientSecret] || "").trim();
   if (!clientId || !clientSecret) {
@@ -518,11 +499,19 @@ async function handleOAuthCallback(context, provider) {
         message: `OAuth login callback completed for ${provider}.`,
         tags: ["auth", "oauth", "danielclancy"],
         linkUrl: "https://admin.danielclancy.net/#/accounts",
+        pagePath: `/api/auth/oauth/${provider}/callback`,
+        pageUrl: `https://admin.danielclancy.net/api/auth/oauth/${provider}/callback`,
+        displayName: account.displayName || profile.displayName || "",
+        userEmail: account.email || profile.email || "",
+        userType: "regular",
+        accountType: "regular",
+        authProvider: provider,
         payload: {
           provider,
           email: account.email || profile.email || "",
           username: account.username || profile.username || "",
           accountType: "regular",
+          user_type: "regular",
           registered: Boolean(registration.ok),
         },
       }),

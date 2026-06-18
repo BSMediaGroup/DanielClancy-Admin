@@ -69,9 +69,13 @@ export async function onRequestPost(context) {
     message: `Admin page visit: ${pagePath}`,
     tags: ["page_visit", "admin", "danielclancy"],
     pagePath,
+    pageUrl: cleanText(payload.pageUrl || payload.url, 500) || `https://admin.danielclancy.net/${pagePath.startsWith("#") ? pagePath : `#${pagePath}`}`,
+    pageTitle: cleanText(payload.title, 160),
+    referrer: cleanText(payload.referrer, 500),
     linkUrl: `https://admin.danielclancy.net/${pagePath.startsWith("#") ? pagePath : `#${pagePath}`}`,
     payload: {
       pagePath,
+      page_url: cleanText(payload.pageUrl || payload.url, 500) || `https://admin.danielclancy.net/${pagePath.startsWith("#") ? pagePath : `#${pagePath}`}`,
       title: cleanText(payload.title, 160),
       referrer: cleanText(payload.referrer, 500),
     },

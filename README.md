@@ -36,9 +36,9 @@ Manual email/password master admin accounts are the first production admin path:
 
 Password verification happens only inside the Pages Function. Session cookies are signed with `DC_AUTH_SESSION_SECRET`, HttpOnly, SameSite=Lax, and Secure on HTTPS requests. Do not place `DC_ADMIN_SECRET_1`, `DC_ADMIN_SECRET_2`, or OAuth client secrets in frontend JavaScript.
 
-The admin auth gate is a polished restricted-access screen with OAuth buttons first, Cloudflare Turnstile protection, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
+The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
 
-The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Turnstile tokens are verified server-side with Cloudflare Siteverify before manual login, signup scaffold responses, or OAuth start redirects. OAuth callbacks do not require Turnstile because the challenge belongs at start. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
+The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Manual login, signup scaffold responses, and OAuth start redirects do not render or require Turnstile. OAuth callbacks are unchanged. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
 
 Required Cloudflare env vars:
 
@@ -49,9 +49,6 @@ Required Cloudflare env vars:
 - `DC_AUTH_SESSION_SECRET`
 - `DC_PUBLIC_SITE_ORIGIN` - expected `https://danielclancy.net`
 - `DC_ADMIN_SITE_ORIGIN` - expected `https://admin.danielclancy.net`
-- `DC_TURNSTILE_SITE_KEY`
-- `DC_TURNSTILE_SECRET_KEY`
-
 Required Cloudflare KV binding:
 
 - `DC_ADMIN_KV` - production CMS persistence for Projects, Media, and Alerts
@@ -69,11 +66,7 @@ Recommended shared-cookie env var:
 
 - `DC_AUTH_COOKIE_DOMAIN` - recommended `.danielclancy.net`
 
-Optional dev/test Turnstile bypass:
-
-- `DC_TURNSTILE_DEV_BYPASS=false` for normal production behavior; only set `true` in explicit dev/test environments
-
-`DC_TURNSTILE_SITE_KEY` is exposed only through the safe `/api/turnstile/config` Pages Function response. `DC_TURNSTILE_SECRET_KEY` must remain server-side only; missing production secrets fail protected auth actions closed. A simple static/file server cannot run Pages Functions, so local static views may show a Turnstile unavailable state until served through a Pages-compatible runtime with env bindings.
+Turnstile helper files may remain for compatibility, but admin login/signup/OAuth auth flows no longer use `DC_TURNSTILE_SITE_KEY`, `DC_TURNSTILE_SECRET_KEY`, `DC_TURNSTILE_DEV_BYPASS`, `/api/turnstile/config`, or Cloudflare Siteverify.
 
 `DANIELCLANCY_ALERT_INGEST_SECRET` is a generated shared secret, not a value found in Cloudflare. Generate it with:
 
@@ -82,6 +75,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
 Set `DANIELCLANCY_ALERT_INGEST_URL` to the StreamSuites runtime/API `POST /api/alerts/danielclancy` endpoint. Use the same generated `DANIELCLANCY_ALERT_INGEST_SECRET` value only in server/runtime environments that need to verify or send DanielClancy alert ingest events, including the StreamSuites runtime/API environment hosting the receiver and this DanielClancy-Admin sender environment. Never expose this value in frontend code or display it in the UI. Alert delivery failures are logged server-side and do not block auth, CMS saves, or dashboard navigation.
+
+Admin auth, CMS, and page-visit alert events forward sanitized Cloudflare request metadata when available, including host/origin, page/referrer fields, request method, client IP, user agent, browser/device/platform, timezone, colo, `geo.city`, `geo.region`, `geo.region_code`, `geo.country`, `geo.country_code`, derived country flag, display/user/account fields, and auth provider. DanielClancy-Admin sends alert events only; rule definitions/configuration are never sent, and the Alerts editor remains removed/disabled.
 
 OAuth env vars:
 
