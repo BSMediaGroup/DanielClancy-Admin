@@ -4,6 +4,7 @@
 
 ### Technical Notes
 
+- Hotfixed Admin shell startup so Positions seed data is loaded after `CV_POSITION_SEED` is initialized, preventing the `Cannot access 'CV_POSITION_SEED' before initialization` crash that blocked the entire shell.
 - Copied DanielClancy public preview assets into matching Admin public paths under `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs`, then regenerated `assets/data/public-asset-catalog.json` from those Admin-local files while retaining `DanielClancy` source metadata.
 - Copied public `company-*` and `software-*` SVG logo assets into Admin `assets/logos`.
 - Fixed sidebar/topbar icon rendering to use local `assets/icons/ui` SVG masks/currentColor instead of missing or invisible placeholders.

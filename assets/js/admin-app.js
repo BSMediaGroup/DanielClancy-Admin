@@ -126,7 +126,7 @@
     }
   };
   const positionsState = {
-    items: loadPositions(),
+    items: [],
     search: "",
     status: "all",
     modal: null,
@@ -5409,6 +5409,7 @@
     }
   });
 
+  positionsState.items = loadPositions();
   if (!window.location.hash && ["/", "/index.html"].includes(window.location.pathname)) {
     window.location.hash = "#/overview";
   } else {
