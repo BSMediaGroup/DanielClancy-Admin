@@ -1,5 +1,60 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Admin Shell, Assets, Registries, Positions, And Analytics Polish Milestone
+
+### Technical Notes
+
+- Copied DanielClancy public preview assets into matching Admin public paths under `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs`, then regenerated `assets/data/public-asset-catalog.json` from those Admin-local files while retaining `DanielClancy` source metadata.
+- Copied public `company-*` and `software-*` SVG logo assets into Admin `assets/logos`.
+- Fixed sidebar/topbar icon rendering to use local `assets/icons/ui` SVG masks/currentColor instead of missing or invisible placeholders.
+- Moved the topbar loader to the bottom edge of the topbar and matched the StreamSuites-Dashboard purple gradient/motion pattern.
+- Split sidebar controls into persisted collapse and hide actions, added a hidden-mode reopen button, kept icon-only collapsed navigation, removed redundant OPEN-style navigation copy, and kept brand subtext as `ADMIN DASHBOARD`.
+- Corrected footer/topbar/sidebar shell quality toward StreamSuites-Dashboard behavior without copying StreamSuites branding.
+- Kept the topbar user widget/dropdown session-aware with avatar/initials fallback and Accounts, Settings, Public Site, and Logout actions.
+- Seeded Companies from the public CV/source employment and project-company data; company logos use `assets/logos/company-*` monochrome SVGs rendered in current UI color.
+- Seeded Platforms from the public CV/source software data; software logos use `assets/logos/software-*` full-color SVGs rendered as normal images.
+- Added Positions CMS/dashboard route at `#/positions` with `cms:positions`, KV/local fallback, table/filtering, create/edit modal, archive/delete confirmation, company selector, and platform multi-selector.
+- Projects editor supports multiple predefined software/platform selections from the Platforms registry and preserves compatibility labels/fields.
+- Projects table rows are clickable/focusable and open the editor modal while excluding checkboxes, buttons, links, inputs, dropdowns, resize handles, and other interactive controls.
+- Replaced the analytics empty-dot map presentation with a dark internal SVG/grid map-style panel, mapped/unmapped metrics, exact city-coordinate plotting only, and no fake sample dots in live mode.
+- Alerts rule editor remains removed/disabled; direct Alerts route remains a non-editable notice only.
+- DanielClancy public website was read-only in this task.
+- StreamSuites and StreamSuites-Dashboard were read-only references and were not mutated.
+
+### Human-Readable Notes
+
+- Admin editor asset previews now resolve locally because the public preview files exist inside DanielClancy-Admin at the same public paths used by project records.
+- Company, software, sidebar, and topbar icons/logos should now be visible on the dark Admin UI with the correct color treatment.
+- The dashboard has a proper Positions workspace and a more credible analytics location panel without pretending sample geography is live data.
+
+### Files / Areas Changed
+
+- `index.html`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `assets/js/admin-auth.js`
+- `assets/data/public-asset-catalog.json`
+- `assets/logos/company-*.svg`
+- `assets/logos/software-*.svg`
+- `functions/api/admin/cms/[[collection]].js`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+
+- Run `node --check assets/js/admin-app.js`.
+- Run `node --check assets/js/admin-auth.js`.
+- Run `node --check functions/api/admin/cms/[[collection]].js`.
+- Run focused `node --test` only for existing cheap tests still practical.
+- Run `git diff --check`.
+- No MCP browser tests, Playwright MCP checks, or rendered browser smoke tests are part of this pass.
+
+### Risks / Follow-Ups
+
+- Public project rendering fixes remain the next task.
+- Hosted KV/R2 behavior and real rendered UI confirmation still need deployment/browser verification outside this no-browser pass.
+- OAuth users are still not auto-promoted, and manual env-backed admin access remains preserved.
+
 ## Projects CMS Usability, Registries, Sidebar, And Profile Editing Milestone
 
 ### Technical Notes

@@ -21,7 +21,7 @@
           <img src="./assets/logos/logomattesilver.webp" alt="" />
           <span>
             <strong>DanielClancy.net</strong>
-            <small>Admin Dashboard</small>
+            <small>ADMIN DASHBOARD</small>
           </span>
         </a>
 
@@ -43,8 +43,11 @@
             <span></span>
             <span></span>
           </button>
-          <button class="sidebar-mode-button" id="sidebar-mode-toggle" type="button" aria-label="Cycle sidebar mode" title="Cycle sidebar mode">
-            <span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/sidebar.svg')" aria-hidden="true"></span>
+          <button class="sidebar-mode-button" id="sidebar-collapse-toggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/sidebarclose.svg')" aria-hidden="true"></span>
+          </button>
+          <button class="sidebar-mode-button" id="sidebar-hide-toggle" type="button" aria-label="Hide sidebar" title="Hide sidebar">
+            <span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/hidden.svg')" aria-hidden="true"></span>
           </button>
           <div class="topbar-title">
             <span class="eyebrow">Professional Portfolio Administration</span>
@@ -60,10 +63,19 @@
         <main class="content" id="app" tabindex="-1"></main>
 
         <footer class="footer">
-          <span>DanielClancy.net Admin Foundation</span>
-          <span>Projects and Media CMS are local scaffold-only. Login wiring and Cloudflare/DNS setup are pending.</span>
+          <div class="footer-left">
+            <span>DanielClancy.net Admin</span>
+            <span class="footer-sep">/</span>
+            <span>v0.1.2-beta -> v1.0</span>
+          </div>
+          <div class="footer-right">
+            <span>Admin CMS uses KV when configured and local fallback when unavailable.</span>
+          </div>
         </footer>
       </div>
+      <button class="sidebar-reopen-button" id="sidebar-reopen-toggle" type="button" aria-label="Show sidebar" title="Show sidebar">
+        <span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/sidebaropen.svg')" aria-hidden="true"></span>
+      </button>
     </div>
 
     <script src="./assets/js/scaffold-data.js"></script>

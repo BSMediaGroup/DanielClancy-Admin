@@ -2,7 +2,7 @@
 
 Static admin dashboard foundation for `admin.danielclancy.net`.
 
-This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, admin CMS endpoints for Projects, Media, Companies, Platforms, and disabled Alerts compatibility, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry protected public-site baseline and asset-catalog snapshots so existing DanielClancy.net portfolio records/assets are not treated as disposable scaffold rows.
+This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, admin CMS endpoints for Projects, Media, Companies, Platforms, Positions, and disabled Alerts compatibility, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry protected public-site baseline and asset-catalog snapshots so existing DanielClancy.net portfolio records/assets are not treated as disposable scaffold rows.
 
 ## Local Use
 
@@ -51,7 +51,7 @@ Required Cloudflare env vars:
 - `DC_ADMIN_SITE_ORIGIN` - expected `https://admin.danielclancy.net`
 Required Cloudflare KV binding:
 
-- `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, disabled Alerts compatibility, and account/profile overlays
+- `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, Positions, disabled Alerts compatibility, and account/profile overlays
 
 Required shared analytics ingest secret:
 
@@ -182,9 +182,11 @@ Implemented endpoints:
 - `PUT /api/admin/cms/companies`
 - `GET /api/admin/cms/platforms`
 - `PUT /api/admin/cms/platforms`
+- `GET /api/admin/cms/positions`
+- `PUT /api/admin/cms/positions`
 - `POST /api/admin/assets/upload`
 
-All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, `alerts`, `companies`, and `platforms`.
+All CMS endpoints require a signed authenticated admin/master-admin session. Unauthenticated requests return `unauthenticated`, and signed-in non-admin users return `admin_required`. Collection names are allowlisted to `projects`, `media`, `alerts`, `companies`, `platforms`, and `positions`.
 
 CMS endpoints are not Turnstile-gated because they are operational admin APIs behind the signed admin session.
 
@@ -196,6 +198,7 @@ Production storage uses Cloudflare KV binding `DC_ADMIN_KV` with keys:
 - `cms:alerts`
 - `cms:companies`
 - `cms:platforms`
+- `cms:positions`
 
 When `DC_ADMIN_KV` is unavailable, the API returns a clear storage-not-configured/fallback response instead of pretending to save. The dashboard keeps existing localStorage data available and labels this as local browser fallback. A simple static/Python server does not run Cloudflare Pages Functions, so local static views will use fallback mode unless served through a Pages-compatible dev runtime with bindings.
 
@@ -203,7 +206,11 @@ Projects are handled differently from Media, Companies, Platforms, and disabled 
 
 Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
 
-`assets/data/public-asset-catalog.json` is a generated admin-side snapshot from the public DanielClancy repo. It catalogs `/public/media/portfolio/thumbs`, `/public/media/portfolio`, and `/public/docs` as public URL-style paths for admin dropdowns; no binary public assets are copied into this repo.
+`public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs` contain copied preview files from the public DanielClancy repo at the same relative public paths. This lets Admin editor previews resolve `/media/portfolio/thumbs/...`, `/media/portfolio/...`, and `/docs/...` locally without remote URLs or embedded assets. `assets/data/public-asset-catalog.json` is regenerated from those copied Admin files and records the original `DanielClancy` source repo/source directories.
+
+Sidebar and topbar UI icons render from local `assets/icons/ui` SVG files using current UI color. Company logos render from local `assets/logos/company-*` monochrome SVGs as currentColor masks so black source SVGs are visible on the dark UI. Software/platform logos render from local `assets/logos/software-*` SVGs as normal full-color images.
+
+Companies are seeded from the public CV/source employment and project-company data, with blank optional fields where only a company name is known. Platforms are seeded from public CV/source software values and matched to `software-*` logo SVGs where available. The Positions page (`#/positions`) manages employment positions seeded from the public CV source and uses the same `DC_ADMIN_KV`/local fallback pattern as the other admin CMS collections.
 
 Projects now use autocomplete/dropdowns and previews for thumbnail (`/media/portfolio/thumbs`), gallery/hero (`/media/portfolio`), and document/PDF (`/docs`) paths. Gallery items render as an ordered thumbnail grid with move up/down and remove controls. Company/studio and software/platform fields are predefined registry selections only, backed by the Companies and Platforms pages. The Projects table supports locally persisted resizable columns with a reset action.
 
@@ -246,6 +253,9 @@ DanielClancy-Admin/
 │   │   ├── scaffold-data.js
 │   │   └── turnstile.js
 │   └── logos/
+│       ├── company-*.svg
+│       ├── software-*.svg
+│       └── logo*.png/webp
 ├── functions/
 │   ├── _shared/
 │   │   ├── admin-accounts.js
@@ -278,23 +288,30 @@ DanielClancy-Admin/
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html
-└── package.json
+├── package.json
+└── public/
+    ├── docs/
+    └── media/
+        └── portfolio/
+            └── thumbs/
 ```
 
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, Projects, Media, Companies, Platforms, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Projects, Media, Companies, Platforms, Positions, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
-- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and empty live analytics shows a real empty state instead of fake sample map markers.
+- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and the dark map-style panel uses an internal SVG/grid surface with exact city-coordinate plotting only. Empty live analytics shows “No live page-visit location events captured yet.” and no fake sample dots.
 - Clearly marked local scaffold data for layout and workflow shape only.
-- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, bulk actions, reset, and safe JSON copy/import controls.
-- Companies page for predefined company/studio options used by Projects, with KV/local fallback, active/archive status, logo path selection, and optional logo upload.
-- Platforms page for predefined software/platform options used by Projects, with KV/local fallback, active/archive status, logo path selection, selected-platform icon chips, and optional logo upload.
-- Sidebar can expand, collapse to icon-only, or hide; the mode is persisted locally, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
+- Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
+- Companies page for predefined company/studio options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
+- Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
+- Positions page for CV-derived employment position records, with KV/local fallback, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector.
+- Sidebar has separate collapse and hide controls; the mode is persisted locally, hidden mode exposes a reopen control, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
+- The topbar loading strip sits on the bottom edge of the topbar and uses the StreamSuites-style purple gradient motion. The topbar user dropdown includes session identity details plus Accounts, Settings, Public Site, and Logout actions.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.

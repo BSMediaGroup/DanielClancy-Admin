@@ -4,7 +4,9 @@
   const nav = document.getElementById("sidebar-nav");
   const routeTitle = document.getElementById("route-title");
   const navToggle = document.getElementById("nav-toggle");
-  const sidebarModeToggle = document.getElementById("sidebar-mode-toggle");
+  const sidebarCollapseToggle = document.getElementById("sidebar-collapse-toggle");
+  const sidebarHideToggle = document.getElementById("sidebar-hide-toggle");
+  const sidebarReopenToggle = document.getElementById("sidebar-reopen-toggle");
   const topbarLoader = document.getElementById("topbar-loader");
 
   const routes = [
@@ -15,7 +17,8 @@
     { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
     { id: "media", label: "Media", icon: "media.svg", path: "#/media" },
     { id: "companies", label: "Companies", icon: "profilecard.svg", path: "#/companies" },
-    { id: "platforms", label: "Platforms", icon: "appspark.svg", path: "#/platforms" }
+    { id: "platforms", label: "Platforms", icon: "appspark.svg", path: "#/platforms" },
+    { id: "positions", label: "Positions", icon: "idbadge.svg", path: "#/positions" }
   ];
 
   const PROJECTS_STORAGE_KEY = "danielclancy-admin.projects.scaffold.v1";
@@ -25,6 +28,7 @@
   const PUBLIC_ASSET_CATALOG_STORAGE_KEY = "danielclancy-admin.public-asset-catalog.v1";
   const COMPANIES_STORAGE_KEY = "danielclancy-admin.companies.scaffold.v1";
   const PLATFORMS_STORAGE_KEY = "danielclancy-admin.platforms.scaffold.v1";
+  const POSITIONS_STORAGE_KEY = "danielclancy-admin.positions.scaffold.v1";
   const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
   const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
@@ -121,6 +125,18 @@
       storage: { status: "checking", source: "local", message: "Checking Platforms registry..." }
     }
   };
+  const positionsState = {
+    items: loadPositions(),
+    search: "",
+    status: "all",
+    modal: null,
+    message: "Positions are seeded from the public CV source and use admin storage when available.",
+    storage: {
+      status: "checking",
+      source: "local",
+      message: "Checking Positions registry..."
+    }
+  };
   const mediaState = {
     items: loadMediaItems(),
     search: "",
@@ -173,6 +189,37 @@
   const pageVisitState = {
     lastPath: ""
   };
+  const CV_COMPANY_SEED = [
+    { id: "richmond-ross", name: "Richmond+Ross", logoPath: "./assets/logos/company-richmondross-0.svg", location: "Crows Nest, NSW", website: "https://www.richmondross.com.au/", description: "Retail, public domain, fuel, tourism, and industrial documentation practice referenced by the public CV.", sortOrder: 10 },
+    { id: "meriton-group", name: "Meriton Group", logoPath: "./assets/logos/company-meriton-0.svg", location: "Sydney, NSW", website: "https://www.meriton.com.au/", description: "Residential developer-builder referenced by the public CV.", sortOrder: 20 },
+    { id: "leffler-simes-architects", name: "Leffler Simes Architects", logoPath: "./assets/logos/company-lefflersimes-0.svg", location: "Melbourne, VIC", website: "https://www.lefflersimes.com.au/", description: "Retail-focused architectural practice referenced by the public CV.", sortOrder: 30 },
+    { id: "fleetwood-australia", name: "Fleetwood Australia", logoPath: "./assets/logos/company-fleetwood-0.svg", location: "Melbourne, VIC", website: "https://www.fleetwood.com.au/", description: "Modular construction company referenced by the public CV.", sortOrder: 40 },
+    { id: "place-laboratory", name: "Place Laboratory", logoPath: "./assets/logos/company-placelab-0.svg", location: "Perth, WA", website: "https://www.placelaboratory.com/", description: "Public realm, urban, and landscape practice referenced by the public CV.", sortOrder: 50 },
+    { id: "dc-design-studio", name: "DC Design Studio", logoPath: "./assets/logos/company-dcdesignstudio-0.svg", location: "Perth, WA", website: "https://www.danielclancy.net/", description: "Boutique design documentation consultancy referenced by the public CV.", sortOrder: 60 },
+    { id: "urbis", name: "Urbis", logoPath: "./assets/logos/company-urbis-0.svg", location: "Perth, WA", website: "https://urbis.com.au/", description: "Multidisciplinary property, city, and community consultancy referenced by the public CV.", sortOrder: 70 },
+    { id: "acce", name: "ACCE", logoPath: "./assets/logos/company-acce-0.svg", location: "Como, WA", website: "https://www.acce.net.au/", description: "Structural consulting engineering practice referenced by the public CV.", sortOrder: 80 },
+    { id: "ghd", name: "GHD", logoPath: "./assets/logos/company-ghd-0.svg", location: "Geraldton & Perth, WA", website: "https://www.ghd.com/", description: "Multidisciplinary professional services company referenced by the public CV.", sortOrder: 90 },
+    { id: "riley-consulting", name: "Riley Consulting", logoPath: "", location: "", website: "", description: "Project company/studio present in the public WorkSet portfolio source.", sortOrder: 120 }
+  ];
+  const CV_PLATFORM_SEED = [
+    { id: "autodesk-autocad", name: "Autodesk AutoCAD", company: "Autodesk", vendor: "Autodesk", logoPath: "./assets/logos/software-autocad.svg", description: "Production drafting platform listed by the public CV.", sortOrder: 10 },
+    { id: "autodesk-revit", name: "Autodesk Revit", company: "Autodesk", vendor: "Autodesk", logoPath: "./assets/logos/software-revit.svg", description: "BIM/documentation platform listed by the public CV.", sortOrder: 20 },
+    { id: "adobe-creative-cloud", name: "Adobe Creative Cloud", company: "Adobe", vendor: "Adobe", logoPath: "./assets/logos/software-creativecloud.svg", description: "Presentation and creative software group listed by the public CV.", sortOrder: 30 },
+    { id: "trimble-sketchup", name: "Trimble SketchUp", company: "Trimble", vendor: "Trimble", logoPath: "./assets/logos/software-sketchup.svg", description: "Concept modelling platform listed by the public CV.", sortOrder: 40 },
+    { id: "microsoft-office", name: "Microsoft Office", company: "Microsoft", vendor: "Microsoft", logoPath: "./assets/logos/software-office365.svg", description: "Document/reporting software listed by the public CV.", sortOrder: 50 },
+    { id: "qgis", name: "QGIS", company: "QGIS", vendor: "QGIS", logoPath: "./assets/logos/software-qgis.svg", description: "Spatial/GIS platform listed by the public CV.", sortOrder: 60 }
+  ];
+  const CV_POSITION_SEED = [
+    { id: "richmond-ross-revit-draftsperson-technician", title: "Revit Draftsperson & Technician", companyId: "richmond-ross", companyName: "Richmond+Ross", location: "Crows Nest, NSW", startDate: "2019-10-01", endDate: "2021-11-01", current: false, summary: "Retail, public domain, fuel, tourism, and industrial documentation across projects ranging from small tenancies to large regional centres.", sortOrder: 10 },
+    { id: "meriton-group-structural-revit-draftsman", title: "Structural Revit Draftsman", companyId: "meriton-group", companyName: "Meriton Group", location: "Sydney, NSW", startDate: "2019-03-01", endDate: "2019-05-01", current: false, summary: "Residential tower and apartment documentation within a major east coast developer-builder environment.", sortOrder: 20 },
+    { id: "leffler-simes-architects-architectural-revit-draftsman", title: "Architectural Revit Draftsman", companyId: "leffler-simes-architects", companyName: "Leffler Simes Architects", location: "Melbourne, VIC", startDate: "2018-09-01", endDate: "2018-11-01", current: false, summary: "Retail-focused architectural drafting for a long-established Australian practice with national reach.", sortOrder: 30 },
+    { id: "fleetwood-australia-revit-draftsperson", title: "Revit Draftsperson", companyId: "fleetwood-australia", companyName: "Fleetwood Australia", location: "Melbourne, VIC", startDate: "2018-07-01", endDate: "2018-08-01", current: false, summary: "Modular construction documentation support tied to housing and community infrastructure delivery.", sortOrder: 40 },
+    { id: "place-laboratory-draftsman", title: "Draftsman", companyId: "place-laboratory", companyName: "Place Laboratory", location: "Perth, WA", startDate: "2017-01-01", endDate: "2018-01-01", current: false, summary: "Public realm, urban, and landscape-oriented drafting supporting walkable and socially engaged place-making work.", sortOrder: 50 },
+    { id: "dc-design-studio-design-consultant", title: "Design Consultant", companyId: "dc-design-studio", companyName: "DC Design Studio", location: "Perth, WA", startDate: "2015-06-01", endDate: "2018-05-01", current: false, summary: "Boutique design documentation consultancy delivering CAD sketches, building plans, and supporting visual material.", sortOrder: 60 },
+    { id: "urbis-drafting-technician", title: "Drafting Technician", companyId: "urbis", companyName: "Urbis", location: "Perth, WA", startDate: "2014-08-01", endDate: "2015-06-01", current: false, summary: "Property, city, and community documentation work within a multidisciplinary consulting environment.", sortOrder: 70 },
+    { id: "acce-structural-draftsman", title: "Structural Draftsman", companyId: "acce", companyName: "ACCE", location: "Como, WA", startDate: "2012-01-01", endDate: "2014-03-01", current: false, summary: "Structural documentation across residential, commercial, industrial, and institutional projects.", sortOrder: 80 },
+    { id: "ghd-draftsman", title: "Draftsman", companyId: "ghd", companyName: "GHD", location: "Geraldton & Perth, WA", startDate: "2008-08-01", endDate: "2011-11-01", current: false, summary: "Early-career multidisciplinary drafting across property, buildings, energy, resources, and transport-related work.", sortOrder: 90 }
+  ];
   let loadingCount = 0;
 
   function escapeHtml(value) {
@@ -386,8 +433,59 @@
       details: String(raw.details || raw.description || ""),
       status: String(raw.status || "active").toLowerCase() === "archived" ? "archived" : "active",
       sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
+      sourceNotes: String(raw.sourceNotes || raw.source || ""),
+      source: String(raw.source || raw.sourceNotes || "public_cv_source"),
       updatedAt: String(raw.updatedAt || new Date().toISOString())
     };
+  }
+
+  function loadPositions() {
+    const seed = CV_POSITION_SEED.map(normalizePosition);
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(POSITIONS_STORAGE_KEY) || "[]");
+      const rows = Array.isArray(stored) ? stored : Array.isArray(stored?.items) ? stored.items : null;
+      return rows ? mergeSeedRows(seed, rows.map(normalizePosition)) : seed;
+    } catch {
+      return seed;
+    }
+  }
+
+  function normalizePosition(raw = {}) {
+    const title = String(raw.title || raw.role || raw.id || "").trim();
+    const companyId = createSlug(raw.companyId || raw.company || raw.companyName || "");
+    const companyName = String(raw.companyName || registryLabel("companies", companyId) || raw.company || "").trim();
+    return {
+      ...raw,
+      id: createSlug(raw.id || raw.slug || `${companyName}-${title}`),
+      slug: createSlug(raw.slug || raw.id || `${companyName}-${title}`),
+      title: title || "Untitled position",
+      companyId,
+      companyName,
+      location: String(raw.location || ""),
+      startDate: String(raw.startDate || ""),
+      endDate: String(raw.endDate || ""),
+      current: Boolean(raw.current),
+      employmentType: String(raw.employmentType || ""),
+      summary: String(raw.summary || ""),
+      responsibilities: arrayFromValue(raw.responsibilities || raw.highlights || []),
+      highlights: arrayFromValue(raw.highlights || raw.responsibilities || []),
+      platformIds: normalizeProjectRegistryRefs(raw.platformIds || raw.technologies || raw.software || []),
+      status: String(raw.status || "active").toLowerCase() === "archived" ? "archived" : "active",
+      sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
+      source: String(raw.source || "public_cv_source"),
+      updatedAt: String(raw.updatedAt || new Date().toISOString())
+    };
+  }
+
+  function mergeSeedRows(seed, stored) {
+    const byId = new Map(seed.map((item) => [item.id, item]));
+    stored.forEach((item) => {
+      byId.set(item.id, {
+        ...(byId.get(item.id) || {}),
+        ...item
+      });
+    });
+    return Array.from(byId.values()).sort(compareRegistryItems);
   }
 
   function persistRegistryItems(kind) {
@@ -401,10 +499,42 @@
     persistCmsCollection(kind, registryState[kind].items);
   }
 
+  function persistPositions() {
+    try {
+      window.localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(positionsState.items, null, 2));
+    } catch {
+      positionsState.message = "Positions saved in memory only because localStorage is unavailable.";
+    }
+    persistCmsCollection("positions");
+  }
+
   function registryConfig(kind) {
     if (kind === "companies") return { label: "Companies", singular: "Company", storageKey: COMPANIES_STORAGE_KEY, route: "companies" };
     if (kind === "platforms") return { label: "Platforms", singular: "Platform", storageKey: PLATFORMS_STORAGE_KEY, route: "platforms" };
     return null;
+  }
+
+  function logoPathForCompany(nameOrId) {
+    const id = createSlug(nameOrId);
+    const item = (registryState.companies.items || []).find((entry) => entry.id === id || entry.slug === id || createSlug(entry.name) === id);
+    return item?.logoPath || "";
+  }
+
+  function logoPathForPlatform(nameOrId) {
+    const id = createSlug(nameOrId);
+    const item = (registryState.platforms.items || []).find((entry) => entry.id === id || entry.slug === id || createSlug(entry.name) === id);
+    return item?.logoPath || platformLogoPath(nameOrId);
+  }
+
+  function seedRegistriesFromCvSource() {
+    registryState.companies.items = mergeSeedRows(
+      CV_COMPANY_SEED.map((item) => normalizeRegistryItem({ ...item, source: "public_cv_source" })),
+      registryState.companies.items
+    );
+    registryState.platforms.items = mergeSeedRows(
+      CV_PLATFORM_SEED.map((item) => normalizeRegistryItem({ ...item, source: "public_cv_source" })),
+      registryState.platforms.items
+    );
   }
 
   function seedRegistriesFromProjects() {
@@ -450,16 +580,16 @@
     const label = registryLabel("platforms", nameOrId) || String(nameOrId || "");
     const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, "");
     const map = {
-      autocad: "./assets/icons/ui/flmedit.svg",
-      autodeskautocad: "./assets/icons/ui/flmedit.svg",
-      revit: "./assets/icons/ui/brick.svg",
-      autodeskrevit: "./assets/icons/ui/brick.svg",
-      adobecreativecloud: "./assets/icons/ui/appspark.svg",
-      trimblesketchup: "./assets/icons/ui/cropsquare.svg",
-      sketchup: "./assets/icons/ui/cropsquare.svg",
-      microsoftoffice: "./assets/icons/ui/bookstack.svg",
-      microsoftoffice365: "./assets/icons/ui/bookstack.svg",
-      qgis: "./assets/icons/ui/globe.svg"
+      autocad: "./assets/logos/software-autocad.svg",
+      autodeskautocad: "./assets/logos/software-autocad.svg",
+      revit: "./assets/logos/software-revit.svg",
+      autodeskrevit: "./assets/logos/software-revit.svg",
+      adobecreativecloud: "./assets/logos/software-creativecloud.svg",
+      trimblesketchup: "./assets/logos/software-sketchup.svg",
+      sketchup: "./assets/logos/software-sketchup.svg",
+      microsoftoffice: "./assets/logos/software-office365.svg",
+      microsoftoffice365: "./assets/logos/software-office365.svg",
+      qgis: "./assets/logos/software-qgis.svg"
     };
     return map[normalized] || "";
   }
@@ -696,6 +826,17 @@
         render: () => renderRegistryPage("platforms")
       };
     }
+    if (collection === "positions") {
+      return {
+        state: positionsState,
+        storageKey: POSITIONS_STORAGE_KEY,
+        getItems: () => positionsState.items,
+        setItems: (items) => {
+          positionsState.items = mergeSeedRows(CV_POSITION_SEED.map(normalizePosition), items.map(normalizePosition));
+        },
+        render: renderPositions
+      };
+    }
     return null;
   }
 
@@ -883,6 +1024,22 @@
     `;
   }
 
+  function localLogoOptions(kind, currentValue = "") {
+    const current = String(currentValue || "").trim();
+    const prefix = kind === "companies" ? "company" : "software";
+    const seed = kind === "companies" ? CV_COMPANY_SEED : CV_PLATFORM_SEED;
+    const options = seed
+      .map((item) => item.logoPath)
+      .filter(Boolean)
+      .filter((path, index, rows) => rows.indexOf(path) === index && path.includes(`/logos/${prefix}-`))
+      .sort((left, right) => left.localeCompare(right));
+    const hasCurrent = current && !options.includes(current);
+    return `
+      ${hasCurrent ? `<option value="${escapeHtml(current)}">${escapeHtml(current)} (current/manual)</option>` : ""}
+      ${options.map((path) => `<option value="${escapeHtml(path)}"${path === current ? " selected" : ""}>${escapeHtml(path.split("/").pop())}</option>`).join("")}
+    `;
+  }
+
   function assetPreview(path, alt = "Selected asset preview") {
     const value = String(path || "").trim();
     if (!value) return `<span class="asset-preview-placeholder">No asset selected</span>`;
@@ -950,7 +1107,7 @@
   }
 
   function hydrateCmsCollections() {
-    ["projects", "media", "alerts", "companies", "platforms"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
+    ["projects", "media", "alerts", "companies", "platforms", "positions"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
   }
 
   async function hydrateAccountRegistry(renderAfter = false) {
@@ -1724,14 +1881,18 @@
       .filter((row) => row.precision === "city" && cityCoordinate(row))
       .slice(0, 20)
       .map((row) => ({ row, coord: cityCoordinate(row) }));
+    const cityDetailCount = Number(pageVisits.cityEvents || liveCities.length || 0);
+    const countryOnlyCount = Number(pageVisits.countryOnlyEvents || 0);
+    const unmappedLocationCount = Math.max(0, liveCities.filter((row) => row.precision === "city").length - plottedCities.length);
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
     const mapBody = plottedCities.length
       ? plottedCities
           .map(({ row, coord }) => {
             const label = [row.city, row.region, row.country].filter(Boolean).join(", ");
+            const title = `${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - ${row.precision} - ${row.source || source}`;
             return `
-              <span class="map-marker live" style="${mapPointStyle(coord)}" title="${escapeHtml(`${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - ${row.precision}`)}">
+              <span class="map-marker live" style="${mapPointStyle(coord)}" title="${escapeHtml(title)}">
                 <span>${escapeHtml(row.city)}</span>
               </span>
             `;
@@ -1753,11 +1914,15 @@
         <div class="panel-body">
           <div class="location-metrics">
             ${storageStatusCard("Tracked events", formatAnalyticsNumber(pageVisits.events || 0), "Bounded page_visit KV events.", pageVisits.configured ? "success" : "warn")}
-            ${storageStatusCard("City detail", formatAnalyticsNumber(pageVisits.cityEvents || 0), "Rows with Cloudflare request.cf.city.", pageVisits.cityEvents ? "success" : "warn")}
-            ${storageStatusCard("Country-only", formatAnalyticsNumber(pageVisits.countryOnlyEvents || 0), "Rows with country but no city.", pageVisits.countryOnlyEvents ? "warn" : "success")}
-            ${storageStatusCard("Plotted cities", formatAnalyticsNumber(plottedCities.length), "Exact built-in coordinate matches only.", plottedCities.length ? "success" : "warn")}
+            ${storageStatusCard("City detail", formatAnalyticsNumber(cityDetailCount), "Rows with city-level precision.", cityDetailCount ? "success" : "warn")}
+            ${storageStatusCard("Country-only", formatAnalyticsNumber(countryOnlyCount), "Rows with country but no city.", countryOnlyCount ? "warn" : "success")}
+            ${storageStatusCard("Mapped", formatAnalyticsNumber(plottedCities.length), "Exact built-in coordinate matches only.", plottedCities.length ? "success" : "warn")}
+            ${storageStatusCard("Unmapped", formatAnalyticsNumber(unmappedLocationCount), "City rows without an exact coordinate lookup.", unmappedLocationCount ? "warn" : "success")}
           </div>
           <div class="map-shell live-map" role="img" aria-label="Live page-visit location map-style panel">
+            <svg class="map-world" viewBox="0 0 1000 520" aria-hidden="true" focusable="false">
+              <path d="M116 192l62-38 84 11 53 43-20 55-70 18-86-22-41-36zM353 168l80-42 128 10 35 45-18 71-74 42-114-20-50-54zM604 158l104-54 116 24 56 62-37 68-112 20-97-35zM260 319l64 18 22 58-50 62-74-27-22-66zM557 318l90 34 73 76-53 44-102-28-53-74zM777 348l75 22 36 53-34 35-72-24-37-50z" />
+            </svg>
             <div class="map-graticule"></div>
             ${mapBody}
           </div>
@@ -2165,8 +2330,129 @@
     `;
   }
 
+  function renderPositions() {
+    routeTitle.textContent = "Positions";
+    const term = positionsState.search.trim().toLowerCase();
+    const visible = positionsState.items
+      .filter((item) => positionsState.status === "all" || item.status === positionsState.status)
+      .filter((item) => !term || [item.title, item.companyName, item.location, item.summary, item.source].join(" ").toLowerCase().includes(term))
+      .sort(compareRegistryItems);
+    app.innerHTML = `
+      <div class="page positions-page">
+        ${pageHeader(
+          "Positions dashboard",
+          "Positions",
+          "Employment positions are seeded from the public CV source. Admin storage can overlay edits without changing public CV rendering in this task.",
+          `<button class="button" type="button" data-position-action="create">Create Position</button>
+           <button class="button button-secondary" type="button" data-position-action="sync-cms">Sync/save positions</button>`
+        )}
+        <div class="cms-storage-status">
+          ${badge(cmsStatusText(positionsState.storage), cmsStatusTone(positionsState.storage))}
+          <span>${escapeHtml(positionsState.storage.message || positionsState.message)}</span>
+        </div>
+        ${panel(
+          "Position records",
+          "Archive keeps records available for compatibility while hiding them from the active view.",
+          `<div class="cms-toolbar">
+            <label class="field"><span>Search</span><input class="input" type="search" data-position-filter="search" value="${escapeHtml(positionsState.search)}" placeholder="Title, company, location, summary" /></label>
+            <label class="field"><span>Status</span><select class="input" data-position-filter="status"><option value="all"${positionsState.status === "all" ? " selected" : ""}>All statuses</option><option value="active"${positionsState.status === "active" ? " selected" : ""}>active</option><option value="archived"${positionsState.status === "archived" ? " selected" : ""}>archived</option></select></label>
+            <div class="cms-toolbar-summary">${badge(`${visible.length} visible`, "warn")}${badge(`${positionsState.items.filter((item) => item.status !== "archived").length} active`, "success")}</div>
+          </div>
+          <div class="table-wrap">
+            <table class="table positions-table">
+              <thead><tr><th>Title</th><th>Company</th><th>Dates</th><th>Location</th><th>Platforms</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+              <tbody>${visible.map(renderPositionRow).join("") || `<tr><td colspan="8"><div class="empty-state">No positions match this filter.</div></td></tr>`}</tbody>
+            </table>
+          </div>`
+        )}
+        ${positionsState.modal ? renderPositionModal(positionsState.modal) : ""}
+      </div>
+    `;
+  }
+
+  function renderPositionRow(item) {
+    const company = registryLabel("companies", item.companyId) || item.companyName || "Company not recorded";
+    return `
+      <tr class="project-click-row" data-project-row-id="${escapeHtml(project.id)}" tabindex="0" role="button" aria-label="Edit ${escapeHtml(project.title)}">
+        <td><strong>${escapeHtml(item.title)}</strong><br><span>${escapeHtml(item.summary || "No summary recorded")}</span></td>
+        <td>${escapeHtml(company)}</td>
+        <td>${escapeHtml([item.startDate, item.endDate || (item.current ? "Current" : "")].filter(Boolean).join(" - ") || "Dates not recorded")}</td>
+        <td>${escapeHtml(item.location || "Not recorded")}</td>
+        <td><div class="chip-row">${platformChips(item.platformIds).join("") || badge("No platforms", "warn")}</div></td>
+        <td>${badge(item.status, item.status === "active" ? "success" : "warn")}</td>
+        <td>${escapeHtml(formatTimestamp(item.updatedAt))}</td>
+        <td><div class="row-actions">
+          <button class="button button-secondary" type="button" data-position-action="edit" data-position-id="${escapeHtml(item.id)}">Edit</button>
+          <button class="button button-danger" type="button" data-position-action="archive" data-position-id="${escapeHtml(item.id)}">${item.status === "archived" ? "Activate" : "Archive"}</button>
+          <button class="button button-danger" type="button" data-position-action="delete" data-position-id="${escapeHtml(item.id)}">Delete</button>
+        </div></td>
+      </tr>
+    `;
+  }
+
+  function isInteractiveProjectRowTarget(target) {
+    return Boolean(
+      target.closest(
+        "a, button, input, select, textarea, label, summary, details, [data-project-select], [data-project-action], [data-project-upload], [data-gallery-move], [data-gallery-remove], .col-resizer, [data-resize-disabled='true'], [draggable='true']"
+      )
+    );
+  }
+
+  function openProjectRow(row) {
+    const id = row?.getAttribute("data-project-row-id");
+    const project = id ? projectState.projects.find((item) => item.id === id) : null;
+    if (!project) return;
+    projectState.modal = { mode: "edit", project };
+    renderProjects();
+  }
+
+  function renderPositionModal(modal) {
+    const item = normalizePosition(modal.item);
+    return `
+      <div class="modal-backdrop" data-position-modal-backdrop>
+        <section class="modal position-modal" role="dialog" aria-modal="true" aria-labelledby="position-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">Public CV source position</span>
+              <h2 id="position-modal-title">${modal.mode === "create" ? "Create position" : "Edit position"}</h2>
+              <p>Use only real CV/source-backed employment details. Public CV rendering is not changed by this task.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close position editor" data-position-action="close-modal">x</button>
+          </header>
+          <form class="modal-body project-form" data-position-form>
+            <input type="hidden" name="originalId" value="${escapeHtml(item.id)}" />
+            <div class="form-grid">
+              ${field("Title", "title", item.title, "text", true, false)}
+              ${field("ID / slug", "id", item.id, "text", true, false)}
+              <label class="field">
+                <span>Company *</span>
+                <select class="input" name="companyId" required>
+                  ${activeRegistryItems("companies").map((company) => `<option value="${escapeHtml(company.id)}"${company.id === item.companyId ? " selected" : ""}>${escapeHtml(company.name)}</option>`).join("")}
+                </select>
+              </label>
+              ${field("Location", "location", item.location, "text", false, false)}
+              ${field("Start date", "startDate", item.startDate, "date", false, false)}
+              ${field("End date", "endDate", item.endDate, "date", false, false)}
+              <label class="checkbox-field"><input type="checkbox" name="current" ${item.current ? "checked" : ""} /><span>Current role</span></label>
+              ${field("Employment type", "employmentType", item.employmentType, "text", false, false)}
+              <label class="field"><span>Status</span><select class="input" name="status"><option value="active"${item.status === "active" ? " selected" : ""}>active</option><option value="archived"${item.status === "archived" ? " selected" : ""}>archived</option></select></label>
+              ${field("Sort order", "sortOrder", item.sortOrder, "number", false, false)}
+              ${registryMultiSelectField("Software / platforms", "platformIds", "platforms", item.platformIds, false)}
+              ${textareaField("Summary", "summary", item.summary, false)}
+              ${textareaField("Responsibilities / highlights", "responsibilities", item.responsibilities.join("\n"), false)}
+            </div>
+            <footer class="modal-footer">
+              <button class="button button-secondary" type="button" data-position-action="close-modal">Cancel</button>
+              <button class="button" type="submit">Save position</button>
+            </footer>
+          </form>
+        </section>
+      </div>
+    `;
+  }
+
   function registryRow(kind, item) {
-    const logo = item.logoPath ? assetPreview(item.logoPath, `${item.name} logo`) : `<span class="asset-preview-placeholder">No logo</span>`;
+    const logo = registryLogoMarkup(kind, item);
     return `
       <tr>
         <td><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.description || item.details || "No details recorded")}</span></td>
@@ -2186,7 +2472,7 @@
   function renderRegistryModal(kind, modal) {
     const config = registryConfig(kind);
     const item = normalizeRegistryItem(modal.item);
-    const logoOptions = catalogOptions(kind === "companies" ? "thumbnail" : "portfolio_image", item.logoPath);
+    const logoOptions = localLogoOptions(kind, item.logoPath);
     return `
       <div class="modal-backdrop" data-registry-modal-backdrop>
         <section class="modal registry-modal" role="dialog" aria-modal="true" aria-labelledby="registry-modal-title">
@@ -2211,7 +2497,7 @@
                 <span>Logo path</span>
                 <div class="input-with-action"><input class="input" type="text" name="logoPath" value="${escapeHtml(item.logoPath)}" /><button class="button button-secondary" type="button" data-registry-action="upload-logo" data-registry-kind="${kind}">Upload</button></div>
                 <select class="input asset-picker" data-registry-logo-select><option value="">Choose existing asset</option>${logoOptions}</select>
-                <span class="asset-preview">${assetPreview(item.logoPath, `${item.name} logo`)}</span>
+                <span class="asset-preview">${registryLogoMarkup(kind, item)}</span>
                 <input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-registry-upload-input="${kind}" />
                 <span class="upload-status" data-registry-upload-status></span>
               </label>
@@ -2225,6 +2511,15 @@
         </section>
       </div>
     `;
+  }
+
+  function registryLogoMarkup(kind, item) {
+    const path = String(item?.logoPath || "").trim();
+    if (!path) return `<span class="asset-preview-placeholder">No logo</span>`;
+    if (kind === "companies") {
+      return `<span class="company-logo-mask" style="--icon-url: url('${escapeHtml(path)}')" title="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)} logo"></span>`;
+    }
+    return `<img class="software-logo-img" src="${escapeHtml(path)}" alt="${escapeHtml(item.name)} logo" loading="lazy" />`;
   }
 
   function renderMediaControls(statuses, platforms, visibleCount, selectedVisible, featuredCount) {
@@ -3052,8 +3347,8 @@
         const item = options.find((entry) => entry.id === id || entry.slug === id) || registryState[kind].items.find((entry) => entry.id === id || entry.slug === id);
         if (!item) return "";
         if (kind === "platforms") {
-          const logo = item.logoPath || platformLogoPath(item.name);
-          return `<span class="platform-chip" title="${escapeHtml(item.name)}">${logo ? `<img src="${escapeHtml(logo)}" alt="" />` : `<span>${escapeHtml(initialsFor(item.name))}</span>`}<span>${escapeHtml(item.name)}</span></span>`;
+          const logo = logoPathForPlatform(item.id);
+          return `<span class="platform-chip" title="${escapeHtml(item.name)}">${logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy" />` : `<span>${escapeHtml(initialsFor(item.name))}</span>`}<span>${escapeHtml(item.name)}</span></span>`;
         }
         return badge(item.name);
       })
@@ -3068,6 +3363,18 @@
         <small class="muted">Options are managed on the ${kind === "companies" ? "Companies" : "Platforms"} page; custom text is not accepted here.</small>
       </label>
     `;
+  }
+
+  function platformChips(values) {
+    return normalizeProjectRegistryRefs(values)
+      .map((value) => {
+        const id = createSlug(value);
+        const item = registryState.platforms.items.find((entry) => entry.id === id || entry.slug === id || createSlug(entry.name) === id);
+        if (!item) return "";
+        const logo = logoPathForPlatform(item.id);
+        return `<span class="platform-chip" title="${escapeHtml(item.name)}">${logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy" />` : `<span>${escapeHtml(initialsFor(item.name))}</span>`}<span>${escapeHtml(item.name)}</span></span>`;
+      })
+      .filter(Boolean);
   }
 
   function initialsFor(value) {
@@ -3440,6 +3747,8 @@
       renderRegistryPage("companies");
     } else if (route.page === "platforms") {
       renderRegistryPage("platforms");
+    } else if (route.page === "positions") {
+      renderPositions();
     } else if (route.page === "alerts") {
       renderAlerts();
     } else if (route.page === "settings") {
@@ -3471,8 +3780,13 @@
     document.body.classList.toggle("nav-collapsed", normalized === "collapsed");
     document.body.classList.toggle("nav-hidden", normalized === "hidden");
     navToggle?.setAttribute("aria-expanded", String(normalized === "expanded"));
-    sidebarModeToggle?.setAttribute("aria-label", normalized === "hidden" ? "Show sidebar" : normalized === "collapsed" ? "Expand sidebar" : "Hide sidebar");
-    sidebarModeToggle?.setAttribute("title", sidebarModeToggle.getAttribute("aria-label") || "Cycle sidebar mode");
+    sidebarCollapseToggle?.setAttribute("aria-pressed", String(normalized === "collapsed"));
+    sidebarCollapseToggle?.setAttribute("aria-label", normalized === "collapsed" ? "Expand sidebar" : "Collapse sidebar");
+    sidebarCollapseToggle?.setAttribute("title", normalized === "collapsed" ? "Expand sidebar" : "Collapse sidebar");
+    sidebarHideToggle?.setAttribute("aria-pressed", String(normalized === "hidden"));
+    sidebarHideToggle?.setAttribute("aria-label", "Hide sidebar");
+    sidebarHideToggle?.setAttribute("title", "Hide sidebar");
+    sidebarReopenToggle?.classList.toggle("is-visible", normalized === "hidden");
   }
 
   function persistSidebarMode(mode) {
@@ -3494,14 +3808,17 @@
     applySidebarMode(stored);
   }
 
-  sidebarModeToggle?.addEventListener("click", () => {
-    const current = document.body.classList.contains("nav-hidden")
-      ? "hidden"
-      : document.body.classList.contains("nav-collapsed")
-        ? "collapsed"
-        : "expanded";
-    const next = current === "expanded" ? "collapsed" : current === "collapsed" ? "hidden" : "expanded";
-    persistSidebarMode(next);
+  sidebarCollapseToggle?.addEventListener("click", () => {
+    const collapsed = document.body.classList.contains("nav-collapsed");
+    persistSidebarMode(collapsed ? "expanded" : "collapsed");
+  });
+
+  sidebarHideToggle?.addEventListener("click", () => {
+    persistSidebarMode("hidden");
+  });
+
+  sidebarReopenToggle?.addEventListener("click", () => {
+    persistSidebarMode("expanded");
   });
 
   app.addEventListener("input", (event) => {
@@ -3529,6 +3846,11 @@
         registryState[kind].search = target.value;
         renderRegistryPage(kind);
       }
+    }
+
+    if (target.matches("[data-position-filter='search']")) {
+      positionsState.search = target.value;
+      renderPositions();
     }
   });
 
@@ -3620,6 +3942,12 @@
     if (target.matches("[data-alert-filter='target']")) {
       alertsState.target = target.value;
       renderAlerts();
+      return;
+    }
+
+    if (target.matches("[data-position-filter='status']")) {
+      positionsState.status = target.value;
+      renderPositions();
       return;
     }
 
@@ -3778,6 +4106,12 @@
       return;
     }
 
+    if (form.matches("[data-position-form]")) {
+      event.preventDefault();
+      savePositionFromForm(form);
+      return;
+    }
+
     const registryKind = form.getAttribute("data-registry-form");
     if (registryKind) {
       event.preventDefault();
@@ -3792,7 +4126,13 @@
   });
 
   app.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-account-access-action], [data-account-action]");
+    const projectRow = event.target instanceof HTMLElement ? event.target.closest("[data-project-row-id]") : null;
+    if (projectRow && event.target instanceof HTMLElement && !isInteractiveProjectRowTarget(event.target)) {
+      openProjectRow(projectRow);
+      return;
+    }
+
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
@@ -3805,6 +4145,8 @@
     const registryAction = target.getAttribute("data-registry-action");
     const registryKind = target.getAttribute("data-registry-kind");
     const registryId = target.getAttribute("data-registry-id");
+    const positionAction = target.getAttribute("data-position-action");
+    const positionId = target.getAttribute("data-position-id");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
     const alertId = target.getAttribute("data-alert-id");
@@ -3872,9 +4214,38 @@
       return;
     }
 
-    if (!action && !mediaAction && !alertAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]"))) {
+    if (!action && !mediaAction && !alertAction && !positionAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]") || target.matches("[data-position-modal-backdrop]"))) {
       return;
     }
+
+    if (positionAction === "create") {
+      positionsState.modal = { mode: "create", item: normalizePosition({ id: "", title: "", status: "active" }) };
+      renderPositions();
+    } else if (positionAction === "edit") {
+      const item = positionsState.items.find((entry) => entry.id === positionId);
+      if (item) positionsState.modal = { mode: "edit", item };
+      renderPositions();
+    } else if (positionAction === "archive") {
+      const item = positionsState.items.find((entry) => entry.id === positionId);
+      if (item) {
+        const nextStatus = item.status === "archived" ? "active" : "archived";
+        if (nextStatus === "archived" && !window.confirm(`Archive ${item.title}?`)) return;
+        item.status = nextStatus;
+        item.updatedAt = new Date().toISOString();
+        positionsState.message = `${item.title} ${nextStatus === "archived" ? "archived" : "activated"}.`;
+        persistPositions();
+        renderPositions();
+      }
+    } else if (positionAction === "delete") {
+      deletePosition(positionId);
+    } else if (positionAction === "close-modal") {
+      positionsState.modal = null;
+      renderPositions();
+    } else if (positionAction === "sync-cms") {
+      persistCmsCollection("positions", true, true);
+    }
+
+    if (positionAction) return;
 
     if (alertAction === "create") {
       alertsState.modal = { mode: "create", rule: emptyAlertRule() };
@@ -4024,6 +4395,16 @@
     }
   });
 
+  app.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const row = target.closest("[data-project-row-id]");
+    if (!row || isInteractiveProjectRowTarget(target)) return;
+    event.preventDefault();
+    openProjectRow(row);
+  });
+
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && alertsState.modal) {
       alertsState.modal = null;
@@ -4153,6 +4534,66 @@
     registryState[kind].message = `Saved ${saved.name}.`;
     persistRegistryItems(kind);
     renderRegistryPage(kind);
+  }
+
+  function savePositionFromForm(form) {
+    const title = formValue(form, "title");
+    const id = createSlug(formValue(form, "id") || title);
+    const companyId = formValue(form, "companyId");
+    if (!title || !id || !companyId) {
+      positionsState.message = "Title, ID, and company are required.";
+      renderPositions();
+      return;
+    }
+    const originalId = formValue(form, "originalId");
+    const existingIndex = positionsState.items.findIndex((item) => item.id === originalId);
+    const duplicate = positionsState.items.some((item, index) => item.id === id && index !== existingIndex);
+    if (duplicate) {
+      positionsState.message = "Another position already uses that ID.";
+      renderPositions();
+      return;
+    }
+    const saved = normalizePosition({
+      ...(existingIndex >= 0 ? positionsState.items[existingIndex] : {}),
+      id,
+      slug: id,
+      title,
+      companyId,
+      companyName: registryLabel("companies", companyId),
+      location: formValue(form, "location"),
+      startDate: formValue(form, "startDate"),
+      endDate: formValue(form, "endDate"),
+      current: Boolean(form.querySelector("[name='current']")?.checked),
+      employmentType: formValue(form, "employmentType"),
+      summary: formValue(form, "summary"),
+      responsibilities: textareaArray(formValue(form, "responsibilities")),
+      highlights: textareaArray(formValue(form, "responsibilities")),
+      platformIds: formSelectedValues(form, "platformIds"),
+      status: formValue(form, "status"),
+      sortOrder: Number(formValue(form, "sortOrder") || 1000),
+      source: existingIndex >= 0 ? positionsState.items[existingIndex].source : "admin_created",
+      updatedAt: new Date().toISOString()
+    });
+    if (existingIndex >= 0) {
+      positionsState.items[existingIndex] = saved;
+    } else {
+      positionsState.items.unshift(saved);
+    }
+    positionsState.items.sort(compareRegistryItems);
+    positionsState.modal = null;
+    positionsState.message = `Saved ${saved.title}.`;
+    persistPositions();
+    renderPositions();
+  }
+
+  function deletePosition(id) {
+    const item = positionsState.items.find((entry) => entry.id === id);
+    if (!item) return;
+    if (!window.confirm(`Delete position "${item.title}"? This only affects Admin storage/fallback and does not change the public CV.`)) return;
+    positionsState.items = positionsState.items.filter((entry) => entry.id !== id);
+    positionsState.message = `Deleted ${item.title}.`;
+    persistPositions();
+    renderPositions();
   }
 
   function removeAccountAccess(id) {
@@ -4975,6 +5416,7 @@
   }
   hydrateProjectBaseline(activePageIs("projects"));
   initSidebarMode();
+  seedRegistriesFromCvSource();
   seedRegistriesFromProjects();
   hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();

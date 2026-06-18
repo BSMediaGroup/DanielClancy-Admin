@@ -1,12 +1,14 @@
 {
   "metadata": {
-    "generatedAt": "2026-06-18T08:19:22.9322960Z",
+    "generatedAt": "2026-06-18T10:17:32.672Z",
     "sourceRepo": "DanielClancy",
+    "adminRepo": "DanielClancy-Admin",
     "sourceDirectories": [
       "public/media/portfolio/thumbs",
       "public/media/portfolio",
       "public/docs"
     ],
+    "note": "Catalog reflects public preview files copied into DanielClancy-Admin at matching public paths.",
     "counts": {
       "total": 56,
       "thumbnail": 7,
@@ -22,12 +24,14 @@
       "filename": "fesa-fire-thumb.webp",
       "relativePath": "/media/portfolio/thumbs/fesa-fire-thumb.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/fesa-fire-thumb.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 71418,
-      "sourceModifiedAt": "2026-06-16T15:28:23.9397352Z",
-      "updatedAt": "2026-06-16T15:28:23.9397352Z",
-      "label": "fesa fire thumb"
+      "sourceModifiedAt": "2026-06-16T15:28:23.940Z",
+      "updatedAt": "2026-06-16T15:28:23.940Z",
+      "label": "Fesa Fire Thumb"
     },
     {
       "id": "thumbnail:upss-beacon-hill.webp",
@@ -35,12 +39,14 @@
       "filename": "upss-beacon-hill.webp",
       "relativePath": "/media/portfolio/thumbs/upss-beacon-hill.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-beacon-hill.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 80526,
-      "sourceModifiedAt": "2026-06-16T15:31:58.6479992Z",
-      "updatedAt": "2026-06-16T15:31:58.6479992Z",
-      "label": "upss beacon hill"
+      "sourceModifiedAt": "2026-06-16T15:31:58.648Z",
+      "updatedAt": "2026-06-16T15:31:58.648Z",
+      "label": "Upss Beacon Hill"
     },
     {
       "id": "thumbnail:upss-brownsville.webp",
@@ -48,12 +54,14 @@
       "filename": "upss-brownsville.webp",
       "relativePath": "/media/portfolio/thumbs/upss-brownsville.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-brownsville.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 41310,
-      "sourceModifiedAt": "2026-06-16T15:32:50.0061133Z",
-      "updatedAt": "2026-06-16T15:32:50.0061133Z",
-      "label": "upss brownsville"
+      "sourceModifiedAt": "2026-06-16T15:32:50.006Z",
+      "updatedAt": "2026-06-16T15:32:50.006Z",
+      "label": "Upss Brownsville"
     },
     {
       "id": "thumbnail:upss-grafton.webp",
@@ -61,12 +69,14 @@
       "filename": "upss-grafton.webp",
       "relativePath": "/media/portfolio/thumbs/upss-grafton.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-grafton.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 74622,
-      "sourceModifiedAt": "2026-06-16T15:31:38.1594693Z",
-      "updatedAt": "2026-06-16T15:31:38.1594693Z",
-      "label": "upss grafton"
+      "sourceModifiedAt": "2026-06-16T15:31:38.159Z",
+      "updatedAt": "2026-06-16T15:31:38.159Z",
+      "label": "Upss Grafton"
     },
     {
       "id": "thumbnail:upss-homebush.webp",
@@ -74,12 +84,14 @@
       "filename": "upss-homebush.webp",
       "relativePath": "/media/portfolio/thumbs/upss-homebush.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-homebush.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 39502,
-      "sourceModifiedAt": "2026-06-16T15:32:30.9148308Z",
-      "updatedAt": "2026-06-16T15:32:30.9148308Z",
-      "label": "upss homebush"
+      "sourceModifiedAt": "2026-06-16T15:32:30.915Z",
+      "updatedAt": "2026-06-16T15:32:30.915Z",
+      "label": "Upss Homebush"
     },
     {
       "id": "thumbnail:upss-north-richmond.webp",
@@ -87,12 +99,14 @@
       "filename": "upss-north-richmond.webp",
       "relativePath": "/media/portfolio/thumbs/upss-north-richmond.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-north-richmond.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 93368,
-      "sourceModifiedAt": "2026-06-16T15:32:14.9165190Z",
-      "updatedAt": "2026-06-16T15:32:14.9165190Z",
-      "label": "upss north richmond"
+      "sourceModifiedAt": "2026-06-16T15:32:14.917Z",
+      "updatedAt": "2026-06-16T15:32:14.917Z",
+      "label": "Upss North Richmond"
     },
     {
       "id": "thumbnail:upss-wyoming.webp",
@@ -100,12 +114,14 @@
       "filename": "upss-wyoming.webp",
       "relativePath": "/media/portfolio/thumbs/upss-wyoming.webp",
       "sourceDir": "public/media/portfolio/thumbs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/thumbs/upss-wyoming.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 70426,
-      "sourceModifiedAt": "2026-06-16T15:31:13.9093444Z",
-      "updatedAt": "2026-06-16T15:31:13.9093444Z",
-      "label": "upss wyoming"
+      "sourceModifiedAt": "2026-06-16T15:31:13.909Z",
+      "updatedAt": "2026-06-16T15:31:13.909Z",
+      "label": "Upss Wyoming"
     },
     {
       "id": "portfolio_image:aqwest-bcp-laboratory.jpg",
@@ -113,12 +129,14 @@
       "filename": "aqwest-bcp-laboratory.jpg",
       "relativePath": "/media/portfolio/aqwest-bcp-laboratory.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/aqwest-bcp-laboratory.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 693035,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "aqwest bcp laboratory"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Aqwest Bcp Laboratory"
     },
     {
       "id": "portfolio_image:aqwest-bcp-laboratory.webp",
@@ -126,12 +144,14 @@
       "filename": "aqwest-bcp-laboratory.webp",
       "relativePath": "/media/portfolio/aqwest-bcp-laboratory.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/aqwest-bcp-laboratory.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 289870,
-      "sourceModifiedAt": "2026-05-01T16:17:31.3389816Z",
-      "updatedAt": "2026-05-01T16:17:31.3389816Z",
-      "label": "aqwest bcp laboratory"
+      "sourceModifiedAt": "2026-05-01T16:17:31.339Z",
+      "updatedAt": "2026-05-01T16:17:31.339Z",
+      "label": "Aqwest Bcp Laboratory"
     },
     {
       "id": "portfolio_image:cottesloe-beach-house.jpg",
@@ -139,12 +159,14 @@
       "filename": "cottesloe-beach-house.jpg",
       "relativePath": "/media/portfolio/cottesloe-beach-house.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/cottesloe-beach-house.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 2060676,
-      "sourceModifiedAt": "2026-05-01T16:12:27.5662098Z",
-      "updatedAt": "2026-05-01T16:12:27.5662098Z",
-      "label": "cottesloe beach house"
+      "sourceModifiedAt": "2026-05-01T16:12:27.566Z",
+      "updatedAt": "2026-05-01T16:12:27.566Z",
+      "label": "Cottesloe Beach House"
     },
     {
       "id": "portfolio_image:cottesloe-beach-house.webp",
@@ -152,12 +174,14 @@
       "filename": "cottesloe-beach-house.webp",
       "relativePath": "/media/portfolio/cottesloe-beach-house.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/cottesloe-beach-house.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 711852,
-      "sourceModifiedAt": "2026-05-01T16:12:15.9933513Z",
-      "updatedAt": "2026-05-01T16:12:15.9933513Z",
-      "label": "cottesloe beach house"
+      "sourceModifiedAt": "2026-05-01T16:12:15.993Z",
+      "updatedAt": "2026-05-01T16:12:15.993Z",
+      "label": "Cottesloe Beach House"
     },
     {
       "id": "portfolio_image:cue-roadhouse.jpg",
@@ -165,12 +189,14 @@
       "filename": "cue-roadhouse.jpg",
       "relativePath": "/media/portfolio/cue-roadhouse.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/cue-roadhouse.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 791186,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "cue roadhouse"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Cue Roadhouse"
     },
     {
       "id": "portfolio_image:cue-roadhouse.webp",
@@ -178,12 +204,14 @@
       "filename": "cue-roadhouse.webp",
       "relativePath": "/media/portfolio/cue-roadhouse.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/cue-roadhouse.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 953986,
-      "sourceModifiedAt": "2026-05-01T16:18:05.8979169Z",
-      "updatedAt": "2026-05-01T16:18:05.8979169Z",
-      "label": "cue roadhouse"
+      "sourceModifiedAt": "2026-05-01T16:18:05.898Z",
+      "updatedAt": "2026-05-01T16:18:05.898Z",
+      "label": "Cue Roadhouse"
     },
     {
       "id": "portfolio_image:curtin-canopy.png",
@@ -191,12 +219,14 @@
       "filename": "curtin-canopy.png",
       "relativePath": "/media/portfolio/curtin-canopy.png",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-canopy.png",
       "extension": ".png",
       "mime": "image/png",
       "sizeBytes": 1034523,
-      "sourceModifiedAt": "2026-04-18T15:25:50.0036283Z",
-      "updatedAt": "2026-04-18T15:25:50.0036283Z",
-      "label": "curtin canopy"
+      "sourceModifiedAt": "2026-04-18T15:25:50.004Z",
+      "updatedAt": "2026-04-18T15:25:50.004Z",
+      "label": "Curtin Canopy"
     },
     {
       "id": "portfolio_image:curtin-canopy.webp",
@@ -204,12 +234,14 @@
       "filename": "curtin-canopy.webp",
       "relativePath": "/media/portfolio/curtin-canopy.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-canopy.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 148322,
-      "sourceModifiedAt": "2026-05-01T16:17:13.1646701Z",
-      "updatedAt": "2026-05-01T16:17:13.1646701Z",
-      "label": "curtin canopy"
+      "sourceModifiedAt": "2026-05-01T16:17:13.165Z",
+      "updatedAt": "2026-05-01T16:17:13.165Z",
+      "label": "Curtin Canopy"
     },
     {
       "id": "portfolio_image:curtin-container-gallery.jpg",
@@ -217,12 +249,14 @@
       "filename": "curtin-container-gallery.jpg",
       "relativePath": "/media/portfolio/curtin-container-gallery.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-container-gallery.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 442715,
-      "sourceModifiedAt": "2026-05-01T16:25:49.0895591Z",
-      "updatedAt": "2026-05-01T16:25:49.0895591Z",
-      "label": "curtin container gallery"
+      "sourceModifiedAt": "2026-05-01T16:25:49.090Z",
+      "updatedAt": "2026-05-01T16:25:49.090Z",
+      "label": "Curtin Container Gallery"
     },
     {
       "id": "portfolio_image:curtin-container-gallery.webp",
@@ -230,12 +264,14 @@
       "filename": "curtin-container-gallery.webp",
       "relativePath": "/media/portfolio/curtin-container-gallery.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-container-gallery.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 223084,
-      "sourceModifiedAt": "2026-05-01T16:16:19.7421312Z",
-      "updatedAt": "2026-05-01T16:16:19.7421312Z",
-      "label": "curtin container gallery"
+      "sourceModifiedAt": "2026-05-01T16:16:19.742Z",
+      "updatedAt": "2026-05-01T16:16:19.742Z",
+      "label": "Curtin Container Gallery"
     },
     {
       "id": "portfolio_image:curtin-creative-quarter.png",
@@ -243,12 +279,14 @@
       "filename": "curtin-creative-quarter.png",
       "relativePath": "/media/portfolio/curtin-creative-quarter.png",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-creative-quarter.png",
       "extension": ".png",
       "mime": "image/png",
       "sizeBytes": 360288,
-      "sourceModifiedAt": "2026-04-18T15:24:51.6154767Z",
-      "updatedAt": "2026-04-18T15:24:51.6154767Z",
-      "label": "curtin creative quarter"
+      "sourceModifiedAt": "2026-04-18T15:24:51.615Z",
+      "updatedAt": "2026-04-18T15:24:51.615Z",
+      "label": "Curtin Creative Quarter"
     },
     {
       "id": "portfolio_image:curtin-creative-quarter.webp",
@@ -256,12 +294,14 @@
       "filename": "curtin-creative-quarter.webp",
       "relativePath": "/media/portfolio/curtin-creative-quarter.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-creative-quarter.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 83528,
-      "sourceModifiedAt": "2026-05-01T16:14:30.6447407Z",
-      "updatedAt": "2026-05-01T16:14:30.6447407Z",
-      "label": "curtin creative quarter"
+      "sourceModifiedAt": "2026-05-01T16:14:30.645Z",
+      "updatedAt": "2026-05-01T16:14:30.645Z",
+      "label": "Curtin Creative Quarter"
     },
     {
       "id": "portfolio_image:curtin-study-pod.png",
@@ -269,12 +309,14 @@
       "filename": "curtin-study-pod.png",
       "relativePath": "/media/portfolio/curtin-study-pod.png",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-study-pod.png",
       "extension": ".png",
       "mime": "image/png",
       "sizeBytes": 141567,
-      "sourceModifiedAt": "2026-05-01T16:19:11.4686151Z",
-      "updatedAt": "2026-05-01T16:19:11.4686151Z",
-      "label": "curtin study pod"
+      "sourceModifiedAt": "2026-05-01T16:19:11.469Z",
+      "updatedAt": "2026-05-01T16:19:11.469Z",
+      "label": "Curtin Study Pod"
     },
     {
       "id": "portfolio_image:curtin-study-pod.webp",
@@ -282,12 +324,14 @@
       "filename": "curtin-study-pod.webp",
       "relativePath": "/media/portfolio/curtin-study-pod.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/curtin-study-pod.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 125078,
-      "sourceModifiedAt": "2026-05-01T16:19:08.8047977Z",
-      "updatedAt": "2026-05-01T16:19:08.8047977Z",
-      "label": "curtin study pod"
+      "sourceModifiedAt": "2026-05-01T16:19:08.805Z",
+      "updatedAt": "2026-05-01T16:19:08.805Z",
+      "label": "Curtin Study Pod"
     },
     {
       "id": "portfolio_image:dawesville-p1.jpg",
@@ -295,12 +339,14 @@
       "filename": "dawesville-p1.jpg",
       "relativePath": "/media/portfolio/dawesville-p1.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/dawesville-p1.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 5076322,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "dawesville p1"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Dawesville P1"
     },
     {
       "id": "portfolio_image:dawesville-p2.jpg",
@@ -308,12 +354,14 @@
       "filename": "dawesville-p2.jpg",
       "relativePath": "/media/portfolio/dawesville-p2.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/dawesville-p2.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 6626305,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "dawesville p2"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Dawesville P2"
     },
     {
       "id": "portfolio_image:dawesville-p3.jpg",
@@ -321,12 +369,14 @@
       "filename": "dawesville-p3.jpg",
       "relativePath": "/media/portfolio/dawesville-p3.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/dawesville-p3.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 5717183,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "dawesville p3"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Dawesville P3"
     },
     {
       "id": "portfolio_image:eastern-creek.png",
@@ -334,12 +384,14 @@
       "filename": "eastern-creek.png",
       "relativePath": "/media/portfolio/eastern-creek.png",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/eastern-creek.png",
       "extension": ".png",
       "mime": "image/png",
       "sizeBytes": 588854,
-      "sourceModifiedAt": "2026-04-18T15:25:50.0036283Z",
-      "updatedAt": "2026-04-18T15:25:50.0036283Z",
-      "label": "eastern creek"
+      "sourceModifiedAt": "2026-04-18T15:25:50.004Z",
+      "updatedAt": "2026-04-18T15:25:50.004Z",
+      "label": "Eastern Creek"
     },
     {
       "id": "portfolio_image:eastern-creek.webp",
@@ -347,12 +399,14 @@
       "filename": "eastern-creek.webp",
       "relativePath": "/media/portfolio/eastern-creek.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/eastern-creek.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 150428,
-      "sourceModifiedAt": "2026-05-01T16:14:57.5142540Z",
-      "updatedAt": "2026-05-01T16:14:57.5142540Z",
-      "label": "eastern creek"
+      "sourceModifiedAt": "2026-05-01T16:14:57.514Z",
+      "updatedAt": "2026-05-01T16:14:57.514Z",
+      "label": "Eastern Creek"
     },
     {
       "id": "portfolio_image:fesa-fire01.jpg",
@@ -360,12 +414,14 @@
       "filename": "fesa-fire01.jpg",
       "relativePath": "/media/portfolio/fesa-fire01.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/fesa-fire01.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 3969394,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "fesa fire01"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Fesa Fire01"
     },
     {
       "id": "portfolio_image:fesa-fire02.jpg",
@@ -373,12 +429,14 @@
       "filename": "fesa-fire02.jpg",
       "relativePath": "/media/portfolio/fesa-fire02.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/fesa-fire02.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 4241622,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "fesa fire02"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Fesa Fire02"
     },
     {
       "id": "portfolio_image:fesa-fire03.jpg",
@@ -386,12 +444,14 @@
       "filename": "fesa-fire03.jpg",
       "relativePath": "/media/portfolio/fesa-fire03.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/fesa-fire03.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 4134383,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "fesa fire03"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Fesa Fire03"
     },
     {
       "id": "portfolio_image:fesa-fire04.jpg",
@@ -399,12 +459,14 @@
       "filename": "fesa-fire04.jpg",
       "relativePath": "/media/portfolio/fesa-fire04.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/fesa-fire04.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 5139801,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "fesa fire04"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Fesa Fire04"
     },
     {
       "id": "portfolio_image:lake-joondalup-baptist-college.jpg",
@@ -412,12 +474,14 @@
       "filename": "lake-joondalup-baptist-college.jpg",
       "relativePath": "/media/portfolio/lake-joondalup-baptist-college.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/lake-joondalup-baptist-college.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 791672,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "lake joondalup baptist college"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Lake Joondalup Baptist College"
     },
     {
       "id": "portfolio_image:lake-joondalup-baptist-college.webp",
@@ -425,12 +489,14 @@
       "filename": "lake-joondalup-baptist-college.webp",
       "relativePath": "/media/portfolio/lake-joondalup-baptist-college.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/lake-joondalup-baptist-college.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 449510,
-      "sourceModifiedAt": "2026-05-01T16:15:16.8659095Z",
-      "updatedAt": "2026-05-01T16:15:16.8659095Z",
-      "label": "lake joondalup baptist college"
+      "sourceModifiedAt": "2026-05-01T16:15:16.866Z",
+      "updatedAt": "2026-05-01T16:15:16.866Z",
+      "label": "Lake Joondalup Baptist College"
     },
     {
       "id": "portfolio_image:pheasants-nest.jpg",
@@ -438,12 +504,14 @@
       "filename": "pheasants-nest.jpg",
       "relativePath": "/media/portfolio/pheasants-nest.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/pheasants-nest.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 1351461,
-      "sourceModifiedAt": "2026-05-01T16:14:15.3235726Z",
-      "updatedAt": "2026-05-01T16:14:15.3235726Z",
-      "label": "pheasants nest"
+      "sourceModifiedAt": "2026-05-01T16:14:15.324Z",
+      "updatedAt": "2026-05-01T16:14:15.324Z",
+      "label": "Pheasants Nest"
     },
     {
       "id": "portfolio_image:pheasants-nest.webp",
@@ -451,12 +519,14 @@
       "filename": "pheasants-nest.webp",
       "relativePath": "/media/portfolio/pheasants-nest.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/pheasants-nest.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 297520,
-      "sourceModifiedAt": "2026-05-01T16:14:10.6617427Z",
-      "updatedAt": "2026-05-01T16:14:10.6617427Z",
-      "label": "pheasants nest"
+      "sourceModifiedAt": "2026-05-01T16:14:10.662Z",
+      "updatedAt": "2026-05-01T16:14:10.662Z",
+      "label": "Pheasants Nest"
     },
     {
       "id": "portfolio_image:rowell-residence.jpg",
@@ -464,12 +534,14 @@
       "filename": "rowell-residence.jpg",
       "relativePath": "/media/portfolio/rowell-residence.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/rowell-residence.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 650988,
-      "sourceModifiedAt": "2026-05-01T16:22:11.5904147Z",
-      "updatedAt": "2026-05-01T16:22:11.5904147Z",
-      "label": "rowell residence"
+      "sourceModifiedAt": "2026-05-01T16:22:11.590Z",
+      "updatedAt": "2026-05-01T16:22:11.590Z",
+      "label": "Rowell Residence"
     },
     {
       "id": "portfolio_image:rowell-residence.webp",
@@ -477,12 +549,14 @@
       "filename": "rowell-residence.webp",
       "relativePath": "/media/portfolio/rowell-residence.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/rowell-residence.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 528172,
-      "sourceModifiedAt": "2026-05-01T16:22:07.9497065Z",
-      "updatedAt": "2026-05-01T16:22:07.9497065Z",
-      "label": "rowell residence"
+      "sourceModifiedAt": "2026-05-01T16:22:07.950Z",
+      "updatedAt": "2026-05-01T16:22:07.950Z",
+      "label": "Rowell Residence"
     },
     {
       "id": "portfolio_image:south-perth-promenade.jpg",
@@ -490,12 +564,14 @@
       "filename": "south-perth-promenade.jpg",
       "relativePath": "/media/portfolio/south-perth-promenade.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/south-perth-promenade.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 1491805,
-      "sourceModifiedAt": "2026-05-01T16:20:35.5951311Z",
-      "updatedAt": "2026-05-01T16:20:35.5951311Z",
-      "label": "south perth promenade"
+      "sourceModifiedAt": "2026-05-01T16:20:35.595Z",
+      "updatedAt": "2026-05-01T16:20:35.595Z",
+      "label": "South Perth Promenade"
     },
     {
       "id": "portfolio_image:south-perth-promenade.webp",
@@ -503,12 +579,14 @@
       "filename": "south-perth-promenade.webp",
       "relativePath": "/media/portfolio/south-perth-promenade.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/south-perth-promenade.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 387834,
-      "sourceModifiedAt": "2026-05-01T16:20:34.6359894Z",
-      "updatedAt": "2026-05-01T16:20:34.6359894Z",
-      "label": "south perth promenade"
+      "sourceModifiedAt": "2026-05-01T16:20:34.636Z",
+      "updatedAt": "2026-05-01T16:20:34.636Z",
+      "label": "South Perth Promenade"
     },
     {
       "id": "portfolio_image:spratt-residence.jpg",
@@ -516,12 +594,14 @@
       "filename": "spratt-residence.jpg",
       "relativePath": "/media/portfolio/spratt-residence.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/spratt-residence.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 1258922,
-      "sourceModifiedAt": "2026-05-01T16:16:50.7055257Z",
-      "updatedAt": "2026-05-01T16:16:50.7055257Z",
-      "label": "spratt residence"
+      "sourceModifiedAt": "2026-05-01T16:16:50.706Z",
+      "updatedAt": "2026-05-01T16:16:50.706Z",
+      "label": "Spratt Residence"
     },
     {
       "id": "portfolio_image:spratt-residence.webp",
@@ -529,12 +609,14 @@
       "filename": "spratt-residence.webp",
       "relativePath": "/media/portfolio/spratt-residence.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/spratt-residence.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 459564,
-      "sourceModifiedAt": "2026-05-01T16:16:47.0566367Z",
-      "updatedAt": "2026-05-01T16:16:47.0566367Z",
-      "label": "spratt residence"
+      "sourceModifiedAt": "2026-05-01T16:16:47.057Z",
+      "updatedAt": "2026-05-01T16:16:47.057Z",
+      "label": "Spratt Residence"
     },
     {
       "id": "portfolio_image:upss-beacon-hill.jpg",
@@ -542,12 +624,14 @@
       "filename": "upss-beacon-hill.jpg",
       "relativePath": "/media/portfolio/upss-beacon-hill.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-beacon-hill.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 607556,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "upss beacon hill"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Upss Beacon Hill"
     },
     {
       "id": "portfolio_image:upss-beacon-hill.webp",
@@ -555,12 +639,14 @@
       "filename": "upss-beacon-hill.webp",
       "relativePath": "/media/portfolio/upss-beacon-hill.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-beacon-hill.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 474370,
-      "sourceModifiedAt": "2026-05-01T16:19:26.9482016Z",
-      "updatedAt": "2026-05-01T16:19:26.9482016Z",
-      "label": "upss beacon hill"
+      "sourceModifiedAt": "2026-05-01T16:19:26.948Z",
+      "updatedAt": "2026-05-01T16:19:26.948Z",
+      "label": "Upss Beacon Hill"
     },
     {
       "id": "portfolio_image:upss-brownsville.jpg",
@@ -568,12 +654,14 @@
       "filename": "upss-brownsville.jpg",
       "relativePath": "/media/portfolio/upss-brownsville.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-brownsville.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 684557,
-      "sourceModifiedAt": "2026-05-01T16:20:11.8047233Z",
-      "updatedAt": "2026-05-01T16:20:11.8047233Z",
-      "label": "upss brownsville"
+      "sourceModifiedAt": "2026-05-01T16:20:11.805Z",
+      "updatedAt": "2026-05-01T16:20:11.805Z",
+      "label": "Upss Brownsville"
     },
     {
       "id": "portfolio_image:upss-brownsville.webp",
@@ -581,12 +669,14 @@
       "filename": "upss-brownsville.webp",
       "relativePath": "/media/portfolio/upss-brownsville.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-brownsville.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 165490,
-      "sourceModifiedAt": "2026-05-01T16:19:47.0979616Z",
-      "updatedAt": "2026-05-01T16:19:47.0979616Z",
-      "label": "upss brownsville"
+      "sourceModifiedAt": "2026-05-01T16:19:47.098Z",
+      "updatedAt": "2026-05-01T16:19:47.098Z",
+      "label": "Upss Brownsville"
     },
     {
       "id": "portfolio_image:upss-grafton.jpg",
@@ -594,12 +684,14 @@
       "filename": "upss-grafton.jpg",
       "relativePath": "/media/portfolio/upss-grafton.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-grafton.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 546995,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "upss grafton"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Upss Grafton"
     },
     {
       "id": "portfolio_image:upss-grafton.webp",
@@ -607,12 +699,14 @@
       "filename": "upss-grafton.webp",
       "relativePath": "/media/portfolio/upss-grafton.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-grafton.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 395314,
-      "sourceModifiedAt": "2026-05-01T16:18:22.6526152Z",
-      "updatedAt": "2026-05-01T16:18:22.6526152Z",
-      "label": "upss grafton"
+      "sourceModifiedAt": "2026-05-01T16:18:22.653Z",
+      "updatedAt": "2026-05-01T16:18:22.653Z",
+      "label": "Upss Grafton"
     },
     {
       "id": "portfolio_image:upss-homebush.jpg",
@@ -620,12 +714,14 @@
       "filename": "upss-homebush.jpg",
       "relativePath": "/media/portfolio/upss-homebush.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-homebush.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 660433,
-      "sourceModifiedAt": "2026-05-01T16:21:02.3396716Z",
-      "updatedAt": "2026-05-01T16:21:02.3396716Z",
-      "label": "upss homebush"
+      "sourceModifiedAt": "2026-05-01T16:21:02.340Z",
+      "updatedAt": "2026-05-01T16:21:02.340Z",
+      "label": "Upss Homebush"
     },
     {
       "id": "portfolio_image:upss-homebush.webp",
@@ -633,12 +729,14 @@
       "filename": "upss-homebush.webp",
       "relativePath": "/media/portfolio/upss-homebush.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-homebush.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 156370,
-      "sourceModifiedAt": "2026-05-01T16:20:58.8837055Z",
-      "updatedAt": "2026-05-01T16:20:58.8837055Z",
-      "label": "upss homebush"
+      "sourceModifiedAt": "2026-05-01T16:20:58.884Z",
+      "updatedAt": "2026-05-01T16:20:58.884Z",
+      "label": "Upss Homebush"
     },
     {
       "id": "portfolio_image:upss-north-richmond.jpg",
@@ -646,12 +744,14 @@
       "filename": "upss-north-richmond.jpg",
       "relativePath": "/media/portfolio/upss-north-richmond.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-north-richmond.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 613243,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "upss north richmond"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Upss North Richmond"
     },
     {
       "id": "portfolio_image:upss-north-richmond.webp",
@@ -659,12 +759,14 @@
       "filename": "upss-north-richmond.webp",
       "relativePath": "/media/portfolio/upss-north-richmond.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-north-richmond.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 485588,
-      "sourceModifiedAt": "2026-05-01T16:17:47.2960174Z",
-      "updatedAt": "2026-05-01T16:17:47.2960174Z",
-      "label": "upss north richmond"
+      "sourceModifiedAt": "2026-05-01T16:17:47.296Z",
+      "updatedAt": "2026-05-01T16:17:47.296Z",
+      "label": "Upss North Richmond"
     },
     {
       "id": "portfolio_image:upss-wyoming.jpg",
@@ -672,12 +774,14 @@
       "filename": "upss-wyoming.jpg",
       "relativePath": "/media/portfolio/upss-wyoming.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-wyoming.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 521051,
-      "sourceModifiedAt": "2026-04-18T15:22:38.6764478Z",
-      "updatedAt": "2026-04-18T15:22:38.6764478Z",
-      "label": "upss wyoming"
+      "sourceModifiedAt": "2026-04-18T15:22:38.676Z",
+      "updatedAt": "2026-04-18T15:22:38.676Z",
+      "label": "Upss Wyoming"
     },
     {
       "id": "portfolio_image:upss-wyoming.webp",
@@ -685,12 +789,14 @@
       "filename": "upss-wyoming.webp",
       "relativePath": "/media/portfolio/upss-wyoming.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/upss-wyoming.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 365440,
-      "sourceModifiedAt": "2026-05-01T16:18:41.2890686Z",
-      "updatedAt": "2026-05-01T16:18:41.2890686Z",
-      "label": "upss wyoming"
+      "sourceModifiedAt": "2026-05-01T16:18:41.289Z",
+      "updatedAt": "2026-05-01T16:18:41.289Z",
+      "label": "Upss Wyoming"
     },
     {
       "id": "portfolio_image:wungong-master-plan.jpg",
@@ -698,12 +804,14 @@
       "filename": "wungong-master-plan.jpg",
       "relativePath": "/media/portfolio/wungong-master-plan.jpg",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/wungong-master-plan.jpg",
       "extension": ".jpg",
       "mime": "image/jpeg",
       "sizeBytes": 1078598,
-      "sourceModifiedAt": "2026-05-01T16:21:25.0518355Z",
-      "updatedAt": "2026-05-01T16:21:25.0518355Z",
-      "label": "wungong master plan"
+      "sourceModifiedAt": "2026-05-01T16:21:25.052Z",
+      "updatedAt": "2026-05-01T16:21:25.052Z",
+      "label": "Wungong Master Plan"
     },
     {
       "id": "portfolio_image:wungong-master-plan.webp",
@@ -711,12 +819,14 @@
       "filename": "wungong-master-plan.webp",
       "relativePath": "/media/portfolio/wungong-master-plan.webp",
       "sourceDir": "public/media/portfolio",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/media/portfolio/wungong-master-plan.webp",
       "extension": ".webp",
       "mime": "image/webp",
       "sizeBytes": 260886,
-      "sourceModifiedAt": "2026-05-01T16:21:22.6482978Z",
-      "updatedAt": "2026-05-01T16:21:22.6482978Z",
-      "label": "wungong master plan"
+      "sourceModifiedAt": "2026-05-01T16:21:22.648Z",
+      "updatedAt": "2026-05-01T16:21:22.648Z",
+      "label": "Wungong Master Plan"
     },
     {
       "id": "document_pdf:daniel_clancy_cv_2026_light.pdf",
@@ -724,11 +834,13 @@
       "filename": "Daniel_Clancy_CV_2026_Light.pdf",
       "relativePath": "/docs/Daniel_Clancy_CV_2026_Light.pdf",
       "sourceDir": "public/docs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/docs/Daniel_Clancy_CV_2026_Light.pdf",
       "extension": ".pdf",
       "mime": "application/pdf",
       "sizeBytes": 773458,
-      "sourceModifiedAt": "2026-04-26T21:58:10.7163072Z",
-      "updatedAt": "2026-04-26T21:58:10.7163072Z",
+      "sourceModifiedAt": "2026-04-26T21:58:10.716Z",
+      "updatedAt": "2026-04-26T21:58:10.716Z",
       "label": "Daniel Clancy CV 2026 Light"
     },
     {
@@ -737,11 +849,13 @@
       "filename": "Daniel_Clancy_CV_2026.pdf",
       "relativePath": "/docs/Daniel_Clancy_CV_2026.pdf",
       "sourceDir": "public/docs",
+      "sourceRepo": "DanielClancy",
+      "adminPreviewPath": "/docs/Daniel_Clancy_CV_2026.pdf",
       "extension": ".pdf",
       "mime": "application/pdf",
       "sizeBytes": 612996,
-      "sourceModifiedAt": "2026-04-26T21:52:20.9519312Z",
-      "updatedAt": "2026-04-26T21:52:20.9519312Z",
+      "sourceModifiedAt": "2026-04-26T21:52:20.952Z",
+      "updatedAt": "2026-04-26T21:52:20.952Z",
       "label": "Daniel Clancy CV 2026"
     }
   ]

@@ -96,10 +96,15 @@
               <span class="topbar-user-label">${escapeHtml(identity)}</span>
             </summary>
             <div class="topbar-user-popover">
-              <a href="#/accounts">Accounts</a>
-              <a href="#/settings">Settings</a>
-              <a href="https://danielclancy.net" rel="noreferrer">Public Site</a>
-              <button type="button" data-auth-action="logout">Logout</button>
+              <div class="topbar-user-overview">
+                <span><strong>${escapeHtml(identity)}</strong></span>
+                <span>${escapeHtml(session.provider || "manual")} / ${escapeHtml(session.account_type || "admin")}</span>
+                <span>${escapeHtml(session.admin_level || "admin")}</span>
+              </div>
+              <a href="#/accounts"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/profile.svg')" aria-hidden="true"></span><span>Accounts</span></a>
+              <a href="#/settings"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/cog.svg')" aria-hidden="true"></span><span>Settings</span></a>
+              <a href="https://danielclancy.net" rel="noreferrer"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/public.svg')" aria-hidden="true"></span><span>Public Site</span></a>
+              <button type="button" data-auth-action="logout"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/portal.svg')" aria-hidden="true"></span><span>Logout</span></button>
             </div>
           </details>
         `;
