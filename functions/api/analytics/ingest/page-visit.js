@@ -68,6 +68,7 @@ function sanitizePayload(raw) {
     page_path: cleanText(raw?.page_path || raw?.pagePath || raw?.path || raw?.route || "/", 500),
     page_url: cleanText(raw?.page_url || raw?.pageUrl || raw?.url, 500),
     page_title: cleanText(raw?.page_title || raw?.pageTitle || raw?.title, 160),
+    session_id: cleanText(raw?.session_id || raw?.sessionId || raw?.visitor_session_id, 160),
     referrer: cleanText(raw?.referrer, 500),
     referrer_host: cleanText(raw?.referrer_host || raw?.referrerHost, 200),
     timezone: cleanText(raw?.timezone, 120),

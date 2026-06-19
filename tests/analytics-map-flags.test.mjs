@@ -33,6 +33,12 @@ test("analytics location rendering includes MapLibre, flags, freshness, and isol
   assert.ok(app.includes("country-flag"));
   assert.ok(app.includes("location-chip"));
   assert.ok(app.includes("analytics-map-marker-label"));
+  assert.ok(app.includes("analytics-map-marker-halo"));
+  assert.ok(app.includes("analytics-window-selector"));
+  assert.ok(app.includes("[\"5m\", \"5M\"]"));
+  assert.ok(app.includes("[\"15m\", \"15M\"]"));
+  assert.ok(app.includes("[\"1h\", \"1H\"]"));
+  assert.ok(app.includes("[\"24h\", \"24HRS\"]"));
   assert.ok(app.includes("window.maplibregl.Map"));
   assert.ok(app.includes("new window.maplibregl.Marker"));
   assert.ok(app.includes("mapStyleConfig"));
@@ -48,6 +54,32 @@ test("analytics location rendering includes MapLibre, flags, freshness, and isol
   assert.equal(app.includes("<svg class=\"map-world\""), false);
 });
 
+test("location table flags are limited to the country column", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  assert.equal(app.includes("locationChip(row, row.city"), false);
+  assert.equal(app.includes("locationChip(row, row.region"), false);
+  assert.ok(app.includes('["City", "Region", "Country", "Sessions", "Requests", "Precision", "Source", "Last seen"]'));
+  assert.ok(app.includes("plainLocationText(row.city"));
+  assert.ok(app.includes("plainLocationText(row.region"));
+  assert.ok(app.includes("locationChip(row, row.country"));
+});
+
+test("marker model separates sessions and requests and scales dot versus halo", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../assets/css/admin.css", import.meta.url), "utf8");
+  assert.ok(app.includes("function sessionCount(row)"));
+  assert.ok(app.includes("function requestCount(row)"));
+  assert.ok(app.includes("function markerStyle(row)"));
+  assert.ok(app.includes("--analytics-marker-dot"));
+  assert.ok(app.includes("--analytics-marker-halo"));
+  assert.ok(app.includes('markerEl.setAttribute("data-sessions"'));
+  assert.ok(app.includes('markerEl.setAttribute("data-requests"'));
+  assert.ok(app.includes('sessionCount(row) === null ? "unavailable"'));
+  assert.ok(css.includes(".analytics-map-marker-halo"));
+  assert.ok(css.includes("width: var(--analytics-marker-dot);"));
+  assert.ok(css.includes("width: var(--analytics-marker-halo);"));
+});
+
 test("analytics marker generation excludes samples and rows without coordinates", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
   assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"])'));
@@ -61,6 +93,7 @@ test("country-only rows are country precision and popups include flag metadata",
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
   const api = await readFile(new URL("../functions/api/admin/analytics.js", import.meta.url), "utf8");
   assert.ok(api.includes('precision: "country"'));
+  assert.ok(api.includes("sessions: row.sessions ?? null"));
   assert.ok(api.includes("liveLocationRows"));
   assert.ok(app.includes("COUNTRY_CENTROIDS"));
   assert.ok(app.includes("coord.coordinateSource || \"source\""));

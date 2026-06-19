@@ -1,7 +1,9 @@
 import { requireAdmin } from "../../_shared/admin-accounts.js";
 import {
+  ANALYTICS_WINDOWS,
   isLiveAnalyticsRow,
   loadPageVisitAnalytics as loadStoredPageVisitAnalytics,
+  normalizeAnalyticsWindow,
   purgeNonLiveAnalyticsRows
 } from "../../_shared/analytics-store.js";
 
@@ -94,8 +96,32 @@ function mergeCount(map, key, seed) {
   map.set(id, existing);
 }
 
+function mergePageVisitEvent(map, key, seed, event) {
+  const id = key || "Unavailable";
+  const existing = map.get(id) || { ...seed, count: 0, requests: 0, sessionIds: new Set(), sessions: null };
+  existing.count += 1;
+  existing.requests += 1;
+  const sessionId = cleanText(event?.session_id || event?.sessionId || event?.visitor_session_id, 160);
+  if (sessionId) {
+    existing.sessionIds.add(sessionId);
+    existing.sessions = existing.sessionIds.size;
+  }
+  const eventTime = event?.recordedAt || event?.timestamp || "";
+  if (eventTime && (!existing.lastSeen || eventTime > existing.lastSeen)) existing.lastSeen = eventTime;
+  map.set(id, existing);
+}
+
 function topRows(map, limit = 20) {
-  return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+  return [...map.values()]
+    .map((row) => {
+      const { sessionIds, ...rest } = row;
+      return {
+        ...rest,
+        sessions: sessionIds instanceof Set && sessionIds.size ? sessionIds.size : row.sessions ?? null
+      };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
 
 function parseJson(raw, fallback) {
@@ -166,6 +192,7 @@ export function buildPageVisitEvent(context, payload = {}) {
     page_path: pagePath.startsWith("/") || pagePath.startsWith("#/") ? pagePath : "/",
     page_url: cleanText(payload.pageUrl || payload.url, 500),
     page_title: cleanText(payload.title, 160),
+    session_id: cleanText(payload.session_id || payload.sessionId || payload.visitor_session_id, 160),
     referrer_host: referrerHost(payload.referrer || payload.referrerHost),
     country: cleanText(cf.country || payload.country, 80),
     region: cleanText(cf.region || payload.region, 120),
@@ -193,44 +220,44 @@ export function aggregatePageVisitEvents(events = []) {
   let countryOnlyCount = 0;
 
   for (const event of events.filter(isLiveAnalyticsRow)) {
-    mergeCount(pages, event.page_path || "/", {
+    mergePageVisitEvent(pages, event.page_path || "/", {
       path: event.page_path || "/",
       title: event.page_title || "",
       source: "page_visit_kv"
-    });
+    }, event);
     if (event.referrer_host) {
-      mergeCount(referrers, event.referrer_host, { host: event.referrer_host, source: "page_visit_kv" });
+      mergePageVisitEvent(referrers, event.referrer_host, { host: event.referrer_host, source: "page_visit_kv" }, event);
     }
     if (event.country) {
-      mergeCount(countries, event.country, { country: event.country, source: "page_visit_kv" });
+      mergePageVisitEvent(countries, event.country, { country: event.country, source: "page_visit_kv" }, event);
     }
     if (event.region || event.country) {
       const key = `${event.region || "Unavailable"}|${event.country || ""}`;
-      mergeCount(regions, key, {
+      mergePageVisitEvent(regions, key, {
         region: event.region || "Unavailable",
         country: event.country || "",
         source: "page_visit_kv",
         precision: event.region ? "region" : "country"
-      });
+      }, event);
     }
     if (event.city) {
       cityCount += 1;
       const key = `${event.city}|${event.region || ""}|${event.country || ""}`;
-      mergeCount(cities, key, {
+      mergePageVisitEvent(cities, key, {
         city: event.city,
         region: event.region || "",
         country: event.country || "",
         source: "page_visit_kv",
         precision: "city"
-      });
+      }, event);
     } else if (event.country) {
       countryOnlyCount += 1;
     }
     if (event.browser) {
-      mergeCount(browsers, event.browser, { browser: event.browser, source: "page_visit_kv" });
+      mergePageVisitEvent(browsers, event.browser, { browser: event.browser, source: "page_visit_kv" }, event);
     }
     if (event.device) {
-      mergeCount(devices, event.device, { device: event.device, source: "page_visit_kv" });
+      mergePageVisitEvent(devices, event.device, { device: event.device, source: "page_visit_kv" }, event);
     }
   }
 
@@ -313,12 +340,11 @@ function graphQlQuery(kind) {
   const fields = {
     totals: "totals: httpRequestsAdaptiveGroups(limit: 1, filter: $filter) { count sum { visits edgeResponseBytes } }",
     pages: "topPages: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) { count sum { visits edgeResponseBytes } dimensions { metric: clientRequestPath } }",
-    referrers: "referrers: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { metric: clientRefererHost } }",
     countries: "countries: httpRequestsAdaptiveGroups(limit: 20, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { country: clientCountryName } }",
     browsers: "browsers: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { browser: userAgentBrowser } }",
-    devices: "devices: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { device: clientDeviceType } }",
-    cities: "cities: httpRequestsAdaptiveGroups(limit: 20, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { city: clientCityName region: clientRegion country: clientCountryName } }"
+    devices: "devices: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) { count sum { visits } dimensions { device: clientDeviceType } }"
   };
+  if (!fields[kind]) return "";
   return `query DanielClancyAnalytics($zoneTag: string, $filter: filter) { viewer { zones(filter: { zoneTag: $zoneTag }) { ${fields[kind]} } } }`;
 }
 
@@ -354,6 +380,7 @@ async function fetchGraphQlSection(env, kind, filter, fetchImpl = fetch) {
 
 function normalizeGraphQlResults(results) {
   const notes = [];
+  const sectionStatus = {};
   const output = {
     totals: {
       requests: null,
@@ -371,14 +398,28 @@ function normalizeGraphQlResults(results) {
     cities: [],
     devices: [],
     browsers: [],
-    errors: []
+    errors: [],
+    sectionStatus
   };
   for (const result of results) {
-    if (!result.ok) {
-      output.errors.push({ section: result.kind, status: result.status, error: result.error });
-      notes.push(`Cloudflare ${result.kind} query unavailable: ${result.error}`);
+    if (result.skipped) {
+      sectionStatus[result.kind] = {
+        status: result.status || "unavailable",
+        message: result.message || ""
+      };
+      if (result.message) notes.push(result.message);
       continue;
     }
+    if (!result.ok) {
+      output.errors.push({ section: result.kind, status: result.status, error: result.error });
+      sectionStatus[result.kind] = {
+        status: "unavailable",
+        message: cloudflareSectionMessage(result.kind, result.error)
+      };
+      notes.push(sectionStatus[result.kind].message);
+      continue;
+    }
+    sectionStatus[result.kind] = { status: "live", message: `Cloudflare ${result.kind} query loaded.` };
     if (result.kind === "totals") {
       const row = result.rows[0] || {};
       output.totals.requests = safeNumber(row.count);
@@ -429,54 +470,52 @@ function normalizeGraphQlResults(results) {
         source: "cloudflare_graphql"
       }));
     }
-    if (result.kind === "cities") {
-      output.cities = result.rows.map((row) => ({
-        city: cleanText(row.dimensions?.city || "", 120),
-        region: cleanText(row.dimensions?.region || "", 120),
-        country: cleanText(row.dimensions?.country || "", 120),
-        country_code: countryCode(row.dimensions?.country),
-        count: safeNumber(row.count),
-        visits: safeNumber(row.sum?.visits),
-        source: "cloudflare_graphql",
-        live: true,
-        precision: row.dimensions?.city ? "city" : row.dimensions?.region ? "region" : "country"
-      })).filter((row) => row.city);
-    }
   }
   return { ...output, notes };
 }
 
-export async function queryCloudflareAnalytics(env, fetchImpl = fetch) {
+function cloudflareSectionMessage(kind, error = "") {
+  if (kind === "referrers") return "Referrer host is unavailable from the current Cloudflare dataset.";
+  if (kind === "cities") return "City detail is sourced from page-visit request geo metadata.";
+  if (error) return `Cloudflare ${kind} query unavailable for the selected window.`;
+  return `Cloudflare ${kind} query unavailable.`;
+}
+
+function cloudflareFilterForWindow(windowKey, now = new Date()) {
+  const safeWindow = normalizeAnalyticsWindow(windowKey);
+  const since = new Date(now.getTime() - ANALYTICS_WINDOWS[safeWindow]).toISOString();
+  return {
+    window: safeWindow,
+    since,
+    until: now.toISOString(),
+    filter: {
+      datetime_geq: since,
+      datetime_lt: now.toISOString(),
+      requestSource: "eyeball"
+    }
+  };
+}
+
+export async function queryCloudflareAnalytics(env, fetchImpl = fetch, options = {}) {
+  const selectedWindow = normalizeAnalyticsWindow(options.window);
   const missingConfig = REQUIRED_CONFIG.filter((key) => !hasEnv(env, key));
   if (missingConfig.length) {
     return {
       configured: false,
       missingConfig,
+      window: selectedWindow,
       source: "cloudflare_analytics_not_configured",
       notes: ["Cloudflare Analytics env vars are missing; live Cloudflare metrics are not queried."]
     };
   }
   const now = new Date();
-  const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const commonFilter = {
-    datetime_geq: since7d,
-    datetime_lt: now.toISOString(),
-    requestSource: "eyeball"
-  };
-  const totalsFilter = {
-    datetime_geq: since24h,
-    datetime_lt: now.toISOString(),
-    requestSource: "eyeball"
-  };
+  const { since, until, filter } = cloudflareFilterForWindow(selectedWindow, now);
   const sections = [
-    ["totals", totalsFilter],
-    ["pages", commonFilter],
-    ["referrers", commonFilter],
-    ["countries", commonFilter],
-    ["browsers", commonFilter],
-    ["devices", commonFilter],
-    ["cities", commonFilter]
+    ["totals", filter],
+    ["pages", filter],
+    ["countries", filter],
+    ["browsers", filter],
+    ["devices", filter]
   ];
   const results = [];
   for (const [kind, filter] of sections) {
@@ -491,15 +530,29 @@ export async function queryCloudflareAnalytics(env, fetchImpl = fetch) {
       });
     }
   }
+  results.push({
+    ok: false,
+    skipped: true,
+    kind: "referrers",
+    status: "unavailable",
+    message: "Referrer host is unavailable from the current Cloudflare dataset."
+  });
+  results.push({
+    ok: false,
+    skipped: true,
+    kind: "cities",
+    status: "unavailable",
+    message: "City detail is sourced from page-visit request geo metadata."
+  });
   const normalized = normalizeGraphQlResults(results);
   const anySuccess = results.some((result) => result.ok);
   return {
     configured: true,
+    window: selectedWindow,
     source: anySuccess ? (normalized.errors.length ? "cloudflare_graphql_partial" : "cloudflare_graphql") : "cloudflare_graphql_error",
     queriedAt: now.toISOString(),
     windows: {
-      totals: { label: "last_24_hours", since: since24h, until: now.toISOString() },
-      grouped: { label: "last_7_days", since: since7d, until: now.toISOString() }
+      selected: { label: selectedWindow, since, until }
     },
     ...normalized
   };
@@ -507,7 +560,6 @@ export async function queryCloudflareAnalytics(env, fetchImpl = fetch) {
 
 function fallbackCityRows(pageVisit, cloudflare) {
   if (pageVisit.rollup.cities.length) return pageVisit.rollup.cities;
-  if (cloudflare.cities?.length) return cloudflare.cities;
   return [];
 }
 
@@ -517,6 +569,9 @@ function countryRows(pageVisit, cloudflare) {
     country: row.country || "Unavailable",
     country_code: row.country_code || countryCode(row.country),
     count: row.count ?? row.requests ?? row.visits ?? null,
+    requests: row.requests ?? row.count ?? row.visits ?? null,
+    sessions: row.sessions ?? null,
+    lastSeen: row.lastSeen || "",
     source: row.source || "unavailable",
     live: row.live !== false && ["page_visit_kv", "cloudflare_graphql"].includes(row.source),
     precision: "country"
@@ -540,23 +595,33 @@ function liveLocationRows(cityRows, countryRowsList) {
 }
 
 export async function analyticsStatus(env, options = {}) {
+  const selectedWindow = normalizeAnalyticsWindow(options.window);
   const missingConfig = REQUIRED_CONFIG.filter((key) => !hasEnv(env, key));
   const [cloudflare, pageVisit] = await Promise.all([
-    queryCloudflareAnalytics(env, options.fetchImpl),
-    loadStoredPageVisitAnalytics(env)
+    queryCloudflareAnalytics(env, options.fetchImpl, { window: selectedWindow }),
+    loadStoredPageVisitAnalytics(env, { window: selectedWindow })
   ]);
   const cityRows = fallbackCityRows(pageVisit, cloudflare);
   const countries = countryRows(pageVisit, cloudflare);
   const liveRows = liveLocationRows(cityRows, countries);
   const freshness = freshnessState(pageVisit, cloudflare);
   const zeroPageVisitEvents = !pageVisit.rollup.events;
+  const partialStatus = {
+    pages: cloudflare.sectionStatus?.pages?.status || "unavailable",
+    referrers: cloudflare.sectionStatus?.referrers?.status || "unavailable",
+    countries: cloudflare.sectionStatus?.countries?.status || "unavailable",
+    browsers: cloudflare.sectionStatus?.browsers?.status || "unavailable",
+    devices: cloudflare.sectionStatus?.devices?.status || "unavailable",
+    pageVisitCityDetail: pageVisit.rollup.cityEvents ? "available" : zeroPageVisitEvents ? "no_events" : "unavailable"
+  };
   const notes = [
     ...(cloudflare.notes || []),
     ...(pageVisit.rollup.cityEvents
       ? [`City detail is available from ${pageVisit.rollup.cityEvents} page-visit event(s).`]
       : zeroPageVisitEvents
         ? ["No page-visit events have been captured yet."]
-        : ["City detail unavailable from current data source"]),
+        : ["City detail is sourced from page-visit request geo metadata."]),
+    ...(pageVisit.unknownWindowRows?.length ? [`${pageVisit.unknownWindowRows.length} page-visit row(s) have no timestamp and were excluded from the selected live window.`] : []),
     "Secret values are never returned."
   ];
   const source = cloudflare.configured
@@ -568,6 +633,8 @@ export async function analyticsStatus(env, options = {}) {
     ok: true,
     configured: missingConfig.length === 0,
     source,
+    window: selectedWindow,
+    supportedWindows: Object.keys(ANALYTICS_WINDOWS),
     lastChecked: new Date().toISOString(),
     lastCloudflareQueryTime: cloudflare.queriedAt || "",
     lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",
@@ -591,9 +658,11 @@ export async function analyticsStatus(env, options = {}) {
       errors: cloudflare.errors || [],
       windows: cloudflare.windows || null
     },
+    partialStatus,
     pageVisits: {
       configured: pageVisit.configured,
       source: pageVisit.source,
+      window: selectedWindow,
       storage: pageVisit.storage,
       events: pageVisit.rollup.events || 0,
       cityEvents: pageVisit.rollup.cityEvents || 0,
@@ -601,6 +670,7 @@ export async function analyticsStatus(env, options = {}) {
       liveRows: pageVisit.liveRows || [],
       sampleRows: pageVisit.sampleRows || [],
       staleRows: pageVisit.staleRows || [],
+      unknownWindowRows: pageVisit.unknownWindowRows || [],
       lastLiveEventTime: pageVisit.rollup.lastEventAt || "",
       emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
@@ -663,8 +733,9 @@ export async function onRequest(context) {
       if (admin.error) {
         response = json({ ok: false, error: admin.error }, { status: admin.status });
       } else {
+        const url = new URL(request.url);
         response = json({
-          ...(await analyticsStatus(env)),
+          ...(await analyticsStatus(env, { window: url.searchParams.get("window") })),
           session: admin.session
         });
       }

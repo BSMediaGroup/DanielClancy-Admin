@@ -202,7 +202,8 @@ import {
     status: "checking",
     message: "Checking analytics status...",
     payload: null,
-    lastChecked: ""
+    lastChecked: "",
+    selectedWindow: "5m"
   };
   const publishState = {
     status: "checking",
@@ -2553,7 +2554,8 @@ import {
     startTopbarLoader();
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
     try {
-      const response = await fetch(adminAnalyticsEndpoint(), { credentials: "include" });
+      const selectedWindow = normalizeAnalyticsWindow(analyticsStatusState.selectedWindow);
+      const response = await fetch(`${adminAnalyticsEndpoint()}?window=${encodeURIComponent(selectedWindow)}`, { credentials: "include" });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {
         analyticsStatusState.status = "fallback";
@@ -2567,6 +2569,7 @@ import {
             ? "Cloudflare analytics is not configured, but page-visit KV analytics are available."
             : "Cloudflare analytics not configured. No live analytics rows are shown until real source-tagged events exist.";
         analyticsStatusState.payload = payload;
+        analyticsStatusState.selectedWindow = normalizeAnalyticsWindow(payload.window || selectedWindow);
         analyticsStatusState.lastChecked = payload.lastChecked || new Date().toISOString();
       }
     } catch {
@@ -2680,7 +2683,12 @@ import {
     return ["projects", "companies", "platforms", "positions"].every((collection) => getCmsConfig(collection)?.state.storage.status === "connected");
   }
 
-  async function runAnalyticsAction(action) {
+  async function runAnalyticsAction(action, target = null) {
+    if (action === "window") {
+      analyticsStatusState.selectedWindow = normalizeAnalyticsWindow(target?.getAttribute("data-analytics-window"));
+      await hydrateAnalyticsStatus(true);
+      return;
+    }
     if (action === "refresh") {
       await hydrateAnalyticsStatus(true);
       return;
@@ -3435,6 +3443,22 @@ import {
   };
 
   const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"]);
+  const ANALYTICS_WINDOWS = Object.freeze([
+    ["5m", "5M"],
+    ["15m", "15M"],
+    ["1h", "1H"],
+    ["24h", "24HRS"]
+  ]);
+
+  function normalizeAnalyticsWindow(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ANALYTICS_WINDOWS.some(([key]) => key === normalized) ? normalized : "5m";
+  }
+
+  function analyticsWindowLabel(value) {
+    const normalized = normalizeAnalyticsWindow(value);
+    return ANALYTICS_WINDOWS.find(([key]) => key === normalized)?.[1] || "5M";
+  }
 
   function countryCode(value) {
     const text = String(value || "").trim().toUpperCase();
@@ -3475,6 +3499,37 @@ import {
 
   function locationChip(row, text) {
     return `<span class="location-chip">${flagIcon(row, text)}</span>`;
+  }
+
+  function plainLocationText(value, fallback = "") {
+    return `<span class="location-text">${escapeHtml(value || fallback || "")}</span>`;
+  }
+
+  function requestCount(row) {
+    const value = row?.requests ?? row?.count ?? row?.events ?? row?.visits ?? null;
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.round(number)) : null;
+  }
+
+  function sessionCount(row) {
+    const value = row?.sessions;
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.round(number)) : null;
+  }
+
+  function formatAnalyticsMetric(value) {
+    return value === null || value === undefined ? "n/a" : formatAnalyticsNumber(value);
+  }
+
+  function markerStyle(row) {
+    const sessions = sessionCount(row);
+    const requests = requestCount(row);
+    const dotMetric = sessions === null ? 0 : sessions;
+    const haloMetric = requests === null ? 0 : requests;
+    const dotSize = Math.max(8, Math.min(26, 8 + Math.log10(dotMetric + 1) * 9));
+    const haloSize = Math.max(24, Math.min(82, 24 + Math.log10(haloMetric + 1) * 28));
+    return `--analytics-marker-dot:${dotSize.toFixed(2)}px;--analytics-marker-halo:${haloSize.toFixed(2)}px;`;
   }
 
   function cityCoordinate(row) {
@@ -3555,11 +3610,19 @@ import {
     const lastSeen = row.lastSeen || row.last_seen || row.recordedAt || row.recorded_at || row.timestamp || "";
     const page = row.page_path || row.path || row.page || "";
     const referrer = row.referrer_host || row.referrer || "";
+    const sessions = sessionCount(row);
+    const requests = requestCount(row);
+    const selectedWindow = row.window || analyticsStatusState.payload?.window || analyticsStatusState.selectedWindow;
     return `
       <div class="analytics-map-popup-inner">
-        <strong>${flagIcon(row, label)}</strong>
+        <strong>${escapeHtml(label)}</strong>
         <dl>
-          <div><dt>Count</dt><dd>${escapeHtml(formatAnalyticsNumber(metricValue(row) || 0))}</dd></div>
+          <div><dt>City</dt><dd>${escapeHtml(row.city || "n/a")}</dd></div>
+          <div><dt>Region</dt><dd>${escapeHtml(row.region || "n/a")}</dd></div>
+          <div><dt>Country</dt><dd>${flagIcon(row, row.country || row.country_code || "Unavailable")}</dd></div>
+          <div><dt>Sessions</dt><dd>${escapeHtml(formatAnalyticsMetric(sessions))}</dd></div>
+          <div><dt>Requests</dt><dd>${escapeHtml(formatAnalyticsMetric(requests))}</dd></div>
+          <div><dt>Window</dt><dd>${escapeHtml(analyticsWindowLabel(selectedWindow))}</dd></div>
           <div><dt>Precision</dt><dd>${escapeHtml(row.precision || "unavailable")}</dd></div>
           <div><dt>Source</dt><dd>${escapeHtml(sourceLabel(row.source))}</dd></div>
           <div><dt>Coordinates</dt><dd>${escapeHtml(coord.coordinateSource || "source")}</dd></div>
@@ -3574,7 +3637,7 @@ import {
 
   function markerTitle(row, coord) {
     const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
-    return `${label} - ${formatAnalyticsNumber(metricValue(row) || 0)} event(s) - precision=${row.precision || "unavailable"} - source=${sourceLabel(row.source)} - coordinates=${coord.coordinateSource || "source"} - flag=${flagPath(row)}`;
+    return `${label} - sessions=${formatAnalyticsMetric(sessionCount(row))} - requests=${formatAnalyticsMetric(requestCount(row))} - precision=${row.precision || "unavailable"} - source=${sourceLabel(row.source)} - coordinates=${coord.coordinateSource || "source"} - flag=${flagPath(row)}`;
   }
 
   function ensureAnalyticsMap(markers) {
@@ -3629,7 +3692,7 @@ import {
   function updateAnalyticsMapMarkers(markers) {
     const map = analyticsMapState.map;
     if (!map) return;
-    const signature = JSON.stringify(markers.map(({ row, coord }) => [row.city, row.region, row.country_code || row.country, row.source, row.precision, metricValue(row), coord.lat, coord.lon]));
+    const signature = JSON.stringify(markers.map(({ row, coord }) => [row.city, row.region, row.country_code || row.country, row.source, row.precision, sessionCount(row), requestCount(row), coord.lat, coord.lon]));
     if (signature === analyticsMapState.lastSignature) return;
     analyticsMapState.lastSignature = signature;
     analyticsMapState.markers.forEach((marker) => marker.remove());
@@ -3637,9 +3700,12 @@ import {
       const markerEl = document.createElement("button");
       markerEl.type = "button";
       markerEl.className = `analytics-map-marker analytics-map-marker-${String(row.precision || "unknown").toLowerCase()}`;
+      markerEl.setAttribute("data-sessions", sessionCount(row) === null ? "unavailable" : String(sessionCount(row)));
+      markerEl.setAttribute("data-requests", requestCount(row) === null ? "unavailable" : String(requestCount(row)));
+      markerEl.setAttribute("style", markerStyle(row));
       markerEl.title = markerTitle(row, coord);
       markerEl.setAttribute("aria-label", markerTitle(row, coord));
-      markerEl.innerHTML = `<span class="analytics-map-marker-dot"></span><span class="analytics-map-marker-label">${flagIcon(row, row.city || row.country || row.country_code || "Location")}</span>`;
+      markerEl.innerHTML = `<span class="analytics-map-marker-halo"></span><span class="analytics-map-marker-dot"></span><span class="analytics-map-marker-label">${flagIcon(row, row.city || row.country || row.country_code || "Location")}</span>`;
       const popup = new window.maplibregl.Popup({
         offset: 14,
         closeButton: true,
@@ -3732,6 +3798,8 @@ import {
     const pageVisits = status?.pageVisits || {};
     const readiness = status?.readiness || {};
     const totals = status?.totals || {};
+    const selectedWindow = normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow);
+    const selectedWindowLabel = analyticsWindowLabel(selectedWindow);
     const liveTopPages = hasRows(status?.topPages) ? status.topPages : [];
     const liveReferrers = hasRows(status?.referrers) ? status.referrers : [];
     const liveCities = hasRows(status?.cities) ? status.cities : [];
@@ -3747,6 +3815,7 @@ import {
     const staleRows = pageVisits.staleRows || status?.location?.staleRows || [];
     const operationalRows = [
       ["Cloudflare configured", configured ? "Yes" : "No"],
+      ["Selected window", selectedWindowLabel],
       ["Page-visit KV", pageVisits.configured ? "Connected" : "Unavailable"],
       ["Source", sourceLabel],
       ["Freshness", status?.sourceFreshnessState || "no_live_events"],
@@ -3763,10 +3832,13 @@ import {
         ${pageHeader(
           "Analytics",
           "Analytics",
-          "Live Cloudflare metrics and page-visit KV analytics are separated by source, with location precision labelled per row.",
+          `Live Cloudflare metrics and page-visit KV analytics are separated by source for the selected ${selectedWindowLabel} window.`,
           `${badge(configured ? "Cloudflare Analytics connected" : "Cloudflare Analytics missing config", configured ? "success" : "warn")}
            ${badge(pageVisits.configured ? "Page-visit KV connected" : "Page-visit KV unavailable", pageVisits.configured ? "success" : "warn")}
            ${badge(`Freshness: ${status?.sourceFreshnessState || "no_live_events"}`, sourceTone(status?.sourceFreshnessState))}
+           <div class="analytics-window-selector" role="group" aria-label="Analytics time window">
+             ${ANALYTICS_WINDOWS.map(([value, label]) => `<button class="button button-secondary analytics-window-button${value === selectedWindow ? " is-active" : ""}" type="button" data-analytics-action="window" data-analytics-window="${escapeHtml(value)}" aria-pressed="${value === selectedWindow ? "true" : "false"}">${escapeHtml(label)}</button>`).join("")}
+           </div>
            <button class="button" type="button" data-analytics-action="refresh">Refresh analytics</button>
            <button class="button button-secondary" type="button" data-analytics-action="purge-sample">Clear sample analytics rows</button>`
         )}
@@ -3795,16 +3867,18 @@ import {
             "Location breakdown",
             cityUnavailable ? (pageVisits.emptyMessage || "City detail unavailable from current data source") : "City rows are sourced from page-visit KV request geo metadata when available.",
             analyticsTable(
-              ["City", "Region", "Country", "Visits/Events", "Precision", "Source"],
+              ["City", "Region", "Country", "Sessions", "Requests", "Precision", "Source", "Last seen"],
               liveCities,
               (row) => `
                 <tr>
-                  <td><strong>${locationChip(row, row.city || "City detail unavailable from current data source")}</strong></td>
-                  <td>${row.region ? locationChip(row, row.region) : ""}</td>
+                  <td><strong>${plainLocationText(row.city || "City detail unavailable from current data source")}</strong></td>
+                  <td>${row.region ? plainLocationText(row.region) : ""}</td>
                   <td>${locationChip(row, row.country || row.country_code || "Unavailable")}</td>
-                  <td>${escapeHtml(formatAnalyticsNumber(metricValue(row)))}</td>
+                  <td>${escapeHtml(formatAnalyticsMetric(sessionCount(row)))}</td>
+                  <td>${escapeHtml(formatAnalyticsMetric(requestCount(row)))}</td>
                   <td>${badge(row.precision || "unavailable", row.precision === "city" ? "success" : "warn")}</td>
                   <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
+                  <td>${escapeHtml(formatOperationalTimestamp(row.lastSeen || row.recordedAt || row.timestamp || ""))}</td>
                 </tr>
               `,
               pageVisits.emptyMessage || "No city-level page-visit rows available."
@@ -3820,6 +3894,7 @@ import {
               <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>DC_ADMIN_KV</strong></p></article>
               <article class="card">${badge("Cloudflare result", sourceTone(readiness.lastCloudflareQueryResult))}<p>${escapeHtml(readiness.lastCloudflareQueryResult || "Not checked")}</p></article>
               <article class="card">${badge("Page-visit result", sourceTone(readiness.lastPageVisitStorageResult))}<p>${escapeHtml(readiness.lastPageVisitStorageResult || "Not checked")}</p></article>
+              ${Object.entries(status?.partialStatus || {}).map(([key, value]) => `<article class="card">${badge(value, sourceTone(value))}<p>${escapeHtml(key)}</p></article>`).join("")}
               ${(status?.notes || data.analytics.notes)
                 .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
                 .join("")}
@@ -6024,7 +6099,7 @@ import {
     }
 
     if (analyticsAction) {
-      runAnalyticsAction(analyticsAction);
+      runAnalyticsAction(analyticsAction, target);
       return;
     }
 

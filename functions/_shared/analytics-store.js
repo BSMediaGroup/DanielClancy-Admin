@@ -3,6 +3,13 @@ const ROLLUP_KEY = "analytics:page_visits:rollup";
 const RECENT_VISIT_LIMIT = 1000;
 const LIVE_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"]);
 const SAMPLE_SOURCES = new Set(["sample", "sample_fallback", "fallback", "demo", "mock", "test", "local_mock"]);
+export const ANALYTICS_WINDOWS = Object.freeze({
+  "5m": 5 * 60 * 1000,
+  "15m": 15 * 60 * 1000,
+  "1h": 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000
+});
+const DEFAULT_ANALYTICS_WINDOW = "1h";
 
 function cleanText(value, maxLength = 500) {
   return String(value || "")
@@ -19,6 +26,49 @@ function parseJson(raw, fallback) {
   } catch {
     return fallback;
   }
+}
+
+export function normalizeAnalyticsWindow(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(ANALYTICS_WINDOWS, normalized)
+    ? normalized
+    : DEFAULT_ANALYTICS_WINDOW;
+}
+
+function eventTimestampMs(event) {
+  const value = event?.recordedAt || event?.recorded_at || event?.timestamp || event?.time || event?.createdAt || "";
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function filterPageVisitEventsForWindow(events = [], windowKey = DEFAULT_ANALYTICS_WINDOW, nowMs = Date.now()) {
+  const safeWindow = normalizeAnalyticsWindow(windowKey);
+  const cutoff = nowMs - ANALYTICS_WINDOWS[safeWindow];
+  const liveRows = [];
+  const sampleRows = [];
+  const staleRows = [];
+  const unknownWindowRows = [];
+  for (const event of Array.isArray(events) ? events : []) {
+    if (isSampleAnalyticsRow(event)) {
+      sampleRows.push(event);
+      continue;
+    }
+    if (!isLiveAnalyticsRow(event)) {
+      staleRows.push(event);
+      continue;
+    }
+    const eventMs = eventTimestampMs(event);
+    if (!Number.isFinite(eventMs)) {
+      unknownWindowRows.push(event);
+      continue;
+    }
+    if (eventMs >= cutoff && eventMs <= nowMs) {
+      liveRows.push(event);
+    } else {
+      staleRows.push({ ...event, staleReason: "outside_selected_window" });
+    }
+  }
+  return { window: safeWindow, liveRows, sampleRows, staleRows, unknownWindowRows };
 }
 
 function getKv(env) {
@@ -72,8 +122,32 @@ function mergeCount(map, key, seed, increment = 1) {
   map.set(id, existing);
 }
 
+function mergePageVisitEvent(map, key, seed, event) {
+  const id = key || "Unavailable";
+  const existing = map.get(id) || { ...seed, count: 0, requests: 0, sessionIds: new Set(), sessions: null };
+  existing.count += 1;
+  existing.requests += 1;
+  const sessionId = cleanText(event?.session_id || event?.sessionId || event?.visitor_session_id, 160);
+  if (sessionId) {
+    existing.sessionIds.add(sessionId);
+    existing.sessions = existing.sessionIds.size;
+  }
+  const eventTime = event?.recordedAt || event?.timestamp || "";
+  if (eventTime && (!existing.lastSeen || eventTime > existing.lastSeen)) existing.lastSeen = eventTime;
+  map.set(id, existing);
+}
+
 function topRows(map, limit = 20) {
-  return [...map.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+  return [...map.values()]
+    .map((row) => {
+      const { sessionIds, ...rest } = row;
+      return {
+        ...rest,
+        sessions: sessionIds instanceof Set && sessionIds.size ? sessionIds.size : row.sessions ?? null
+      };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
 
 function countryCode(value) {
@@ -141,6 +215,7 @@ export function buildPageVisitEvent(context, payload = {}) {
     page_path: pagePath.startsWith("/") || pagePath.startsWith("#/") ? pagePath : "/",
     page_url: cleanText(payload.page_url || payload.pageUrl || payload.url, 500),
     page_title: cleanText(payload.page_title || payload.title, 160),
+    session_id: cleanText(payload.session_id || payload.sessionId || payload.visitor_session_id, 160),
     referrer,
     referrer_host: referrerHost(payload.referrer_host || payload.referrerHost || referrer),
     country,
@@ -175,31 +250,31 @@ export function aggregatePageVisitEvents(events = []) {
   for (const event of events.filter(isLiveAnalyticsRow)) {
     const eventTime = event.recordedAt || event.timestamp || "";
     if (eventTime && (!lastEventAt || eventTime > lastEventAt)) lastEventAt = eventTime;
-    mergeCount(pages, event.page_path || "/", {
+    mergePageVisitEvent(pages, event.page_path || "/", {
       path: event.page_path || "/",
       title: event.page_title || "",
       source: "page_visit_kv"
-    });
+    }, event);
     if (event.referrer_host) {
-      mergeCount(referrers, event.referrer_host, { host: event.referrer_host, source: "page_visit_kv" });
+      mergePageVisitEvent(referrers, event.referrer_host, { host: event.referrer_host, source: "page_visit_kv" }, event);
     }
     if (event.country) {
-      mergeCount(countries, event.country, { country: event.country, country_code: event.country_code || countryCode(event.country), source: "page_visit_kv", precision: "country" });
+      mergePageVisitEvent(countries, event.country, { country: event.country, country_code: event.country_code || countryCode(event.country), source: "page_visit_kv", precision: "country" }, event);
     }
     if (event.region || event.country) {
       const key = `${event.region || "Unavailable"}|${event.country || ""}`;
-      mergeCount(regions, key, {
+      mergePageVisitEvent(regions, key, {
         region: event.region || "Unavailable",
         country: event.country || "",
         country_code: event.country_code || countryCode(event.country),
         source: "page_visit_kv",
         precision: event.region ? "region" : "country"
-      });
+      }, event);
     }
     if (event.city) {
       cityCount += 1;
       const key = `${event.city}|${event.region || ""}|${event.country || ""}`;
-      mergeCount(cities, key, {
+      mergePageVisitEvent(cities, key, {
         city: event.city,
         region: event.region || "",
         country: event.country || "",
@@ -207,15 +282,15 @@ export function aggregatePageVisitEvents(events = []) {
         source: "page_visit_kv",
         precision: "city",
         lastSeen: eventTime
-      });
+      }, event);
     } else if (event.country) {
       countryOnlyCount += 1;
     }
     if (event.browser) {
-      mergeCount(browsers, event.browser, { browser: event.browser, source: "page_visit_kv" });
+      mergePageVisitEvent(browsers, event.browser, { browser: event.browser, source: "page_visit_kv" }, event);
     }
     if (event.device) {
-      mergeCount(devices, event.device, { device: event.device, source: "page_visit_kv" });
+      mergePageVisitEvent(devices, event.device, { device: event.device, source: "page_visit_kv" }, event);
     }
   }
 
@@ -255,12 +330,15 @@ export async function storePageVisitEvent(context, payload = {}) {
   }
 }
 
-export async function loadPageVisitAnalytics(env) {
+export async function loadPageVisitAnalytics(env, options = {}) {
+  const windowKey = normalizeAnalyticsWindow(options.window);
+  const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
   const kv = getKv(env);
   if (!kv) {
     return {
       configured: false,
       source: "dc_admin_kv_missing",
+      window: windowKey,
       storage: { configured: false, status: "missing", lastResult: "DC_ADMIN_KV missing" },
       rollup: aggregatePageVisitEvents([])
     };
@@ -269,13 +347,12 @@ export async function loadPageVisitAnalytics(env) {
     const [recentRaw] = await Promise.all([kv.get(RECENT_VISITS_KEY), kv.get(ROLLUP_KEY)]);
     const recent = parseJson(recentRaw, { items: [] });
     const items = Array.isArray(recent?.items) ? recent.items : [];
-    const liveRows = items.filter(isLiveAnalyticsRow);
-    const sampleRows = items.filter(isSampleAnalyticsRow);
-    const staleRows = items.filter(isStaleAnalyticsRow);
+    const { liveRows, sampleRows, staleRows, unknownWindowRows } = filterPageVisitEventsForWindow(items, windowKey, nowMs);
     const rollup = aggregatePageVisitEvents(liveRows);
     return {
       configured: true,
       source: "page_visit_kv",
+      window: windowKey,
       storage: {
         configured: true,
         status: "connected",
@@ -287,6 +364,7 @@ export async function loadPageVisitAnalytics(env) {
       liveRows,
       sampleRows,
       staleRows,
+      unknownWindowRows,
       rollup: {
         ...aggregatePageVisitEvents([]),
         ...rollup
@@ -296,6 +374,7 @@ export async function loadPageVisitAnalytics(env) {
     return {
       configured: true,
       source: "page_visit_kv_error",
+      window: windowKey,
       storage: { configured: true, status: "error", lastResult: "read_failed" },
       rollup: aggregatePageVisitEvents([])
     };

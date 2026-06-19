@@ -1,5 +1,39 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics Windowed Map / Cloudflare Query Cleanup Milestone
+
+### Technical Notes
+
+- Added Analytics `5M`, `15M`, `1H`, and `24HRS` window controls modelled on the StreamSuites-Dashboard analytics selector pattern; the UI sends `GET /api/admin/analytics?window=...` and refreshes map, tables, summary cards, freshness state, and notes for the selected window.
+- Normalized Analytics API windows server-side to the supported `5m`, `15m`, `1h`, and `24h` set. Unsupported values normalize safely and Cloudflare GraphQL filters now stay within the selected <=24h window instead of using a one-week grouped range.
+- Removed the unsupported Cloudflare GraphQL city field query path and stopped querying unavailable referrer-host dimensions from Cloudflare. City detail is sourced from page-visit KV/request geo metadata; Cloudflare referrer host reports a clear unavailable note when the current dataset cannot provide it.
+- Page-visit KV reads now filter recent rows by recorded timestamp for the selected window. Rows outside the selected window and timestamp-missing rows are excluded from live map/table rollups instead of being mixed into current live counts.
+- Marker semantics now mirror the StreamSuites-style dot/halo behavior in DanielClancy's existing MapLibre DOM marker implementation: dot size scales from distinct sessions when available, while the larger gradient halo scales from requests/events.
+- Page-visit aggregation can count distinct sessions only when a safe session id exists; unknown session counts render as `n/a` and are not invented from request counts.
+- Location table flag clutter was fixed: City and Region render text only, Country renders the local SVG flag plus label/code, and flags remain available in map popups/tooltips/chips/country labels.
+- Visible Analytics notes now group partial/unavailable Cloudflare and page-visit status without surfacing raw GraphQL range/schema messages.
+- No fake/sample rows appear as live markers, and no analytics counts, cities, countries, sessions, requests, or coordinates are invented.
+- StreamSuites and StreamSuites-Dashboard were not mutated; StreamSuites-Dashboard was inspected read-only for the analytics map/window reference.
+
+### Human-Readable Notes
+
+- Analytics can now be checked by recent window, and the map/table should stop showing old all-time location rows as if they are current 5-minute traffic.
+- Map markers are easier to read: sessions affect the foreground dot, while request volume affects the glow behind it.
+- The location table is quieter because flags appear only where they identify the country.
+
+### Validation Notes
+
+- Ran `node --check assets/js/admin-app.js`, `node --check assets/js/admin-auth.js`, `node --check functions/api/admin/analytics.js`, `node --check functions/_shared/analytics-store.js`, and `node --check functions/api/analytics/ingest/page-visit.js`.
+- Ran `node --test tests/analytics-helpers.test.mjs`, `node --test tests/analytics-map-flags.test.mjs`, and `node --test tests/analytics-ingest-and-assets.test.mjs`.
+- Ran `git diff --check`.
+- `npm run check` and `npm run build` are unavailable in this repo because `package.json` has no `check` or `build` script.
+- Ran Playwright/MCP browser validation against a local mock preview on `http://127.0.0.1:5199/#/analytics`: Analytics route loaded, real MapLibre initialized, CARTO `dark_all` tile requests were observed, `5M/15M/1H/24HRS` selector was visible and refreshed state, marker dot/halo sizes varied with session/request fixture counts, table flags appeared only in Country, popup retained a country flag and session/request/window fields, raw GraphQL field/range errors were not visible, and the empty `15M` window kept the real basemap with no fake markers.
+
+### Risks / Follow-Ups
+
+- Live Cloudflare schema access still depends on the deployed account/token/zone permissions, so hosted verification remains needed after deploy.
+- Browser validation must confirm real MapLibre tile rendering and marker scaling with controlled test data.
+
 ## Public Site-Data Publish Snapshot / Manifest Tooling Milestone
 
 ### Technical Notes

@@ -88,23 +88,24 @@ test("analytics status returns city rows from mocked KV rollup and exact empty m
 
 test("analytics status excludes sample and stale rows from live location rows", async () => {
   const kv = memoryKv();
+  const liveNow = new Date().toISOString();
   kv.store.set("analytics:page_visits:recent", JSON.stringify({
     updatedAt: "2026-06-18T00:00:00.000Z",
     items: [
       { source: "sample_fallback", live: false, city: "Los Angeles", country: "US", page_path: "/sample", timestamp: "2026-06-18T00:00:00.000Z" },
       { city: "Portland", country: "US", page_path: "/stale", timestamp: "2026-06-18T00:00:01.000Z" },
-      { source: "page_visit_kv", live: true, city: "Sydney", region: "NSW", country: "AU", country_code: "AU", page_path: "/live", recordedAt: "2026-06-18T00:00:02.000Z", precision: "city" },
-      { source: "page_visit_kv", live: true, country: "US", country_code: "US", page_path: "/country", recordedAt: "2026-06-18T00:00:03.000Z", precision: "country" }
+      { source: "page_visit_kv", live: true, city: "Sydney", region: "NSW", country: "AU", country_code: "AU", page_path: "/live", recordedAt: liveNow, precision: "city" },
+      { source: "page_visit_kv", live: true, country: "US", country_code: "US", page_path: "/country", recordedAt: liveNow, precision: "country" }
     ]
   }));
 
-  const status = await analyticsStatus({ DC_ADMIN_KV: kv });
+  const status = await analyticsStatus({ DC_ADMIN_KV: kv }, { window: "24h" });
   assert.deepEqual(status.cities.map((row) => row.city), ["Sydney"]);
   assert.equal(status.pageVisits.sampleRows.length, 1);
   assert.equal(status.pageVisits.staleRows.length, 1);
   assert.equal(status.location.countryOnlyEventCount, 1);
   assert.equal(status.countries.find((row) => row.country === "US").precision, "country");
-  assert.equal(status.sourceFreshnessState, "live_stale");
+  assert.equal(status.sourceFreshnessState, "live_recent");
 });
 
 test("admin purge action removes only sample analytics rows", async () => {
