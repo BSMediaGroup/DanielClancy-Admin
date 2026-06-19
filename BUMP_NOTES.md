@@ -1,5 +1,31 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Projects Editor Asset Preview Containment Milestone
+
+### Technical Notes
+
+- Added bounded Projects editor asset preview markup for selected hero, thumbnail, document/PDF, upload, and gallery values using explicit preview card/frame/image/document/grid/action classes.
+- Gallery paths now render inside compact thumbnail cards with truncated path labels and wrapped up/down/remove controls, preventing natural image dimensions or long paths from widening the modal.
+- Document/PDF paths now render as compact file cards with filename/path text and an open link instead of any full-page embed behavior in the modal.
+- Added modal/form/grid overflow guards so preview cards and long asset paths stay inside the editor and preserve normal vertical scrolling.
+- Existing asset dropdowns, upload triggers, manual path fields, gallery ordering/removal controls, Companies/Platforms selectors, local/API save flow, and protected baseline behavior were preserved.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Project image selections should now appear as useful thumbnails instead of taking over the editor.
+- Gallery media is easier to scan and reorder because each item stays in a small card.
+- PDF/document selections stay visible as compact file rows with an open link.
+
+### Validation Notes
+
+- Ran `node --check assets/js/admin-app.js`.
+- Pending validation includes `git diff --check` and any available quick repo scripts after final edits.
+
+### Risks / Follow-Ups
+
+- Browser smoke testing with live/admin fixture data is still useful after deploy to confirm real uploaded asset URLs load correctly.
+
 ## Analytics Windowed Map / Cloudflare Query Cleanup Milestone
 
 ### Technical Notes

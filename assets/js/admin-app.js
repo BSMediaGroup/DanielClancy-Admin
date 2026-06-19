@@ -2376,13 +2376,49 @@ import {
     `;
   }
 
-  function assetPreview(path, alt = "Selected asset preview") {
+  function assetPreview(path, alt = "Selected asset preview", options = {}) {
     const value = String(path || "").trim();
-    if (!value) return `<span class="asset-preview-placeholder">No asset selected</span>`;
-    if (/\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(value)) {
-      return `<img src="${escapeHtml(adminAssetPreviewUrl(value))}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+    const variant = options.variant === "gallery" ? "gallery" : "field";
+    const kind = String(options.kind || "");
+    const constrained = variant === "gallery" || Boolean(kind);
+    const cardClass = `asset-preview-card asset-preview-card--${variant}`;
+    if (!value) {
+      return constrained ? `<span class="${cardClass} asset-preview-placeholder">No asset selected</span>` : `<span class="asset-preview-placeholder">No asset selected</span>`;
     }
-    return `<span class="selected-file-indicator">${escapeHtml(value.split("/").pop() || value)}</span>`;
+    if (/\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(value)) {
+      if (!constrained) {
+        return `<img src="${escapeHtml(adminAssetPreviewUrl(value))}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+      }
+      return `
+        <span class="${cardClass}">
+          <span class="asset-preview-frame">
+            <img class="asset-preview-image" src="${escapeHtml(adminAssetPreviewUrl(value))}" alt="${escapeHtml(alt)}" loading="lazy" />
+          </span>
+        </span>
+      `;
+    }
+    const label = value.split("/").pop() || value;
+    const isDocument = kind === "document_pdf" || /\.(pdf|docx?|xlsx?|pptx?)(\?.*)?$/i.test(value) || value.includes("/docs/");
+    if (!constrained) {
+      return `<span class="selected-file-indicator">${escapeHtml(label)}</span>`;
+    }
+    if (isDocument) {
+      return `
+        <span class="${cardClass} asset-preview-document">
+          <span class="asset-preview-document-icon">${/\.pdf(\?.*)?$/i.test(value) ? "PDF" : "DOC"}</span>
+          <span class="asset-preview-document-copy">
+            <strong>${escapeHtml(label)}</strong>
+            <span>${escapeHtml(value)}</span>
+          </span>
+          <a class="asset-preview-open" href="${escapeHtml(adminAssetPreviewUrl(value))}" target="_blank" rel="noopener">Open</a>
+        </span>
+      `;
+    }
+    return `
+      <span class="${cardClass}">
+        <span class="selected-file-indicator">${escapeHtml(label)}</span>
+      </span>
+    `;
   }
 
   function adminAssetPreviewUrl(path) {
@@ -5218,7 +5254,7 @@ import {
           ${!readOnly && name === "heroImage" ? `<button class="button button-secondary" type="button" data-project-clear="${escapeHtml(name)}">Clear</button>` : ""}
         </div>
         ${readOnly ? "" : `<select class="input asset-picker" data-project-asset-select="${escapeHtml(name)}"><option value="">Choose existing asset</option>${catalogOptions(catalogType, value)}</select>`}
-        <span class="asset-preview">${assetPreview(value, label)}</span>
+        <span class="asset-preview-slot" data-project-upload-preview="${escapeHtml(name)}" data-project-preview-kind="${escapeHtml(catalogType)}">${assetPreview(value, label, { kind: catalogType })}</span>
         ${note ? `<small class="muted">${escapeHtml(note)}</small>` : ""}
         ${readOnly ? "" : `<input class="asset-file-input" type="file" accept="${escapeHtml(accept)}" data-project-upload-input="${escapeHtml(name)}" />`}
         <span class="upload-status" data-project-upload-status="${escapeHtml(name)}"></span>
@@ -5232,7 +5268,7 @@ import {
       <label class="field field-wide project-upload-field">
         <span>Gallery/image paths *</span>
         <textarea class="input textarea gallery-paths-input" name="galleryPaths" rows="4" ${readOnly ? "readonly" : ""}>${escapeHtml(values.join("\n"))}</textarea>
-        <div class="gallery-grid" data-gallery-grid>
+        <div class="gallery-preview-grid gallery-grid" data-gallery-grid>
           ${values.map((path, index) => galleryTile(path, index, readOnly)).join("") || `<span class="asset-preview-placeholder">No gallery images selected</span>`}
         </div>
         ${readOnly ? "" : `<div class="field-actions">
@@ -5247,13 +5283,13 @@ import {
 
   function galleryTile(path, index, readOnly = false) {
     return `
-      <div class="gallery-tile" data-gallery-index="${index}">
-        ${assetPreview(path, `Gallery item ${index + 1}`)}
-        <code>${escapeHtml(path)}</code>
+      <div class="gallery-preview-card gallery-tile" data-gallery-index="${index}">
+        <div class="gallery-preview-thumb">${assetPreview(path, `Gallery item ${index + 1}`, { variant: "gallery" })}</div>
+        <code title="${escapeHtml(path)}">${escapeHtml(path)}</code>
         ${
           readOnly
             ? ""
-            : `<div class="row-actions">
+            : `<div class="gallery-preview-actions row-actions">
                 <button class="button button-secondary" type="button" data-gallery-move="${index}" data-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button>
                 <button class="button button-secondary" type="button" data-gallery-move="${index}" data-direction="1">Down</button>
                 <button class="button button-danger" type="button" data-gallery-remove="${index}">Remove</button>
@@ -6651,7 +6687,13 @@ import {
       return;
     }
     const url = URL.createObjectURL(file);
-    preview.innerHTML = `<img src="${url}" alt="Selected upload preview" />`;
+    preview.innerHTML = `
+      <span class="asset-preview-card asset-preview-card--field">
+        <span class="asset-preview-frame">
+          <img class="asset-preview-image" src="${url}" alt="Selected upload preview" />
+        </span>
+      </span>
+    `;
     const image = preview.querySelector("img");
     if (image) image.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
   }
@@ -6668,6 +6710,12 @@ import {
       return;
     }
     target.value = value;
+    const preview = form.querySelector(`[data-project-upload-preview="${CSS.escape(fieldName)}"]`);
+    if (preview) {
+      preview.innerHTML = assetPreview(value, target.getAttribute("aria-label") || fieldName, {
+        kind: preview.getAttribute("data-project-preview-kind")
+      });
+    }
   }
 
   function renderProjectGalleryGrid(form) {
