@@ -166,9 +166,11 @@ Public `danielclancy.net` page visits flow through the public repo's `POST /api/
 
 City-level location detail comes first from page-visit KV rows enriched with Cloudflare `request.cf.city`, then from any Cloudflare GraphQL city dataset that is available. If only region/country rows are available, the API and UI mark those rows with `precision: "region"` or `precision: "country"` and show “City detail unavailable from current data source” instead of pretending country rows are city rows. When zero page-visit events exist, the API/UI says “No page-visit events have been captured yet.”
 
-The Analytics map/location panel uses live location rows only. It does not fetch external map tiles/libraries and does not render sample markers as live data. Known city coordinates are plotted only for exact city/country matches in the built-in lookup; unknown city coordinates remain unplotted and country-only rows remain labelled as country precision. The lookup is documented in `assets/data/geo-coordinate-lookup.json` and is intentionally limited to verified approximate city-center coordinates for exact matches such as Los Angeles, Portland, and Sydney.
+The Analytics map/location panel uses a real interactive MapLibre GL map, modelled on the StreamSuites-Dashboard MapLibre analytics pattern. Runtime MapLibre assets are vendored locally under `assets/vendor/maplibre-gl/`, while the dark basemap uses CARTO `dark_all` raster tiles with the required OpenStreetMap/CARTO attribution shown by MapLibre. The map supports pan/zoom, local marker elements, popups, attribution, route/layout resize handling, and a visible empty overlay. Live markers are generated only from source-tagged live rows (`page_visit_kv` or `cloudflare_graphql`); sample/fallback/demo/mock/test rows and stale untagged legacy rows stay out of the map.
 
-Country values render with local SVG flag assets under `assets/icons/flags/` in location tables, city/region/country chips, map labels, and marker tooltip text. Unknown or unsupported country codes use the local `_fallback.svg` globe icon; no remote flag CDN or emoji flag fallback is used as the primary implementation.
+Known city coordinates are plotted only from trusted row `lat`/`lng` values or exact city/region/country matches in the built-in lookup; unknown city coordinates remain unplotted. Country-only rows plot only when a verified local country centroid exists and remain labelled as `precision: "country"`. The lookup is documented in `assets/data/geo-coordinate-lookup.json` and is intentionally limited to verified approximate city-center coordinates for exact matches such as Los Angeles, Portland, and Sydney. No analytics counts or cities are invented.
+
+Country values render with the local `flag-icons` SVG set copied into `assets/icons/flags/` in location tables, city/region/country chips, map marker labels, marker popups/tooltips, and summary labels where country appears. Unknown or unsupported country codes use the local `_fallback.svg` globe icon; no remote flag CDN, base64 flag, or emoji flag fallback is used as the primary implementation.
 
 The Analytics page shows `Last refreshed`, `Last live page-visit event`, `Last Cloudflare GraphQL query`, and a freshness state of `live_recent`, `live_stale`, `no_live_events`, `sample_only`, or `cloudflare_partial`. The Refresh analytics button performs a manual periodic refresh; the UI does not claim realtime behavior. The admin-only Clear sample analytics rows action removes only rows explicitly tagged sample/fallback/demo/mock/test and keeps real `page_visit_kv` rows plus unverified stale legacy rows.
 
@@ -303,17 +305,18 @@ DanielClancy-Admin/
 │   ├── icons/
 │   │   └── flags/
 │   │       ├── _fallback.svg
-│   │       ├── au.svg
-│   │       ├── ca.svg
-│   │       ├── gb.svg
-│   │       ├── nz.svg
-│   │       └── us.svg
+│   │       └── *.svg (local flag-icons 4x3 country flag set)
 │   ├── js/
 │   │   ├── admin-auth.js
 │   │   ├── admin-app.js
 │   │   ├── registry-reconciliation.js
 │   │   ├── scaffold-data.js
 │   │   └── turnstile.js
+│   ├── vendor/
+│   │   └── maplibre-gl/
+│   │       ├── LICENSE.txt
+│   │       ├── maplibre-gl.css
+│   │       └── maplibre-gl.js
 │   └── logos/
 │       ├── company-*.svg
 │       ├── software-*.svg
@@ -375,7 +378,7 @@ DanielClancy-Admin/
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
-- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and the dark map-style panel uses an internal SVG/grid surface with exact city-coordinate plotting only. Empty live analytics shows “No live page-visit location events captured yet.” and no fake sample dots.
+- Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and the location section uses a real dark MapLibre GL map with local markers/popups. Empty live analytics shows “No live page-visit location events captured yet.” over the real basemap and no fake sample markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
 - Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with registry overlay v3 reconciliation, client-only names excluded, source-required employers restored from baseline, source/provenance/override/custom classification shown, KV/local fallback, active/archive status, local registry cache repair/reset, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.

@@ -1,13 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900" role="img" aria-label="United States flag">
-  <rect width="7410" height="3900" fill="#b22234"/>
-  <path d="M0 300h7410M0 900h7410M0 1500h7410M0 2100h7410M0 2700h7410M0 3300h7410" stroke="#fff" stroke-width="300"/>
-  <rect width="2964" height="2100" fill="#3c3b6e"/>
-  <g fill="#fff">
-    <circle cx="247" cy="175" r="75"/><circle cx="741" cy="175" r="75"/><circle cx="1235" cy="175" r="75"/><circle cx="1729" cy="175" r="75"/><circle cx="2223" cy="175" r="75"/><circle cx="2717" cy="175" r="75"/>
-    <circle cx="494" cy="525" r="75"/><circle cx="988" cy="525" r="75"/><circle cx="1482" cy="525" r="75"/><circle cx="1976" cy="525" r="75"/><circle cx="2470" cy="525" r="75"/>
-    <circle cx="247" cy="875" r="75"/><circle cx="741" cy="875" r="75"/><circle cx="1235" cy="875" r="75"/><circle cx="1729" cy="875" r="75"/><circle cx="2223" cy="875" r="75"/><circle cx="2717" cy="875" r="75"/>
-    <circle cx="494" cy="1225" r="75"/><circle cx="988" cy="1225" r="75"/><circle cx="1482" cy="1225" r="75"/><circle cx="1976" cy="1225" r="75"/><circle cx="2470" cy="1225" r="75"/>
-    <circle cx="247" cy="1575" r="75"/><circle cx="741" cy="1575" r="75"/><circle cx="1235" cy="1575" r="75"/><circle cx="1729" cy="1575" r="75"/><circle cx="2223" cy="1575" r="75"/><circle cx="2717" cy="1575" r="75"/>
-    <circle cx="494" cy="1925" r="75"/><circle cx="988" cy="1925" r="75"/><circle cx="1482" cy="1925" r="75"/><circle cx="1976" cy="1925" r="75"/><circle cx="2470" cy="1925" r="75"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-us" viewBox="0 0 640 480">
+  <path fill="#bd3d44" d="M0 0h640v480H0"/>
+  <path stroke="#fff" stroke-width="37" d="M0 55.3h640M0 129h640M0 203h640M0 277h640M0 351h640M0 425h640"/>
+  <path fill="#192f5d" d="M0 0h364.8v258.5H0"/>
+  <marker id="us-a" markerHeight="30" markerWidth="30">
+    <path fill="#fff" d="m14 0 9 27L0 10h28L5 27z"/>
+  </marker>
+  <path fill="none" marker-mid="url(#us-a)" d="m0 0 16 11h61 61 61 61 60L47 37h61 61 60 61L16 63h61 61 61 61 60L47 89h61 61 60 61L16 115h61 61 61 61 60L47 141h61 61 60 61L16 166h61 61 61 61 60L47 192h61 61 60 61L16 218h61 61 61 61 60z"/>
 </svg>

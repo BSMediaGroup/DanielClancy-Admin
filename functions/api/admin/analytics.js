@@ -532,6 +532,13 @@ function freshnessState(pageVisit, cloudflare) {
   return Date.now() - lastEvent <= 60 * 60 * 1000 ? "live_recent" : "live_stale";
 }
 
+function liveLocationRows(cityRows, countryRowsList) {
+  return [...cityRows, ...countryRowsList].filter((row) => {
+    const source = String(row?.source || "");
+    return row?.live !== false && ["page_visit_kv", "cloudflare_graphql"].includes(source);
+  });
+}
+
 export async function analyticsStatus(env, options = {}) {
   const missingConfig = REQUIRED_CONFIG.filter((key) => !hasEnv(env, key));
   const [cloudflare, pageVisit] = await Promise.all([
@@ -540,6 +547,7 @@ export async function analyticsStatus(env, options = {}) {
   ]);
   const cityRows = fallbackCityRows(pageVisit, cloudflare);
   const countries = countryRows(pageVisit, cloudflare);
+  const liveRows = liveLocationRows(cityRows, countries);
   const freshness = freshnessState(pageVisit, cloudflare);
   const zeroPageVisitEvents = !pageVisit.rollup.events;
   const notes = [
@@ -606,6 +614,7 @@ export async function analyticsStatus(env, options = {}) {
       countryOnlyEventCount: pageVisit.rollup.countryOnlyEvents || 0,
       precision: cityRows.length ? "city" : countries.length ? "country" : "unavailable",
       liveRows: cityRows,
+      liveLocationRows: liveRows,
       sampleRows: pageVisit.sampleRows || [],
       staleRows: pageVisit.staleRows || [],
       lastUpdated: pageVisit.rollup.lastEventAt || pageVisit.storage?.updatedAt || cloudflare.queriedAt || "",

@@ -10,13 +10,15 @@ test("analytics map uses exact city-country coordinates and does not use city-on
   assert.ok(lookup.cities.some((row) => row.city === "Portland" && row.region === "Oregon" && row.country_code === "US"));
   assert.ok(lookup.cities.some((row) => row.city === "Sydney" && row.country_code === "AU"));
   assert.equal(app.includes("CITY_COORDINATES[city]"), false);
-  assert.ok(app.includes("City rows without an exact coordinate lookup."));
+  assert.ok(app.includes("Rows without verified coordinates."));
+  assert.ok(app.includes("function markerCoordinate(row)"));
+  assert.ok(app.includes("filter(({ coord }) => coord && Number.isFinite(coord.lat) && Number.isFinite(coord.lon))"));
 });
 
-test("country flag helper resolves required local SVG paths and fallback", async () => {
+test("country flag helper resolves broad local SVG paths and fallback", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
-  for (const code of ["us", "au", "gb", "ca", "nz"]) {
-    assert.ok(app.includes(`/assets/icons/flags/${code}.svg`));
+  for (const code of ["us", "au", "gb", "ca", "nz", "de", "fr", "jp", "in", "br", "za"]) {
+    assert.ok(app.includes("getCountryFlagPath"));
     const svg = await readFile(new URL(`../assets/icons/flags/${code}.svg`, import.meta.url), "utf8");
     assert.ok(svg.includes("<svg"));
   }
@@ -25,13 +27,50 @@ test("country flag helper resolves required local SVG paths and fallback", async
   assert.ok(fallback.includes("<svg"));
 });
 
-test("analytics location rendering includes flags, freshness, and isolated demo rows", async () => {
+test("analytics location rendering includes MapLibre, flags, freshness, and isolated demo rows", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.ok(app.includes("country-flag"));
   assert.ok(app.includes("location-chip"));
-  assert.ok(app.includes("map-marker-label"));
+  assert.ok(app.includes("analytics-map-marker-label"));
+  assert.ok(app.includes("window.maplibregl.Map"));
+  assert.ok(app.includes("new window.maplibregl.Marker"));
+  assert.ok(app.includes("mapStyleConfig"));
+  assert.ok(app.includes("carto-dark"));
+  assert.ok(index.includes("assets/vendor/maplibre-gl/maplibre-gl.css"));
+  assert.ok(index.includes("assets/vendor/maplibre-gl/maplibre-gl.js"));
+  assert.ok(app.includes('id="analytics-location-map"'));
   assert.ok(app.includes("Refresh analytics"));
   assert.ok(app.includes("Last live page-visit event"));
+  assert.ok(app.includes("sourceFreshnessState"));
   assert.ok(app.includes("Sample fallback only — not live analytics"));
   assert.ok(app.includes("demo-fallback"));
+  assert.equal(app.includes("<svg class=\"map-world\""), false);
+});
+
+test("analytics marker generation excludes samples and rows without coordinates", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"])'));
+  assert.ok(app.includes("function isLiveAnalyticsLocationRow(row)"));
+  assert.ok(app.includes("row?.live !== false && LIVE_ANALYTICS_SOURCES.has(source)"));
+  assert.ok(app.includes("buildLiveMapMarkers(liveLocationRows)"));
+  assert.ok(app.includes("analyticsMapState.markers.forEach((marker) => marker.remove())"));
+});
+
+test("country-only rows are country precision and popups include flag metadata", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  const api = await readFile(new URL("../functions/api/admin/analytics.js", import.meta.url), "utf8");
+  assert.ok(api.includes('precision: "country"'));
+  assert.ok(api.includes("liveLocationRows"));
+  assert.ok(app.includes("COUNTRY_CENTROIDS"));
+  assert.ok(app.includes("coord.coordinateSource || \"source\""));
+  assert.ok(app.includes("Flag path"));
+  assert.ok(app.includes("markerPopupHtml"));
+});
+
+test("empty live data keeps real map state without sample markers", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  assert.ok(app.includes("No live page-visit location events captured yet."));
+  assert.ok(app.includes("map.easeTo({ center: [10, 18], zoom: 1.2"));
+  assert.equal(app.includes("sampleMarkers"), false);
 });

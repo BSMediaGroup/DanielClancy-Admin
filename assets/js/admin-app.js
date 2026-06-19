@@ -203,6 +203,13 @@ import {
     payload: null,
     lastChecked: ""
   };
+  const analyticsMapState = {
+    map: null,
+    markers: [],
+    ready: false,
+    pendingMarkers: [],
+    lastSignature: ""
+  };
   const pageVisitState = {
     lastPath: ""
   };
@@ -3245,33 +3252,52 @@ import {
     "singapore|sg": { lat: 1.3521, lon: 103.8198 }
   };
 
-  const FLAG_ICON_PATHS = {
-    US: "/assets/icons/flags/us.svg",
-    AU: "/assets/icons/flags/au.svg",
-    GB: "/assets/icons/flags/gb.svg",
-    CA: "/assets/icons/flags/ca.svg",
-    NZ: "/assets/icons/flags/nz.svg"
+  const COUNTRY_CENTROIDS = {
+    AU: { lat: -25.2744, lon: 133.7751 },
+    BR: { lat: -14.235, lon: -51.9253 },
+    CA: { lat: 56.1304, lon: -106.3468 },
+    DE: { lat: 51.1657, lon: 10.4515 },
+    FR: { lat: 46.2276, lon: 2.2137 },
+    GB: { lat: 55.3781, lon: -3.436 },
+    IN: { lat: 20.5937, lon: 78.9629 },
+    JP: { lat: 36.2048, lon: 138.2529 },
+    NZ: { lat: -40.9006, lon: 174.886 },
+    US: { lat: 37.0902, lon: -95.7129 },
+    ZA: { lat: -30.5595, lon: 22.9375 }
   };
+
+  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"]);
 
   function countryCode(value) {
     const text = String(value || "").trim().toUpperCase();
+    if (text === "UK") return "GB";
     if (/^[A-Z]{2}$/.test(text)) return text;
     const lookup = {
       AUSTRALIA: "AU",
+      BRAZIL: "BR",
+      CANADA: "CA",
+      FRANCE: "FR",
+      GERMANY: "DE",
+      INDIA: "IN",
+      JAPAN: "JP",
+      "SOUTH AFRICA": "ZA",
       "UNITED STATES": "US",
       "UNITED STATES OF AMERICA": "US",
       USA: "US",
       "UNITED KINGDOM": "GB",
       "GREAT BRITAIN": "GB",
-      CANADA: "CA",
       "NEW ZEALAND": "NZ"
     };
     return lookup[text] || "";
   }
 
+  function getCountryFlagPath(countryCodeValue) {
+    const code = countryCode(countryCodeValue);
+    return code ? `/assets/icons/flags/${code.toLowerCase()}.svg` : "/assets/icons/flags/_fallback.svg";
+  }
+
   function flagPath(row) {
-    const code = countryCode(row?.country_code || row?.countryCode || row?.country);
-    return FLAG_ICON_PATHS[code] || "/assets/icons/flags/_fallback.svg";
+    return getCountryFlagPath(row?.country_code || row?.countryCode || row?.country);
   }
 
   function flagIcon(row, label = "") {
@@ -3284,52 +3310,224 @@ import {
   }
 
   function cityCoordinate(row) {
+    const explicitLat = Number(row?.lat ?? row?.latitude);
+    const explicitLon = Number(row?.lng ?? row?.lon ?? row?.longitude);
+    if (Number.isFinite(explicitLat) && Number.isFinite(explicitLon)) {
+      return { lat: explicitLat, lon: explicitLon, coordinateSource: row?.coordinateSource || "source" };
+    }
     const city = String(row?.city || "").trim().toLowerCase();
     const country = String(row?.country || "").trim().toLowerCase();
     const region = String(row?.region || "").trim().toLowerCase();
     const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
     if (!city) return null;
-    return CITY_COORDINATES[`${city}|${region}|${code}`] || CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[`${city}|${code}`] || null;
+    const coord = CITY_COORDINATES[`${city}|${region}|${code}`] || CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[`${city}|${code}`] || null;
+    return coord ? { ...coord, coordinateSource: "lookup" } : null;
   }
 
-  function mapPointStyle(coord) {
-    const x = ((coord.lon + 180) / 360) * 100;
-    const y = ((90 - coord.lat) / 180) * 100;
-    return `--x: ${Math.max(2, Math.min(98, x)).toFixed(2)}%; --y: ${Math.max(4, Math.min(96, y)).toFixed(2)}%;`;
+  function countryCoordinate(row) {
+    const code = countryCode(row?.country_code || row?.countryCode || row?.country);
+    const coord = COUNTRY_CENTROIDS[code];
+    return coord ? { ...coord, coordinateSource: "country_centroid" } : null;
   }
 
-  function renderLocationMap(status, liveCities, liveCountries) {
+  function isLiveAnalyticsLocationRow(row) {
+    const source = String(row?.source || "").trim();
+    return row?.live !== false && LIVE_ANALYTICS_SOURCES.has(source);
+  }
+
+  function markerCoordinate(row) {
+    const precision = String(row?.precision || "").toLowerCase();
+    if (precision === "city" || row?.city) return cityCoordinate(row);
+    if (precision === "country") return countryCoordinate(row);
+    return null;
+  }
+
+  function buildLiveMapMarkers(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .filter(isLiveAnalyticsLocationRow)
+      .map((row) => ({ row, coord: markerCoordinate(row) }))
+      .filter(({ coord }) => coord && Number.isFinite(coord.lat) && Number.isFinite(coord.lon));
+  }
+
+  function mapStyleConfig() {
+    return {
+      version: 8,
+      sources: {
+        "carto-dark": {
+          type: "raster",
+          tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        }
+      },
+      layers: [
+        {
+          id: "carto-dark",
+          type: "raster",
+          source: "carto-dark",
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    };
+  }
+
+  function sourceLabel(source) {
+    const labels = {
+      page_visit_kv: "Page-visit KV",
+      cloudflare_graphql: "Cloudflare GraphQL",
+      sample_fallback: "Sample fallback",
+      stale_unverified: "Stale ignored"
+    };
+    return labels[source] || source || "Unavailable";
+  }
+
+  function markerPopupHtml(row, coord) {
+    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
+    const lastSeen = row.lastSeen || row.last_seen || row.recordedAt || row.recorded_at || row.timestamp || "";
+    const page = row.page_path || row.path || row.page || "";
+    const referrer = row.referrer_host || row.referrer || "";
+    return `
+      <div class="analytics-map-popup-inner">
+        <strong>${flagIcon(row, label)}</strong>
+        <dl>
+          <div><dt>Count</dt><dd>${escapeHtml(formatAnalyticsNumber(metricValue(row) || 0))}</dd></div>
+          <div><dt>Precision</dt><dd>${escapeHtml(row.precision || "unavailable")}</dd></div>
+          <div><dt>Source</dt><dd>${escapeHtml(sourceLabel(row.source))}</dd></div>
+          <div><dt>Coordinates</dt><dd>${escapeHtml(coord.coordinateSource || "source")}</dd></div>
+          <div><dt>Last seen</dt><dd>${escapeHtml(formatOperationalTimestamp(lastSeen))}</dd></div>
+          ${page ? `<div><dt>Page</dt><dd>${escapeHtml(page)}</dd></div>` : ""}
+          ${referrer ? `<div><dt>Referrer</dt><dd>${escapeHtml(referrer)}</dd></div>` : ""}
+          <div><dt>Flag path</dt><dd>${escapeHtml(flagPath(row))}</dd></div>
+        </dl>
+      </div>
+    `;
+  }
+
+  function markerTitle(row, coord) {
+    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
+    return `${label} - ${formatAnalyticsNumber(metricValue(row) || 0)} event(s) - precision=${row.precision || "unavailable"} - source=${sourceLabel(row.source)} - coordinates=${coord.coordinateSource || "source"} - flag=${flagPath(row)}`;
+  }
+
+  function ensureAnalyticsMap(markers) {
+    const container = document.getElementById("analytics-location-map");
+    const feedback = document.getElementById("analytics-location-map-feedback");
+    if (!container) return;
+    if (!window.maplibregl || typeof window.maplibregl.Map !== "function") {
+      if (feedback) feedback.textContent = "Map unavailable: local MapLibre GL assets failed to load.";
+      return;
+    }
+    if (analyticsMapState.map && analyticsMapState.map.getContainer() !== container) {
+      analyticsMapState.markers.forEach((marker) => marker.remove());
+      analyticsMapState.map.remove();
+      analyticsMapState.map = null;
+      analyticsMapState.markers = [];
+      analyticsMapState.ready = false;
+      analyticsMapState.lastSignature = "";
+    }
+    if (!analyticsMapState.map) {
+      analyticsMapState.map = new window.maplibregl.Map({
+        container,
+        style: mapStyleConfig(),
+        center: [10, 18],
+        zoom: 1.2,
+        minZoom: 1,
+        maxZoom: 12,
+        attributionControl: true,
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false
+      });
+      analyticsMapState.map.addControl(
+        new window.maplibregl.NavigationControl({
+          showCompass: false,
+          visualizePitch: false
+        }),
+        "top-right"
+      );
+      analyticsMapState.map.once("load", () => {
+        analyticsMapState.ready = true;
+        updateAnalyticsMapMarkers(analyticsMapState.pendingMarkers);
+      });
+      analyticsMapState.map.on("error", (event) => {
+        if (feedback) feedback.textContent = `Map unavailable: ${event?.error?.message || "tile/style load failed."}`;
+      });
+    }
+    analyticsMapState.pendingMarkers = markers;
+    if (analyticsMapState.ready) updateAnalyticsMapMarkers(markers);
+    window.setTimeout(() => analyticsMapState.map?.resize(), 0);
+  }
+
+  function updateAnalyticsMapMarkers(markers) {
+    const map = analyticsMapState.map;
+    if (!map) return;
+    const signature = JSON.stringify(markers.map(({ row, coord }) => [row.city, row.region, row.country_code || row.country, row.source, row.precision, metricValue(row), coord.lat, coord.lon]));
+    if (signature === analyticsMapState.lastSignature) return;
+    analyticsMapState.lastSignature = signature;
+    analyticsMapState.markers.forEach((marker) => marker.remove());
+    analyticsMapState.markers = markers.map(({ row, coord }) => {
+      const markerEl = document.createElement("button");
+      markerEl.type = "button";
+      markerEl.className = `analytics-map-marker analytics-map-marker-${String(row.precision || "unknown").toLowerCase()}`;
+      markerEl.title = markerTitle(row, coord);
+      markerEl.setAttribute("aria-label", markerTitle(row, coord));
+      markerEl.innerHTML = `<span class="analytics-map-marker-dot"></span><span class="analytics-map-marker-label">${flagIcon(row, row.city || row.country || row.country_code || "Location")}</span>`;
+      const popup = new window.maplibregl.Popup({
+        offset: 14,
+        closeButton: true,
+        closeOnClick: true,
+        className: "analytics-map-popup"
+      }).setHTML(markerPopupHtml(row, coord));
+      return new window.maplibregl.Marker({ element: markerEl, anchor: "center" }).setLngLat([coord.lon, coord.lat]).setPopup(popup).addTo(map);
+    });
+
+    if (markers.length > 1) {
+      const bounds = new window.maplibregl.LngLatBounds();
+      markers.forEach(({ coord }) => bounds.extend([coord.lon, coord.lat]));
+      map.fitBounds(bounds, { padding: 58, maxZoom: 6, duration: 350 });
+    } else if (markers.length === 1) {
+      const [{ row, coord }] = markers;
+      map.easeTo({
+        center: [coord.lon, coord.lat],
+        zoom: row.precision === "country" ? 2.7 : 4.2,
+        duration: 350
+      });
+    } else {
+      map.easeTo({ center: [10, 18], zoom: 1.2, duration: 350 });
+    }
+  }
+
+  function resizeAnalyticsMap() {
+    if (!analyticsMapState.map) return;
+    window.setTimeout(() => analyticsMapState.map?.resize(), 80);
+  }
+
+  function syncAnalyticsLocationMap(status, liveLocationRows) {
+    const markers = buildLiveMapMarkers(liveLocationRows);
+    const overlay = document.getElementById("analytics-location-map-empty");
+    if (overlay) {
+      const hasEvents = Number(status?.pageVisits?.events || status?.location?.events || 0) > 0;
+      overlay.textContent = hasEvents ? "Live location rows do not have verified coordinates yet." : "No live page-visit location events captured yet.";
+      overlay.hidden = markers.length > 0;
+    }
+    ensureAnalyticsMap(markers);
+  }
+
+  function renderLocationMap(status, liveCities, liveCountries, liveLocationRows) {
     const pageVisits = status?.pageVisits || {};
     const location = status?.location || {};
-    const plottedCities = liveCities
-      .filter((row) => row.precision === "city" && cityCoordinate(row))
-      .slice(0, 20)
-      .map((row) => ({ row, coord: cityCoordinate(row) }));
+    const plottedLocations = buildLiveMapMarkers(liveLocationRows);
     const cityDetailCount = Number(pageVisits.cityEvents || liveCities.length || 0);
     const countryOnlyCount = Number(pageVisits.countryOnlyEvents || 0);
-    const unmappedLocationCount = Math.max(0, liveCities.filter((row) => row.precision === "city").length - plottedCities.length);
+    const unmappedLocationCount = Math.max(0, liveLocationRows.filter(isLiveAnalyticsLocationRow).length - plottedLocations.length);
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
-    const mapBody = plottedCities.length
-      ? plottedCities
-          .map(({ row, coord }) => {
-            const label = [row.city, row.region, row.country].filter(Boolean).join(", ");
-            const title = `${label} - ${formatAnalyticsNumber(metricValue(row))} event(s) - precision=${row.precision} - source=${row.source || source} - last seen=${row.lastSeen || row.last_seen || "unavailable"} - flag=${flagPath(row)}`;
-            const markerSize = Math.max(12, Math.min(28, 10 + Number(metricValue(row) || 0) * 2));
-            return `
-              <span class="map-marker live" style="${mapPointStyle(coord)} --marker-size: ${markerSize}px;" title="${escapeHtml(title)}">
-                <span class="map-marker-label">${flagIcon(row, row.city)}</span>
-              </span>
-            `;
-          })
-          .join("")
-      : `<div class="map-empty">${escapeHtml(hasEvents ? "City coordinates unavailable for current live rows." : "No live page-visit location events captured yet.")}</div>`;
     return `
       <section class="panel">
         <header class="panel-header">
           <div>
             <h2>Live Location Map</h2>
-            <p>${escapeHtml(hasEvents ? "Live page-visit locations only. Unknown coordinates are not invented." : "No live page-visit location events captured yet.")}</p>
+            <p>${escapeHtml(hasEvents ? "Real interactive MapLibre map. Live page-visit and Cloudflare location rows only." : "No live page-visit location events captured yet.")}</p>
           </div>
           <div class="panel-actions">
             ${badge(`Source: ${source}`, sourceTone(source))}
@@ -3342,16 +3540,14 @@ import {
             ${storageStatusCard("Tracked events", formatAnalyticsNumber(pageVisits.events || 0), "Bounded page_visit KV events.", pageVisits.configured ? "success" : "warn")}
             ${storageStatusCard("City detail", formatAnalyticsNumber(cityDetailCount), "Rows with city-level precision.", cityDetailCount ? "success" : "warn")}
             ${storageStatusCard("Country-only", formatAnalyticsNumber(countryOnlyCount), "Rows with country but no city.", countryOnlyCount ? "warn" : "success")}
-            ${storageStatusCard("Mapped", formatAnalyticsNumber(plottedCities.length), "Exact built-in coordinate matches only.", plottedCities.length ? "success" : "warn")}
-            ${storageStatusCard("Unmapped", formatAnalyticsNumber(unmappedLocationCount), "City rows without an exact coordinate lookup.", unmappedLocationCount ? "warn" : "success")}
+            ${storageStatusCard("Mapped markers", formatAnalyticsNumber(plottedLocations.length), "Rows with source or verified lookup coordinates.", plottedLocations.length ? "success" : "warn")}
+            ${storageStatusCard("Unmapped rows", formatAnalyticsNumber(unmappedLocationCount), "Rows without verified coordinates.", unmappedLocationCount ? "warn" : "success")}
             ${storageStatusCard("Last live event", formatOperationalTimestamp(pageVisits.lastLiveEventTime || location.lastUpdated), "Periodic refresh; not realtime.", pageVisits.lastLiveEventTime ? "success" : "warn")}
           </div>
-          <div class="map-shell live-map" role="img" aria-label="Live page-visit location map-style panel">
-            <svg class="map-world" viewBox="0 0 1000 520" aria-hidden="true" focusable="false">
-              <path d="M116 192l62-38 84 11 53 43-20 55-70 18-86-22-41-36zM353 168l80-42 128 10 35 45-18 71-74 42-114-20-50-54zM604 158l104-54 116 24 56 62-37 68-112 20-97-35zM260 319l64 18 22 58-50 62-74-27-22-66zM557 318l90 34 73 76-53 44-102-28-53-74zM777 348l75 22 36 53-34 35-72-24-37-50z" />
-            </svg>
-            <div class="map-graticule"></div>
-            ${mapBody}
+          <div class="analytics-map-shell">
+            <div id="analytics-location-map" class="analytics-location-map" aria-label="Interactive live analytics location map"></div>
+            <div id="analytics-location-map-empty" class="analytics-map-empty" ${hasEvents ? "hidden" : ""}>No live page-visit location events captured yet.</div>
+            <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>
           </div>
         </div>
       </section>
@@ -3374,6 +3570,7 @@ import {
     const liveCountries = hasRows(status?.countries) ? status.countries : [];
     const liveBrowsers = hasRows(status?.browsers) ? status.browsers : [];
     const liveDevices = hasRows(status?.devices) ? status.devices : [];
+    const liveLocationRows = hasRows(status?.location?.liveLocationRows) ? status.location.liveLocationRows : [...liveCities, ...liveCountries].filter(isLiveAnalyticsLocationRow);
     const hasLiveRows = hasRows(liveTopPages) || hasRows(liveReferrers) || hasRows(liveCities) || hasRows(liveCountries) || hasRows(liveBrowsers) || hasRows(liveDevices);
     const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city);
     const sampleGeoRows = data.analytics.geoRows || [];
@@ -3423,7 +3620,7 @@ import {
           ${storageStatusCard("Page-visit events", formatAnalyticsNumber(totals.pageVisitEvents || 0), "KV event count from bounded recent storage.", pageVisits.configured ? "success" : "warn")}
         </section>
 
-        ${renderLocationMap(status, liveCities, liveCountries)}
+        ${renderLocationMap(status, liveCities, liveCountries, liveLocationRows)}
 
         <section class="grid analytics-grid">
           ${panel(
@@ -3540,6 +3737,7 @@ import {
           : ""}
       </div>
     `;
+    syncAnalyticsLocationMap(status, liveLocationRows);
   }
 
   function renderAccounts() {
@@ -5253,6 +5451,7 @@ import {
     document.body.classList.toggle("nav-collapsed");
     persistSidebarMode(document.body.classList.contains("nav-collapsed") ? "collapsed" : "expanded");
     navToggle.setAttribute("aria-expanded", String(!document.body.classList.contains("nav-collapsed")));
+    resizeAnalyticsMap();
   });
 
   function applySidebarMode(mode) {
@@ -5267,6 +5466,7 @@ import {
     sidebarHideToggle?.setAttribute("aria-label", "Hide sidebar");
     sidebarHideToggle?.setAttribute("title", "Hide sidebar");
     sidebarReopenToggle?.classList.toggle("is-visible", normalized === "hidden");
+    resizeAnalyticsMap();
   }
 
   function persistSidebarMode(mode) {
@@ -6969,6 +7169,7 @@ import {
 
   window.addEventListener("hashchange", render);
   window.addEventListener("popstate", render);
+  window.addEventListener("resize", resizeAnalyticsMap);
   document.addEventListener("dc-admin-auth-status", (event) => {
     if (event.detail?.isAdmin) {
       hydrateCmsCollections();

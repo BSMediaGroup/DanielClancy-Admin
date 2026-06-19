@@ -1,5 +1,53 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics Real Interactive Map / Complete Local Flags Milestone
+
+### Technical Notes
+
+- Replaced the rejected custom SVG/graticule Analytics location panel with a real MapLibre GL map instance modelled on StreamSuites-Dashboard's MapLibre analytics approach.
+- Added local vendored MapLibre GL runtime assets under `assets/vendor/maplibre-gl/` so the Cloudflare Pages static admin surface does not depend on `node_modules` at runtime.
+- Added a dark CARTO `dark_all` raster basemap style through MapLibre with OpenStreetMap/CARTO attribution handled by the map control.
+- Added one-time map initialization, route/layout resize handling, marker replacement on refresh, popup rendering, bounds fitting, and an empty overlay that appears over the real basemap when no live location rows exist.
+- Added `location.liveLocationRows` to the Analytics API response; it contains only rows with `live !== false` and source `page_visit_kv` or `cloudflare_graphql`.
+- Reworked frontend marker generation so rows without verified coordinates are listed but not plotted, country-only rows use only verified centroids and stay labelled `precision: "country"`, and sample/stale rows never become live markers.
+- Replaced the five-file local flag set with the broad `flag-icons` 4x3 SVG set under `assets/icons/flags/`, retaining `_fallback.svg` for unknown/missing codes.
+- Expanded map/flag tests to assert MapLibre asset inclusion, real map metadata, live-source filtering, no sample markers, coordinate filtering, country precision, broad flag coverage, fallback flags, popup flag metadata, and freshness/empty-state behavior.
+- No fake/sample markers appear in live map mode.
+- No analytics counts or cities were invented.
+- Alerts editor remains removed/disabled.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Analytics now uses a real dark interactive map with pan/zoom, markers, popups, and attribution instead of a decorative pseudo-map.
+- Empty live analytics still shows the map base layer, but no demo Los Angeles/Portland/AU/EU markers are injected.
+- Country flags now come from a materially complete local SVG set rather than five hand-picked files.
+
+### Files / Areas Changed
+
+- `index.html`
+- `assets/js/admin-app.js`
+- `assets/css/admin.css`
+- `assets/vendor/maplibre-gl/*`
+- `assets/icons/flags/*.svg`
+- `functions/api/admin/analytics.js`
+- `tests/analytics-map-flags.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Run `node --check assets/js/admin-app.js`.
+- Run `node --check functions/api/admin/analytics.js`.
+- Run `node --test tests/analytics-helpers.test.mjs`.
+- Run `node --test tests/analytics-ingest-and-assets.test.mjs`.
+- Run `node --test tests/analytics-map-flags.test.mjs`.
+
+### Risks / Follow-Ups
+
+- The dark basemap tiles are remote CARTO raster tiles; if that provider is blocked or unavailable, MapLibre still initializes but tile loading will fail.
+- Hosted Cloudflare Pages validation is still needed to confirm production env bindings and Cloudflare GraphQL schema behavior with real live traffic.
+
 ## Analytics Live Map / Source Integrity Milestone
 
 ### Technical Notes
@@ -21,7 +69,7 @@
 ### Human-Readable Notes
 
 - Analytics now shows live page-visit geography only when real source-tagged rows exist.
-- Empty analytics renders a real dark map shell with “No live page-visit location events captured yet.” instead of demo locations.
+- Empty analytics now renders the real MapLibre basemap with “No live page-visit location events captured yet.” instead of demo locations.
 - Operators can refresh analytics manually and clear only tagged sample rows without deleting real page-visit data.
 
 ### Files / Areas Changed
