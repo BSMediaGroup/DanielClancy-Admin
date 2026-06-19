@@ -43,6 +43,7 @@ import {
   const PLATFORMS_STORAGE_KEY = "danielclancy-admin.platforms.scaffold.v1";
   const POSITIONS_STORAGE_KEY = "danielclancy-admin.positions.scaffold.v1";
   const REGISTRY_SCHEMA_STORAGE_KEY = REGISTRY_SCHEMA_VERSION;
+  const PUBLIC_SITE_DATA_URL = "/api/public/site-data";
   const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
   const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
@@ -202,6 +203,17 @@ import {
     message: "Checking analytics status...",
     payload: null,
     lastChecked: ""
+  };
+  const publishState = {
+    status: "checking",
+    message: "Checking public site-data publish status...",
+    source: "unknown",
+    revision: "",
+    publishedAt: "",
+    generatedAt: "",
+    publicUrl: PUBLIC_SITE_DATA_URL,
+    counts: { projects: 0, companies: 0, platforms: 0, positions: 0, assets: 0 },
+    warnings: []
   };
   const analyticsMapState = {
     map: null,
@@ -2006,6 +2018,14 @@ import {
     return "/api/admin/analytics";
   }
 
+  function publishEndpoint() {
+    return "/api/admin/publish/site-data";
+  }
+
+  function publicSiteDataEndpoint(revision = "") {
+    return revision ? `${PUBLIC_SITE_DATA_URL}?rev=${encodeURIComponent(revision)}` : PUBLIC_SITE_DATA_URL;
+  }
+
   function sendAdminPageVisit(path) {
     if (!window.DC_ADMIN_AUTH?.isAdmin || pageVisitState.lastPath === path) return;
     pageVisitState.lastPath = path;
@@ -2558,6 +2578,108 @@ import {
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
   }
 
+  async function hydratePublishStatus(renderAfter = false) {
+    publishState.status = "checking";
+    publishState.message = "Checking public site-data publish status...";
+    if (renderAfter && (activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage())) render();
+    try {
+      const response = await fetch(publicSiteDataEndpoint(), { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || `http_${response.status}`);
+      }
+      Object.assign(publishState, {
+        status: payload.source === "published_kv_snapshot" ? "published" : payload.source === "live_reconciled_fallback" ? "fallback" : "static",
+        source: payload.source || "unknown",
+        revision: payload.revision || "",
+        publishedAt: payload.publishedAt || "",
+        generatedAt: payload.generatedAt || "",
+        publicUrl: publicSiteDataEndpoint(payload.revision || ""),
+        counts: payloadCounts(payload),
+        warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
+        message: publishStatusMessage(payload.source)
+      });
+    } catch {
+      Object.assign(publishState, {
+        status: "error",
+        source: "unavailable",
+        message: "Public site-data endpoint is unavailable; publish status cannot be confirmed.",
+        warnings: ["public_site_data_status_unavailable"]
+      });
+    }
+    if (renderAfter && (activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage())) render();
+  }
+
+  async function publishSiteData() {
+    if (!canPublishSiteData()) {
+      publishState.status = "blocked";
+      publishState.message = "Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.";
+      render();
+      return;
+    }
+    publishState.status = "publishing";
+    publishState.message = "Publishing sanitized public site-data snapshot...";
+    render();
+    try {
+      const response = await fetch(publishEndpoint(), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" }
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || payload?.error || `http_${response.status}`);
+      }
+      Object.assign(publishState, {
+        status: "published",
+        source: payload.source || "published_kv_snapshot",
+        revision: payload.revision || "",
+        publishedAt: payload.publishedAt || new Date().toISOString(),
+        generatedAt: payload.publishedAt || "",
+        publicUrl: payload.publicUrl || publicSiteDataEndpoint(payload.revision || ""),
+        counts: payload.counts || publishState.counts,
+        warnings: Array.isArray(payload.warnings) ? payload.warnings : [],
+        message: "Published. Refresh the public site; redeploy Public only for env, fallback, rendering code, or asset changes."
+      });
+    } catch (error) {
+      Object.assign(publishState, {
+        status: "error",
+        message: String(error?.message || "Publish failed. Save/Sync edits and confirm live Admin KV before retrying.")
+      });
+    }
+    render();
+  }
+
+  function payloadCounts(payload = {}) {
+    const collections = payload.collections || {};
+    const assets = payload.assets || {};
+    return {
+      projects: Array.isArray(collections.projects) ? collections.projects.length : 0,
+      companies: Array.isArray(collections.companies) ? collections.companies.length : 0,
+      platforms: Array.isArray(collections.platforms) ? collections.platforms.length : 0,
+      positions: Array.isArray(collections.positions) ? collections.positions.length : 0,
+      assets:
+        (Array.isArray(assets.portfolioThumbs) ? assets.portfolioThumbs.length : 0) +
+        (Array.isArray(assets.portfolioImages) ? assets.portfolioImages.length : 0) +
+        (Array.isArray(assets.docs) ? assets.docs.length : 0)
+    };
+  }
+
+  function publishStatusMessage(source) {
+    if (source === "published_kv_snapshot") return "Public endpoint is serving the latest published KV snapshot.";
+    if (source === "live_reconciled_fallback") return "No published snapshot exists; public endpoint is building live reconciled fallback from Admin KV/baselines.";
+    if (source === "baseline_fallback") return "No published snapshot or live KV data is available; public endpoint is serving static baseline fallback.";
+    return "Public site-data source is unknown.";
+  }
+
+  function isPublishCollectionPage() {
+    return ["projects", "companies", "platforms", "positions"].includes(parseRoute().page);
+  }
+
+  function canPublishSiteData() {
+    return ["projects", "companies", "platforms", "positions"].every((collection) => getCmsConfig(collection)?.state.storage.status === "connected");
+  }
+
   async function runAnalyticsAction(action) {
     if (action === "refresh") {
       await hydrateAnalyticsStatus(true);
@@ -2943,6 +3065,50 @@ import {
     `;
   }
 
+  function publishStatusPanel(compact = false) {
+    const counts = publishState.counts || {};
+    const sourceLabel =
+      publishState.source === "published_kv_snapshot"
+        ? "Published snapshot"
+        : publishState.source === "live_reconciled_fallback"
+          ? "Live reconciled fallback"
+          : publishState.source === "baseline_fallback"
+            ? "Static fallback"
+            : publishState.source || "Unknown";
+    const publishBlocked = !canPublishSiteData();
+    const warningText = publishBlocked
+      ? "Cannot publish: live Admin API/KV is unavailable. Current edits are local-only."
+      : publishState.message;
+    const body = `
+      <div class="cms-storage-status">
+        ${badge(sourceLabel, publishState.status === "published" ? "success" : "warn")}
+        <span>${escapeHtml(warningText)}</span>
+      </div>
+      ${metricCards([
+        { label: "Projects", value: String(counts.projects || 0), note: "Public projects in current site-data payload.", tone: counts.projects ? "success" : "warn" },
+        { label: "Companies", value: String(counts.companies || 0), note: "Sanitized public company rows.", tone: counts.companies ? "success" : "warn" },
+        { label: "Platforms", value: String(counts.platforms || 0), note: "Sanitized public platform rows.", tone: counts.platforms ? "success" : "warn" },
+        { label: "Positions", value: String(counts.positions || 0), note: "Sanitized CV position rows.", tone: counts.positions ? "success" : "warn" },
+        { label: "Assets", value: String(counts.assets || 0), note: "Cataloged thumbnails, images, and docs.", tone: counts.assets ? "success" : "warn" },
+        { label: "Revision", value: publishState.revision || "None", note: publishState.publishedAt ? `Published ${formatOperationalTimestamp(publishState.publishedAt)}` : "No published timestamp.", tone: publishState.revision ? "success" : "warn" }
+      ])}
+      ${descriptionRows([
+        ["Public endpoint", publishState.publicUrl || PUBLIC_SITE_DATA_URL],
+        ["Generated at", formatOperationalTimestamp(publishState.generatedAt)],
+        ["Warnings", publishState.warnings?.length ? publishState.warnings.join(", ") : "None reported"],
+        ["Next step", "Save/Sync edits first, then Publish site data. Redeploy Public only for env, committed fallback, rendering code, or asset changes."]
+      ])}
+    `;
+    return panel(
+      compact ? "Public publish status" : "Publish to public site",
+      "Publishing writes a sanitized snapshot for DanielClancy.net. Save/Sync remains separate from Publish.",
+      body,
+      `<button class="button" type="button" data-publish-action="publish" ${publishBlocked || publishState.status === "publishing" ? "disabled" : ""}>Publish site data</button>
+       <button class="button button-secondary" type="button" data-publish-action="refresh">Refresh status</button>
+       <a class="button button-secondary" href="#/settings">Rebuild manifests</a>`
+    );
+  }
+
   function simpleCards(items) {
     return `
       <div class="grid grid-4">
@@ -3137,6 +3303,8 @@ import {
             )}
           </div>`
         )}
+
+        ${publishStatusPanel()}
 
         ${panel(
           "Configuration readiness",
@@ -3841,7 +4009,7 @@ import {
         ${pageHeader(
           "Projects CMS",
           "Projects",
-          "Loaded from protected public-site baseline with admin storage overlay. Changes here do not publish to DanielClancy.net until the public export/hydration bridge is wired.",
+          "Loaded from protected public-site baseline with admin storage overlay. Save/Sync writes Admin KV; Publish site data promotes saved edits to DanielClancy.net.",
           `<button class="button" type="button" data-project-action="create">Create Project</button>
            <button class="button button-secondary" type="button" data-project-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-project-action="import-json">Import JSON</button>
@@ -3850,6 +4018,7 @@ import {
         )}
 
         ${cmsStatusMarkup("projects", "project-action")}
+        ${publishStatusPanel(true)}
 
         ${panel(
           "Baseline and storage status",
@@ -3957,6 +4126,7 @@ import {
           ${badge(cmsStatusText(state.storage), cmsStatusTone(state.storage))}
           <span>${escapeHtml(state.storage.message || state.message)}</span>
         </div>
+        ${publishStatusPanel(true)}
         ${registryReconciliationStatusMarkup(kind)}
         ${panel(
           `${config.label} options`,
@@ -3999,6 +4169,7 @@ import {
           ${badge(cmsStatusText(positionsState.storage), cmsStatusTone(positionsState.storage))}
           <span>${escapeHtml(positionsState.storage.message || positionsState.message)}</span>
         </div>
+        ${publishStatusPanel(true)}
         ${registryReconciliationStatusMarkup("positions")}
         ${panel(
           "Position records",
@@ -5352,6 +5523,8 @@ import {
           ])
         )}
 
+        ${publishStatusPanel()}
+
         ${panel(
           "Account access",
           "Manual master admins are env-backed and production-authoritative. OAuth/public accounts are regular until promoted by a master admin.",
@@ -5812,7 +5985,7 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
@@ -5823,6 +5996,7 @@ import {
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
     const analyticsAction = target.getAttribute("data-analytics-action");
+    const publishAction = target.getAttribute("data-publish-action");
     const registryAction = target.getAttribute("data-registry-action");
     const registryKind = target.getAttribute("data-registry-kind");
     const registryId = target.getAttribute("data-registry-id");
@@ -5836,6 +6010,16 @@ import {
 
     if (accountAction === "refresh") {
       hydrateAccountRegistry(true);
+      return;
+    }
+
+    if (publishAction === "publish") {
+      publishSiteData();
+      return;
+    }
+
+    if (publishAction === "refresh") {
+      hydratePublishStatus(true);
       return;
     }
 
@@ -7176,6 +7360,7 @@ import {
       hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
       hydrateOverviewStatus(activePageIs("overview"));
       hydrateAnalyticsStatus(activePageIs("analytics"));
+      hydratePublishStatus(activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage());
     }
   });
 
@@ -7197,4 +7382,5 @@ import {
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));
   hydrateAnalyticsStatus(activePageIs("analytics"));
+  hydratePublishStatus(activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage());
 })();

@@ -1,4 +1,9 @@
 {
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "manifests:rebuild": "node tools/rebuild-manifests.mjs",
+    "manifests:check": "node tools/rebuild-manifests.mjs --check",
+    "test:registries": "node --test tests/registry-overlay-persistence.test.mjs tests/registry-reconciliation.test.mjs tests/source-audit-completeness.test.mjs"
+  }
 }

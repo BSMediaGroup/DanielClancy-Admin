@@ -1,5 +1,35 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Public Site-Data Publish Snapshot / Manifest Tooling Milestone
+
+### Technical Notes
+
+- Added admin-only `POST /api/admin/publish/site-data` with signed admin-session enforcement and `DC_ADMIN_KV` requirement.
+- Publishing builds the sanitized public site-data payload, writes `public:site-data:published` plus `public:site-data:publish-meta`, and returns revision, counts, warnings, published timestamp, and cache-busting public URL.
+- Updated `GET /api/public/site-data` to prefer the published KV snapshot, expose `source`, `revision`, `publishedAt`, and short-cache/ETag metadata, then fall back to live reconciled or baseline data.
+- Added Overview/Settings/Projects/Companies/Platforms/Positions publish status controls with source, revision, counts, warnings, and explicit local-only/KV-unavailable blocking.
+- Added `tools/rebuild-manifests.mjs` plus `npm run manifests:rebuild`, `npm run manifests:check`, and `npm run test:registries`.
+- Rebuilt `assets/data/public-asset-catalog.json` from current DanielClancy public assets; asset entries increased to match the current public repo.
+- No admin-only overlay/account/session/secret data is exposed by the public export or published snapshot.
+- Alerts editor remains removed/disabled.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- Admin now has a clear Save/Sync first, Publish site data second workflow.
+- The public endpoint can report whether it is serving a published snapshot, live reconciled fallback, or baseline fallback.
+- Local manifest rebuilds are repeatable after new public assets/source files are added.
+
+### Validation Notes
+
+- Added/updated public site-data export and publish snapshot tests.
+- Targeted validation should include `node --test tests/public-site-data-export.test.mjs`, registry/source tests, manifest rebuild/check, syntax checks, and `git diff --check`.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages still needs `DC_ADMIN_KV` binding confirmation and public CORS/live endpoint verification.
+- Save/Sync remains separate from Publish; localStorage-only edits must be synced to Admin KV before publishing.
+
 ## Analytics Real Interactive Map / Complete Local Flags Milestone
 
 ### Technical Notes

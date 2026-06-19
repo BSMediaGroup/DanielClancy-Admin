@@ -20,6 +20,8 @@ const POSITIONS_BASELINE_PATH = "/assets/data/admin-positions-baseline.json";
 const SOURCE_AUDIT_PATH = "/assets/data/source-audit-report.json";
 const ASSET_CATALOG_PATH = "/assets/data/public-asset-catalog.json";
 const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
+export const PUBLISHED_SITE_DATA_KEY = "public:site-data:published";
+export const PUBLISHED_SITE_DATA_META_KEY = "public:site-data:publish-meta";
 
 const SAFE_ASSET_PREFIXES = ["/media/portfolio/thumbs/", "/media/portfolio/", "/docs/"];
 const INTERNAL_KEYS = new Set([
@@ -39,7 +41,7 @@ const INTERNAL_KEYS = new Set([
   "kv"
 ]);
 
-export async function buildPublicSiteData(context) {
+export async function buildPublicSiteData(context, options = {}) {
   const { request, env } = context;
   const generatedAt = new Date().toISOString();
   const warnings = [];
@@ -85,11 +87,14 @@ export async function buildPublicSiteData(context) {
 
   warnings.push(...publicWarnings(companiesResult), ...publicWarnings(platformsResult), ...publicWarnings(positionsResult));
 
-  return {
+  const source = storageConfigured ? "live_reconciled_fallback" : "baseline_fallback";
+  const payload = {
     ok: true,
     schemaVersion: "danielclancy-public-site-data.v1",
     generatedAt,
-    source: storageConfigured ? "admin_kv_reconciled" : "admin_baseline_reconciled",
+    source: options.source || source,
+    revision: "",
+    publishedAt: null,
     collections: {
       projects: projectsResult.items.map((item) => sanitizeProject(item)).filter(Boolean),
       companies: companiesResult.items.map((item) => sanitizeCompany(item)).filter(Boolean),
@@ -105,6 +110,110 @@ export async function buildPublicSiteData(context) {
       assetCatalogGeneratedAt: assetCatalog?.metadata?.generatedAt || null
     },
     warnings: Array.from(new Set(warnings.filter(Boolean)))
+  };
+  payload.revision = options.revision || await publicSiteDataRevision(payload);
+  return payload;
+}
+
+export async function readPublishedSiteData(context) {
+  const kv = context?.env?.DC_ADMIN_KV;
+  if (!kv || typeof kv.get !== "function") {
+    return { payload: null, meta: null, warning: "admin_kv_unavailable_published_snapshot_unavailable" };
+  }
+  try {
+    const [rawPayload, rawMeta] = await Promise.all([
+      kv.get(PUBLISHED_SITE_DATA_KEY),
+      kv.get(PUBLISHED_SITE_DATA_META_KEY)
+    ]);
+    if (!rawPayload) return { payload: null, meta: null, warning: "" };
+    const payload = JSON.parse(rawPayload);
+    const meta = rawMeta ? JSON.parse(rawMeta) : null;
+    if (payload?.schemaVersion !== "danielclancy-public-site-data.v1" || payload?.ok !== true) {
+      return { payload: null, meta: null, warning: "published_snapshot_invalid_fallback_used" };
+    }
+    return {
+      payload: {
+        ...payload,
+        source: "published_kv_snapshot",
+        revision: String(payload.revision || meta?.revision || ""),
+        publishedAt: payload.publishedAt || meta?.publishedAt || null
+      },
+      meta,
+      warning: ""
+    };
+  } catch {
+    return { payload: null, meta: null, warning: "published_snapshot_read_failed_fallback_used" };
+  }
+}
+
+export async function buildPublicSiteDataResponse(context) {
+  const published = await readPublishedSiteData(context);
+  if (published.payload) {
+    return {
+      payload: published.payload,
+      source: "published_kv_snapshot",
+      etag: published.payload.revision ? `"${published.payload.revision}"` : ""
+    };
+  }
+  const payload = await buildPublicSiteData(context);
+  if (published.warning) payload.warnings = Array.from(new Set([...(payload.warnings || []), published.warning]));
+  return {
+    payload,
+    source: payload.source,
+    etag: payload.revision ? `"${payload.revision}"` : ""
+  };
+}
+
+export async function publishPublicSiteData(context, session = {}) {
+  const kv = context?.env?.DC_ADMIN_KV;
+  if (!kv || typeof kv.get !== "function" || typeof kv.put !== "function") {
+    return {
+      ok: false,
+      error: "storage_not_configured",
+      message: "Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.",
+      status: 503
+    };
+  }
+  const publishedAt = new Date().toISOString();
+  const payload = await buildPublicSiteData(context, { source: "published_kv_snapshot" });
+  const counts = collectionCounts(payload);
+  const revision = await publicSiteDataRevision({
+    schemaVersion: payload.schemaVersion,
+    collections: payload.collections,
+    assets: payload.assets,
+    warnings: payload.warnings,
+    publishedAt
+  });
+  const safeActor = String(session.email || session.id || session.providerSubject || session.username || "").trim();
+  const published = {
+    ...payload,
+    source: "published_kv_snapshot",
+    revision,
+    publishedAt,
+    generatedAt: payload.generatedAt || publishedAt
+  };
+  const meta = {
+    schemaVersion: "danielclancy-public-site-data-publish-meta.v1",
+    publishedAt,
+    publishedBy: safeActor,
+    revision,
+    counts,
+    warnings: published.warnings || []
+  };
+  await Promise.all([
+    kv.put(PUBLISHED_SITE_DATA_KEY, JSON.stringify(published, null, 2)),
+    kv.put(PUBLISHED_SITE_DATA_META_KEY, JSON.stringify(meta, null, 2))
+  ]);
+  return {
+    ok: true,
+    published: true,
+    revision,
+    counts,
+    warnings: meta.warnings,
+    publishedAt,
+    source: "published_kv_snapshot",
+    publicUrl: `/api/public/site-data?rev=${encodeURIComponent(revision)}`,
+    meta
   };
 }
 
@@ -401,4 +510,44 @@ function safeAssetPath(value, options = {}) {
   if (options.docsOnly && !text.startsWith("/docs/")) return "";
   if (SAFE_ASSET_PREFIXES.some((prefix) => text.startsWith(prefix))) return text;
   return "";
+}
+
+export function collectionCounts(payload = {}) {
+  const collections = payload.collections || {};
+  const assets = payload.assets || {};
+  return {
+    projects: Array.isArray(collections.projects) ? collections.projects.length : 0,
+    companies: Array.isArray(collections.companies) ? collections.companies.length : 0,
+    platforms: Array.isArray(collections.platforms) ? collections.platforms.length : 0,
+    positions: Array.isArray(collections.positions) ? collections.positions.length : 0,
+    assets:
+      (Array.isArray(assets.portfolioThumbs) ? assets.portfolioThumbs.length : 0) +
+      (Array.isArray(assets.portfolioImages) ? assets.portfolioImages.length : 0) +
+      (Array.isArray(assets.docs) ? assets.docs.length : 0)
+  };
+}
+
+async function publicSiteDataRevision(payload) {
+  const stable = stableJson(payload, new Set(["generatedAt", "revision"]));
+  const bytes = new TextEncoder().encode(stable);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+    return `rev-${Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 16)}`;
+  }
+  let hash = 2166136261;
+  for (const byte of bytes) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16777619);
+  }
+  return `rev-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
+function stableJson(value, omitKeys = new Set()) {
+  if (Array.isArray(value)) return `[${value.map((item) => stableJson(item, omitKeys)).join(",")}]`;
+  if (!value || typeof value !== "object") return JSON.stringify(value);
+  return `{${Object.keys(value)
+    .filter((key) => !omitKeys.has(key))
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(value[key], omitKeys)}`)
+    .join(",")}}`;
 }

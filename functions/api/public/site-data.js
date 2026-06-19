@@ -1,4 +1,4 @@
-import { buildPublicSiteData } from "../../_shared/public-site-data.js";
+import { buildPublicSiteDataResponse } from "../../_shared/public-site-data.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8"
@@ -52,9 +52,11 @@ export async function onRequest(context) {
     );
   } else {
     try {
-      response = json(await buildPublicSiteData(context), {
+      const result = await buildPublicSiteDataResponse(context);
+      response = json(result.payload, {
         headers: {
-          "cache-control": "public, max-age=300, stale-while-revalidate=1800"
+          "cache-control": "public, max-age=60, stale-while-revalidate=300",
+          ...(result.etag ? { etag: result.etag } : {})
         }
       });
     } catch {

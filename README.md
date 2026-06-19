@@ -6,13 +6,13 @@ This repo is the admin surface for the professional DanielClancy.net portfolio/C
 
 ## Local Use
 
-Open `index.html` directly in a browser, or serve the folder with any static file server. `package.json` exists only so local syntax checks parse Cloudflare Pages Function modules correctly; there is no npm build/lint/test script in this repo yet.
+Open `index.html` directly in a browser, or serve the folder with any static file server. `package.json` provides local manifest rebuild/check and focused registry test scripts; there is still no bundled frontend build step for this static Admin shell.
 
 When Pages Functions are unavailable in local static/file mode, the login gate exposes a clearly labelled local scaffold unlock for UI smoke testing only. That local unlock is not a production credential and does not create a signed server session.
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, and CMS endpoints under `functions/api/admin/cms/[[collection]].js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -52,6 +52,7 @@ Required Cloudflare env vars:
 Required Cloudflare KV binding:
 
 - `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, Positions, disabled Alerts compatibility, and account/profile overlays
+- `DC_ADMIN_KV` also stores the public published site-data snapshot at `public:site-data:published` and metadata at `public:site-data:publish-meta`.
 
 Required shared analytics ingest secret:
 
@@ -237,15 +238,20 @@ Projects now use autocomplete/dropdowns and previews for thumbnail (`/media/port
 Implemented endpoint:
 
 - `GET /api/public/site-data`
+- `POST /api/admin/publish/site-data`
 
-This endpoint is intentionally public and read-only. It does not require an admin session because it exposes only sanitized data needed by `danielclancy.net` public rendering. It does not expose account registry rows, auth/session state, secrets, KV binding names, overlay wrappers, excluded-row internals, draft/edit-only metadata, or admin-only implementation details.
+`GET /api/public/site-data` is intentionally public and read-only. It prefers the last published KV snapshot when one exists, otherwise it builds a reconciled live/baseline fallback. It does not require an admin session because it exposes only sanitized data needed by `danielclancy.net` public rendering. It does not expose account registry rows, auth/session state, secrets, KV binding names, overlay wrappers, excluded-row internals, draft/edit-only metadata, or admin-only implementation details.
+
+`POST /api/admin/publish/site-data` requires a signed admin session and `DC_ADMIN_KV`. It builds the same sanitized public payload, applies registry reconciliation/client-only exclusions, writes `public:site-data:published`, writes `public:site-data:publish-meta`, and returns `revision`, `publishedAt`, collection counts, warnings, and `/api/public/site-data?rev=<revision>`. It does not mutate alert rules and does not publish localStorage-only edits.
 
 The response contract is stable JSON:
 
 - `ok`
 - `schemaVersion: "danielclancy-public-site-data.v1"`
 - `generatedAt`
-- `source: "admin_kv_reconciled" | "admin_baseline_reconciled"`
+- `source: "published_kv_snapshot" | "live_reconciled_fallback" | "baseline_fallback"`
+- `revision`
+- `publishedAt`
 - `collections.projects`
 - `collections.companies`
 - `collections.platforms`
@@ -257,7 +263,29 @@ The response contract is stable JSON:
 
 Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
 
-CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use `Cache-Control: public, max-age=300, stale-while-revalidate=1800`; errors use `no-store`.
+CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use short caching with `Cache-Control: public, max-age=60, stale-while-revalidate=300` plus an ETag when a revision exists; errors use `no-store`.
+
+## Publishing Workflow
+
+1. Save/Sync edits in the Projects, Companies, Platforms, or Positions CMS page.
+2. Use Overview or Settings `Publish site data`.
+3. Confirm the returned revision, published timestamp, and counts.
+4. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
+5. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
+
+If Admin is in static/local-only mode or `DC_ADMIN_KV` is unavailable, the dashboard shows `Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.` Save/Sync remains separate from Publish.
+
+## Manifest Rebuild Workflow
+
+After adding public repo assets or source data:
+
+1. In DanielClancy-Admin run `npm run manifests:rebuild`.
+2. Review `assets/data/public-asset-catalog.json` and the existing baseline/audit files.
+3. In DanielClancy run `npm run data:rebuild`.
+4. Run targeted checks/builds in both repos.
+5. Commit both repos and deploy Admin first, then Public.
+
+`npm run manifests:check` reports stale generated output without writing it. The rebuild tool scans `../DanielClancy` by default and accepts `DANIELCLANCY_PUBLIC_ROOT=...`. It copies public preview files into `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs`.
 
 Public asset paths are metadata-only and must stay clean:
 
@@ -341,6 +369,8 @@ DanielClancy-Admin/
 │       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
+│       │   ├── publish/
+│       │   │   └── site-data.js
 │       │   └── status.js
 │       ├── auth/
 │       │   └── [[path]].js
@@ -359,6 +389,8 @@ DanielClancy-Admin/
 │   ├── registry-overlay-persistence.test.mjs
 │   ├── registry-reconciliation.test.mjs
 │   └── source-audit-completeness.test.mjs
+├── tools/
+│   └── rebuild-manifests.mjs
 ├── BUMP_NOTES.md
 ├── favicon.ico
 ├── index.html
@@ -378,6 +410,7 @@ DanielClancy-Admin/
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
+- Overview, Settings, Projects, Companies, Platforms, and Positions show public site-data publish status, source, revision, counts, and warnings. `Publish site data` writes only a sanitized snapshot when live Admin KV is available.
 - Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, city precision is labelled per row, and the location section uses a real dark MapLibre GL map with local markers/popups. Empty live analytics shows “No live page-visit location events captured yet.” over the real basemap and no fake sample markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
