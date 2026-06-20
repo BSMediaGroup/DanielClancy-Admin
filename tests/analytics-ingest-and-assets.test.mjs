@@ -106,9 +106,14 @@ test("analytics status excludes sample and stale rows from live location rows", 
   assert.equal(status.location.countryOnlyEventCount, 1);
   assert.equal(status.countries.find((row) => row.country === "US").precision, "country");
   assert.equal(status.sourceFreshnessState, "live_recent");
+  assert.equal(status.liveRowsCount, 2);
+  assert.equal(status.sampleRowsCount, 1);
+  assert.equal(status.staleRowsCount, 1);
+  assert.equal(status.sourceBreakdown.page_visit_kv, 2);
+  assert.equal(status.lastLiveEventAt, liveNow);
 });
 
-test("admin purge action removes only sample analytics rows", async () => {
+test("admin purge action removes sample and legacy rows but keeps source-tagged live rows", async () => {
   const kv = memoryKv();
   kv.store.set("analytics:page_visits:recent", JSON.stringify({
     items: [
@@ -130,10 +135,47 @@ test("admin purge action removes only sample analytics rows", async () => {
   const body = await response.json();
   const recent = JSON.parse(kv.store.get("analytics:page_visits:recent"));
   assert.equal(response.status, 200);
-  assert.equal(body.result.removed, 1);
+  assert.equal(body.result.removed, 2);
   assert.equal(recent.items.some((row) => row.source === "page_visit_kv"), true);
-  assert.equal(recent.items.some((row) => row.city === "Legacy"), true);
+  assert.equal(recent.items.some((row) => row.city === "Legacy"), false);
   assert.equal(recent.items.some((row) => row.source === "sample_fallback"), false);
+});
+
+test("analytics ingest dedupes duplicate eventId and reports metadata", async () => {
+  const kv = memoryKv();
+  const requestInit = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "X-DanielClancy-Analytics-Secret": "expected"
+    },
+    body: JSON.stringify({
+      eventId: "visit-duplicate-1",
+      source: "page_visit_kv",
+      live: true,
+      recordedAt: new Date().toISOString(),
+      page_path: "/",
+      city: "Toronto",
+      country: "CA",
+      country_code: "CA"
+    })
+  };
+  const first = await analyticsIngest({
+    request: new Request("https://admin.danielclancy.net/api/analytics/ingest/page-visit", requestInit),
+    env: { DANIELCLANCY_ANALYTICS_INGEST_SECRET: "expected", DC_ADMIN_KV: kv }
+  });
+  const second = await analyticsIngest({
+    request: new Request("https://admin.danielclancy.net/api/analytics/ingest/page-visit", requestInit),
+    env: { DANIELCLANCY_ANALYTICS_INGEST_SECRET: "expected", DC_ADMIN_KV: kv }
+  });
+  const firstBody = await first.json();
+  const secondBody = await second.json();
+  const recent = JSON.parse(kv.store.get("analytics:page_visits:recent"));
+  assert.equal(firstBody.stored, true);
+  assert.equal(firstBody.source, "page_visit_kv");
+  assert.equal(secondBody.stored, false);
+  assert.equal(secondBody.duplicate, true);
+  assert.equal(recent.items.length, 1);
 });
 
 test("asset upload rejects unauthenticated requests", async () => {

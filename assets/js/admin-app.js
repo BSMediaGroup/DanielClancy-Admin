@@ -20,6 +20,7 @@ import {
   const sidebarCollapseToggle = document.getElementById("sidebar-collapse-toggle");
   const sidebarHideToggle = document.getElementById("sidebar-hide-toggle");
   const sidebarReopenToggle = document.getElementById("sidebar-reopen-toggle");
+  const sidebarStatusNote = document.getElementById("sidebar-status-note");
   const topbarLoader = document.getElementById("topbar-loader");
 
   const routes = [
@@ -2581,7 +2582,30 @@ import {
       overviewStatusState.status = "fallback";
       overviewStatusState.message = "Pages Functions are unavailable here. Overview cannot claim live operational status.";
     }
+    updateSidebarApiStatus();
     if (renderAfter && activePageIs("overview")) renderOverview();
+  }
+
+  function updateSidebarApiStatus() {
+    if (!sidebarStatusNote) return;
+    const apiConnected = overviewStatusState.status === "connected" || analyticsStatusState.status === "connected";
+    const authWorks = Boolean(window.DC_ADMIN_AUTH?.isAdmin);
+    const analytics = analyticsStatusState.payload;
+    const kvConnected = Boolean(
+      analytics?.kvConnected ||
+      analytics?.readiness?.dcAdminKvConfigured ||
+      overviewStatusState.payload?.accounts?.configured ||
+      Object.values(overviewStatusState.payload?.cms || {}).some((entry) => entry?.configured)
+    );
+    const dotTone = apiConnected && kvConnected ? "status-dot-success" : apiConnected ? "status-dot-warn" : "status-dot-warn";
+    const text = apiConnected
+      ? kvConnected
+        ? "Live Admin API connected. DC_ADMIN_KV/analytics status available."
+        : "Live Admin API connected. Durable KV bindings are incomplete."
+      : authWorks
+        ? "Admin auth is active. Live Admin API status is still unavailable."
+        : "Static/local fallback. No live admin API connected.";
+    sidebarStatusNote.innerHTML = `<span class="status-dot ${dotTone}" aria-hidden="true"></span>${escapeHtml(text)}`;
   }
 
   async function hydrateAnalyticsStatus(renderAfter = false) {
@@ -2596,6 +2620,7 @@ import {
       if (!response.ok || !payload?.ok) {
         analyticsStatusState.status = "fallback";
         analyticsStatusState.message = payload?.error || `Analytics API unavailable (${response.status}).`;
+        analyticsStatusState.payload = null;
       } else {
         const hasKvEvents = Number(payload?.pageVisits?.events || 0) > 0;
         analyticsStatusState.status = payload.configured || hasKvEvents ? "connected" : "not-configured";
@@ -2611,9 +2636,11 @@ import {
     } catch {
       analyticsStatusState.status = "fallback";
       analyticsStatusState.message = "Pages Functions are unavailable here. Live analytics cannot be loaded.";
+      analyticsStatusState.payload = null;
     } finally {
       stopTopbarLoader();
     }
+    updateSidebarApiStatus();
     if (renderAfter && activePageIs("analytics")) renderAnalytics();
   }
 
@@ -2730,9 +2757,9 @@ import {
       return;
     }
     if (action !== "purge-sample") return;
-    if (!window.confirm("Clear only analytics rows explicitly tagged sample, fallback, demo, mock, or test? Live page_visit_kv rows will be kept.")) return;
+    if (!window.confirm("Purge sample/fallback/demo/mock/test and untagged legacy analytics rows? Source-tagged live rows will be kept.")) return;
     analyticsStatusState.status = "saving";
-    analyticsStatusState.message = "Clearing explicitly tagged sample analytics rows...";
+    analyticsStatusState.message = "Purging ignored analytics rows...";
     renderAnalytics();
     try {
       const response = await fetch(adminAnalyticsEndpoint(), {
@@ -2748,7 +2775,7 @@ import {
         renderAnalytics();
         return;
       }
-      analyticsStatusState.message = `Cleared ${payload.result.removed || 0} sample/fallback analytics row(s).`;
+      analyticsStatusState.message = `Purged ${payload.result.removed || 0} ignored analytics row(s).`;
       await hydrateAnalyticsStatus(true);
     } catch {
       analyticsStatusState.status = "fallback";
@@ -3178,7 +3205,7 @@ import {
           .filter(Boolean)
           .join(" ");
         const href = route.disabled ? "javascript:void(0)" : route.path;
-        const icon = `./assets/icons/ui/${route.icon || route.fallbackIcon || "dashboard.svg"}`;
+        const icon = `/assets/icons/ui/${route.icon || route.fallbackIcon || "dashboard.svg"}`;
         return `
           <a class="${classes}" href="${href}" title="${escapeHtml(route.label)}" ${route.disabled ? 'aria-disabled="true"' : ""}>
             <span class="nav-icon" aria-hidden="true"><img class="ui-img-icon" src="${escapeHtml(icon)}" alt="" loading="lazy" /></span>
@@ -3478,7 +3505,7 @@ import {
     ZA: { lat: -30.5595, lon: 22.9375 }
   };
 
-  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"]);
+  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"]);
   const ANALYTICS_WINDOWS = Object.freeze([
     ["5m", "5M"],
     ["15m", "15M"],
@@ -3591,7 +3618,8 @@ import {
 
   function isLiveAnalyticsLocationRow(row) {
     const source = String(row?.source || "").trim();
-    return row?.live !== false && LIVE_ANALYTICS_SOURCES.has(source);
+    const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.recorded_at || row?.timestamp || "");
+    return row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp);
   }
 
   function markerCoordinate(row) {
@@ -3635,6 +3663,7 @@ import {
     const labels = {
       page_visit_kv: "Page-visit KV",
       cloudflare_graphql: "Cloudflare GraphQL",
+      streamsuites_event_mirror: "StreamSuites mirror",
       sample_fallback: "Sample fallback",
       stale_unverified: "Stale ignored"
     };
@@ -3777,7 +3806,7 @@ import {
     const overlay = document.getElementById("analytics-location-map-empty");
     if (overlay) {
       const hasEvents = Number(status?.pageVisits?.events || status?.location?.events || 0) > 0;
-      overlay.textContent = hasEvents ? "Live location rows do not have verified coordinates yet." : "No live page-visit location events captured yet.";
+      overlay.textContent = hasEvents ? "Live location rows do not have verified coordinates yet." : "No live page-visit location events captured for this window.";
       overlay.hidden = markers.length > 0;
     }
     ensureAnalyticsMap(markers);
@@ -3797,7 +3826,7 @@ import {
         <header class="panel-header">
           <div>
             <h2>Live Location Map</h2>
-            <p>${escapeHtml(hasEvents ? "Real interactive MapLibre map. Live page-visit and Cloudflare location rows only." : "No live page-visit location events captured yet.")}</p>
+            <p>${escapeHtml(hasEvents ? "Real interactive MapLibre map. Live page-visit and Cloudflare location rows only." : "No live page-visit location events captured for this window.")}</p>
           </div>
           <div class="panel-actions">
             ${badge(`Source: ${source}`, sourceTone(source))}
@@ -3816,7 +3845,7 @@ import {
           </div>
           <div class="analytics-map-shell">
             <div id="analytics-location-map" class="analytics-location-map" aria-label="Interactive live analytics location map"></div>
-            <div id="analytics-location-map-empty" class="analytics-map-empty" ${hasEvents ? "hidden" : ""}>No live page-visit location events captured yet.</div>
+            <div id="analytics-location-map-empty" class="analytics-map-empty" ${hasEvents ? "hidden" : ""}>No live page-visit location events captured for this window.</div>
             <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>
           </div>
         </div>
@@ -3829,7 +3858,7 @@ import {
     const status = analyticsStatusState.payload;
     const configured = Boolean(status?.configured);
     const missingConfig = Array.isArray(status?.missingConfig) ? status.missingConfig : [];
-    const sourceLabel = status?.source || (analyticsStatusState.status === "fallback" ? "local_function_unavailable" : "checking");
+    const statusSourceLabel = status?.source || (analyticsStatusState.status === "fallback" ? "local_function_unavailable" : "checking");
     const cloudflare = status?.cloudflare || {};
     const pageVisits = status?.pageVisits || {};
     const readiness = status?.readiness || {};
@@ -3849,17 +3878,24 @@ import {
     const sampleRouteRows = data.analytics.routeRows || [];
     const sampleRows = pageVisits.sampleRows || status?.location?.sampleRows || [];
     const staleRows = pageVisits.staleRows || status?.location?.staleRows || [];
+    const sourceBreakdown = status?.sourceBreakdown || {};
+    const warnings = Array.isArray(status?.warnings) ? status.warnings : [];
     const operationalRows = [
+      ["Admin API", status?.adminApiConnected ? "Connected" : analyticsStatusState.status === "fallback" ? "Disconnected" : "Checking"],
+      ["DC_ADMIN_KV", status?.kvConnected ? "Connected" : "Unavailable"],
+      ["Analytics ingest", status?.analyticsIngestConfigured ? "Configured" : "Unavailable"],
+      ["Cloudflare GraphQL", status?.cloudflareGraphqlConnected ? "Connected" : configured ? "Configured with errors/partial data" : "Unavailable"],
       ["Cloudflare configured", configured ? "Yes" : "No"],
       ["Selected window", selectedWindowLabel],
       ["Page-visit KV", pageVisits.configured ? "Connected" : "Unavailable"],
-      ["Source", sourceLabel],
+      ["Source", statusSourceLabel],
       ["Freshness", status?.sourceFreshnessState || "no_live_events"],
       ["Last refreshed", formatOperationalTimestamp(status?.lastChecked || analyticsStatusState.lastChecked)],
       ["Last live page-visit event", formatOperationalTimestamp(status?.lastLivePageVisitEventTime || pageVisits.lastLiveEventTime)],
       ["Last Cloudflare GraphQL query", formatOperationalTimestamp(status?.lastCloudflareQueryTime || cloudflare.lastQueryTime)],
       ["Cloudflare result", cloudflare.lastResult || "Not checked"],
       ["Page-visit storage", pageVisits.storage?.lastResult || "Not checked"],
+      ["Live rows", String(status?.liveRowsCount ?? liveLocationRows.length)],
       ["Sample/fallback rows isolated", String(sampleRows.length || 0)],
       ["Stale untagged rows held out", String(staleRows.length || 0)]
     ];
@@ -3876,8 +3912,16 @@ import {
              ${ANALYTICS_WINDOWS.map(([value, label]) => `<button class="button button-secondary analytics-window-button${value === selectedWindow ? " is-active" : ""}" type="button" data-analytics-action="window" data-analytics-window="${escapeHtml(value)}" aria-pressed="${value === selectedWindow ? "true" : "false"}">${escapeHtml(label)}</button>`).join("")}
            </div>
            <button class="button" type="button" data-analytics-action="refresh">Refresh analytics</button>
-           <button class="button button-secondary" type="button" data-analytics-action="purge-sample">Clear sample analytics rows</button>`
+           <button class="button button-secondary" type="button" data-analytics-action="purge-sample">Purge ignored analytics rows</button>`
         )}
+
+        ${warnings.length || sampleRows.length || staleRows.length
+          ? `<div class="analytics-warning-strip" role="status">
+              ${staleRows.length ? badge("Stale analytics rows ignored.", "warn") : ""}
+              ${sampleRows.length ? badge("Sample analytics rows ignored.", "warn") : ""}
+              ${warnings.map((warning) => badge(warning, "warn")).join("")}
+            </div>`
+          : ""}
 
         ${panel(
           "Source status",
@@ -3928,6 +3972,7 @@ import {
                 .map((name) => `<article class="card">${badge(readiness.cloudflare?.[name] ? "Configured" : "Missing", readiness.cloudflare?.[name] ? "success" : "warn")}<p><strong>${escapeHtml(name)}</strong></p></article>`)
                 .join("")}
               <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>DC_ADMIN_KV</strong></p></article>
+              <article class="card">${badge(status?.analyticsIngestConfigured ? "Configured" : "Missing", status?.analyticsIngestConfigured ? "success" : "warn")}<p><strong>Analytics ingest</strong></p></article>
               <article class="card">${badge("Cloudflare result", sourceTone(readiness.lastCloudflareQueryResult))}<p>${escapeHtml(readiness.lastCloudflareQueryResult || "Not checked")}</p></article>
               <article class="card">${badge("Page-visit result", sourceTone(readiness.lastPageVisitStorageResult))}<p>${escapeHtml(readiness.lastPageVisitStorageResult || "Not checked")}</p></article>
               ${Object.entries(status?.partialStatus || {}).map(([key, value]) => `<article class="card">${badge(value, sourceTone(value))}<p>${escapeHtml(key)}</p></article>`).join("")}
@@ -3935,6 +3980,32 @@ import {
                 .map((note) => `<article class="card">${badge("Note", "warn")}<p>${escapeHtml(note)}</p></article>`)
                 .join("")}
             </div>`
+          )}
+        </section>
+
+        <section class="grid analytics-grid">
+          ${panel(
+            "Source breakdown",
+            "Only source-tagged current live rows are eligible for the map and live tables.",
+            `<div class="grid grid-2">
+              ${Object.entries({
+                page_visit_kv: sourceBreakdown.page_visit_kv || 0,
+                streamsuites_event_mirror: sourceBreakdown.streamsuites_event_mirror || 0,
+                cloudflare_graphql: sourceBreakdown.cloudflare_graphql || 0,
+                sample_fallback: sourceBreakdown.sample_fallback || 0,
+                stale_legacy: sourceBreakdown.stale_legacy || 0
+              }).map(([source, count]) => storageStatusCard(sourceLabel(source), formatAnalyticsNumber(count), source === "sample_fallback" || source === "stale_legacy" ? "Ignored; not shown as live." : "Eligible only when live and inside the selected window.", count && source !== "sample_fallback" && source !== "stale_legacy" ? "success" : "warn")).join("")}
+            </div>`
+          )}
+          ${panel(
+            "Live window",
+            "Rows outside the selected window stay out of live rendering.",
+            descriptionRows([
+              ["Selected window", selectedWindowLabel],
+              ["Last live event", formatOperationalTimestamp(status?.lastLiveEventAt || pageVisits.lastLiveEventTime)],
+              ["Live rows", String(status?.liveRowsCount ?? liveLocationRows.length)],
+              ["Repair action", status?.repairActionsAvailable?.purgeNonLiveFallbackRows ? "Available for ignored rows" : "Unavailable without Admin KV"]
+            ])
           )}
         </section>
 
@@ -3985,11 +4056,11 @@ import {
 
         ${!hasLiveRows || sampleRows.length || staleRows.length
           ? panel(
-              "Demo fallback data",
-              "Sample fallback only — not live analytics",
+              "Ignored analytics rows",
+              "Sample/stale rows are diagnostics only — not live analytics",
               `<details class="demo-fallback">
                 <summary>Show isolated demo/stale rows</summary>
-                <p>These rows are excluded from the live map, tables, cards, and totals.</p>
+                <p>These rows are excluded from the live map, tables, cards, and live totals.</p>
                 <div class="table-wrap">
                 <table class="table">
                   <thead>

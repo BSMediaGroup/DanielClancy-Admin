@@ -64,6 +64,11 @@ function hasValidSecret(request, env) {
 
 function sanitizePayload(raw) {
   return {
+    eventId: cleanText(raw?.eventId || raw?.event_id || raw?.id, 160),
+    dedupeKey: cleanText(raw?.dedupeKey || raw?.dedupe_key, 220),
+    source: cleanText(raw?.source, 80) || "page_visit_kv",
+    live: raw?.live === true,
+    recordedAt: cleanText(raw?.recordedAt || raw?.recorded_at || raw?.timestamp, 80),
     surface: cleanText(raw?.surface, 80) || "danielclancy_public",
     page_path: cleanText(raw?.page_path || raw?.pagePath || raw?.path || raw?.route || "/", 500),
     page_url: cleanText(raw?.page_url || raw?.pageUrl || raw?.url, 500),
@@ -71,6 +76,11 @@ function sanitizePayload(raw) {
     session_id: cleanText(raw?.session_id || raw?.sessionId || raw?.visitor_session_id, 160),
     referrer: cleanText(raw?.referrer, 500),
     referrer_host: cleanText(raw?.referrer_host || raw?.referrerHost, 200),
+    country: cleanText(raw?.country || raw?.geo?.country || raw?.geo?.country_code, 80),
+    country_code: cleanText(raw?.country_code || raw?.countryCode || raw?.geo?.country_code, 20),
+    region: cleanText(raw?.region || raw?.geo?.region, 120),
+    regionCode: cleanText(raw?.regionCode || raw?.region_code || raw?.geo?.region_code, 40),
+    city: cleanText(raw?.city || raw?.geo?.city, 120),
     timezone: cleanText(raw?.timezone, 120),
     browser: cleanText(raw?.browser, 80),
     device: cleanText(raw?.device, 80),
@@ -99,9 +109,12 @@ export async function onRequest(context) {
       const stored = await storePageVisitEvent(context, sanitizePayload(payload));
       response = json({
         ok: true,
-        stored: Boolean(stored.ok),
+        stored: Boolean(stored.stored),
+        duplicate: Boolean(stored.duplicate),
         cityAvailable: Boolean(stored.cityAvailable),
         storageConfigured: Boolean(stored.configured),
+        source: stored.source || "page_visit_kv",
+        recordedAt: stored.recordedAt || "",
         error: stored.ok ? undefined : stored.error
       });
     }

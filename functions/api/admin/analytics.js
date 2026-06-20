@@ -571,9 +571,9 @@ function countryRows(pageVisit, cloudflare) {
     count: row.count ?? row.requests ?? row.visits ?? null,
     requests: row.requests ?? row.count ?? row.visits ?? null,
     sessions: row.sessions ?? null,
-    lastSeen: row.lastSeen || "",
+    lastSeen: row.lastSeen || (row.source === "cloudflare_graphql" ? cloudflare.queriedAt || "" : ""),
     source: row.source || "unavailable",
-    live: row.live !== false && ["page_visit_kv", "cloudflare_graphql"].includes(row.source),
+    live: row.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(row.source),
     precision: "country"
   }));
 }
@@ -588,10 +588,32 @@ function freshnessState(pageVisit, cloudflare) {
 }
 
 function liveLocationRows(cityRows, countryRowsList) {
-  return [...cityRows, ...countryRowsList].filter((row) => {
+  const validCityRows = cityRows.filter((row) => {
     const source = String(row?.source || "");
-    return row?.live !== false && ["page_visit_kv", "cloudflare_graphql"].includes(source);
+    const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.timestamp || "");
+    return row?.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(source) && Number.isFinite(timestamp);
   });
+  const cityCountries = new Set(validCityRows.map((row) => countryCode(row.country_code || row.country)).filter(Boolean));
+  const validCountryRows = countryRowsList.filter((row) => {
+    const source = String(row?.source || "");
+    const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.timestamp || "");
+    const code = countryCode(row.country_code || row.country);
+    return row?.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(source) && Number.isFinite(timestamp) && (!code || !cityCountries.has(code));
+  });
+  return [...validCityRows, ...validCountryRows];
+}
+
+function sourceBreakdown(pageVisit, cloudflare, liveRows = []) {
+  const countSource = (rows, source) => rows.filter((row) => String(row?.source || "") === source).length;
+  const sampleRows = pageVisit.sampleRows || [];
+  const staleRows = [...(pageVisit.staleRows || []), ...(pageVisit.unknownWindowRows || [])];
+  return {
+    page_visit_kv: countSource(liveRows, "page_visit_kv"),
+    streamsuites_event_mirror: countSource(liveRows, "streamsuites_event_mirror"),
+    cloudflare_graphql: countSource(liveRows, "cloudflare_graphql"),
+    sample_fallback: sampleRows.length,
+    stale_legacy: staleRows.length
+  };
 }
 
 export async function analyticsStatus(env, options = {}) {
@@ -604,6 +626,7 @@ export async function analyticsStatus(env, options = {}) {
   const cityRows = fallbackCityRows(pageVisit, cloudflare);
   const countries = countryRows(pageVisit, cloudflare);
   const liveRows = liveLocationRows(cityRows, countries);
+  const breakdown = sourceBreakdown(pageVisit, cloudflare, liveRows);
   const freshness = freshnessState(pageVisit, cloudflare);
   const zeroPageVisitEvents = !pageVisit.rollup.events;
   const partialStatus = {
@@ -624,6 +647,12 @@ export async function analyticsStatus(env, options = {}) {
     ...(pageVisit.unknownWindowRows?.length ? [`${pageVisit.unknownWindowRows.length} page-visit row(s) have no timestamp and were excluded from the selected live window.`] : []),
     "Secret values are never returned."
   ];
+  const warnings = [
+    ...(pageVisit.sampleRows?.length ? ["Sample analytics rows ignored."] : []),
+    ...((pageVisit.staleRows?.length || pageVisit.unknownWindowRows?.length) ? ["Stale analytics rows ignored."] : []),
+    ...(!pageVisit.configured ? ["DC_ADMIN_KV is unavailable; Admin analytics cannot show page-visit location rows."] : []),
+    ...(!cloudflare.configured ? ["Cloudflare GraphQL analytics is not configured."] : [])
+  ];
   const source = cloudflare.configured
     ? cloudflare.source
     : pageVisit.rollup.events
@@ -635,6 +664,20 @@ export async function analyticsStatus(env, options = {}) {
     source,
     window: selectedWindow,
     supportedWindows: Object.keys(ANALYTICS_WINDOWS),
+    adminApiConnected: true,
+    kvConnected: Boolean(pageVisit.configured),
+    cloudflareGraphqlConnected: Boolean(cloudflare.configured && !String(cloudflare.source || "").includes("error")),
+    analyticsIngestConfigured: hasEnv(env, "DANIELCLANCY_ANALYTICS_INGEST_SECRET") && Boolean(getKv(env)),
+    liveRowsCount: liveRows.length,
+    staleRowsCount: (pageVisit.staleRows || []).length + (pageVisit.unknownWindowRows || []).length,
+    sampleRowsCount: (pageVisit.sampleRows || []).length,
+    lastLiveEventAt: pageVisit.rollup.lastEventAt || "",
+    selectedWindow,
+    sourceBreakdown: breakdown,
+    warnings,
+    repairActionsAvailable: {
+      purgeNonLiveFallbackRows: Boolean(getKv(env))
+    },
     lastChecked: new Date().toISOString(),
     lastCloudflareQueryTime: cloudflare.queriedAt || "",
     lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",

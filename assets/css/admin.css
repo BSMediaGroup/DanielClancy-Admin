@@ -1053,6 +1053,12 @@ body.nav-hidden .sidebar {
   border-color: rgba(220, 143, 132, 0.38);
 }
 
+.analytics-warning-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -1099,6 +1105,11 @@ body.nav-hidden .sidebar {
 .status-dot-warn {
   background: var(--warn);
   box-shadow: 0 0 16px rgba(226, 193, 111, 0.42);
+}
+
+.status-dot-success {
+  background: var(--success);
+  box-shadow: 0 0 16px rgba(168, 208, 186, 0.46);
 }
 
 .table-wrap {

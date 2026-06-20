@@ -101,10 +101,10 @@
                 <span>${escapeHtml(session.provider || "manual")} / ${escapeHtml(session.account_type || "admin")}</span>
                 <span>${escapeHtml(session.admin_level || "admin")}</span>
               </div>
-              <a href="#/accounts"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/profile.svg')" aria-hidden="true"></span><span>Accounts</span></a>
-              <a href="#/settings"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/cog.svg')" aria-hidden="true"></span><span>Settings</span></a>
-              <a href="https://danielclancy.net" rel="noreferrer"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/public.svg')" aria-hidden="true"></span><span>Public Site</span></a>
-              <button type="button" data-auth-action="logout"><span class="ui-mask-icon" style="--icon-url: url('./assets/icons/ui/portal.svg')" aria-hidden="true"></span><span>Logout</span></button>
+              <a href="#/accounts"><span class="ui-mask-icon" style="--icon-url: url('/assets/icons/ui/profile.svg')" aria-hidden="true"></span><span>Accounts</span></a>
+              <a href="#/settings"><span class="ui-mask-icon" style="--icon-url: url('/assets/icons/ui/cog.svg')" aria-hidden="true"></span><span>Settings</span></a>
+              <a href="https://danielclancy.net" rel="noreferrer"><span class="ui-mask-icon" style="--icon-url: url('/assets/icons/ui/public.svg')" aria-hidden="true"></span><span>Public Site</span></a>
+              <button type="button" data-auth-action="logout"><span class="ui-mask-icon" style="--icon-url: url('/assets/icons/ui/portal.svg')" aria-hidden="true"></span><span>Logout</span></button>
             </div>
           </details>
         `;

@@ -1,5 +1,53 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Emergency Live Analytics Source Repair Milestone
+
+### Technical Notes
+
+- Hardened analytics row classification so live map/table rows require `live: true`, source `page_visit_kv`, `cloudflare_graphql`, or `streamsuites_event_mirror`, and a timestamp inside the selected `5M/15M/1H/24HRS` window.
+- Added Admin analytics diagnostics for Admin API, `DC_ADMIN_KV`, analytics ingest, Cloudflare GraphQL, live/stale/sample counts, `lastLiveEventAt`, `sourceBreakdown`, warnings, and repair-action availability.
+- Updated `POST /api/analytics/ingest/page-visit` to accept forwarded event IDs, source/live metadata, timestamps, and sanitized geo fields, and to report stored/duplicate/source/recordedAt metadata.
+- Added event dedupe in `analytics-store.js` by event ID/dedupe key with a conservative page/client/time fallback.
+- Changed purge behavior to remove sample/fallback/demo/mock/test and untagged legacy rows while keeping source-tagged live rows.
+- Replaced the static sidebar API note with live Admin API/KV status text driven by `/api/admin/status` and `/api/admin/analytics` results.
+- Fixed admin UI icon mask URLs to use root-relative `/assets/icons/ui/...` paths so browser validation no longer requests nonexistent `/assets/css/assets/icons/...` files.
+- Kept the real MapLibre dark map and local flag rendering. StreamSuites alert rules were not mutated.
+
+### Human-Readable Notes
+
+- Stale Los Angeles/Portland scaffold rows cannot render as live markers unless they are real, source-tagged, current events.
+- If Admin API/KV is unavailable, Analytics shows disconnected/empty live state instead of fake rows.
+- Canada, Brazil, Australia, UK, and other real geographies will appear only after matching live events are ingested or mirrored.
+
+### Files / Areas Changed
+
+- `index.html`
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/js/admin-app.js`
+- `functions/_shared/analytics-store.js`
+- `functions/api/admin/analytics.js`
+- `functions/api/analytics/ingest/page-visit.js`
+- `tests/analytics-ingest-and-assets.test.mjs`
+- `tests/analytics-map-flags.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Passed `node --check assets/js/admin-app.js`.
+- Passed `node --check assets/js/admin-auth.js`.
+- Passed `node --check functions/api/admin/analytics.js`.
+- Passed `node --check functions/_shared/analytics-store.js`.
+- Passed `node --check functions/api/analytics/ingest/page-visit.js`.
+- Passed focused analytics tests: `tests/analytics-helpers.test.mjs`, `tests/analytics-map-flags.test.mjs`, and `tests/analytics-ingest-and-assets.test.mjs`.
+- Passed MCP/Playwright browser validation against `http://127.0.0.1:5199/#/analytics` with mocked stale/sample, live Canada/Brazil/Australia/UK, and disconnected API scenarios.
+- Passed `git diff --check`; Git only reported line-ending normalization warnings for edited files.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages still needs live env/binding verification after deploy.
+
 ## Projects Editor Asset Preview Containment Milestone
 
 ### Technical Notes

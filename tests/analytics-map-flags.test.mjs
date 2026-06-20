@@ -49,7 +49,7 @@ test("analytics location rendering includes MapLibre, flags, freshness, and isol
   assert.ok(app.includes("Refresh analytics"));
   assert.ok(app.includes("Last live page-visit event"));
   assert.ok(app.includes("sourceFreshnessState"));
-  assert.ok(app.includes("Sample fallback only — not live analytics"));
+  assert.ok(app.includes("Sample/stale rows are diagnostics only — not live analytics"));
   assert.ok(app.includes("demo-fallback"));
   assert.equal(app.includes("<svg class=\"map-world\""), false);
 });
@@ -82,9 +82,9 @@ test("marker model separates sessions and requests and scales dot versus halo", 
 
 test("analytics marker generation excludes samples and rows without coordinates", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
-  assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql"])'));
+  assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"])'));
   assert.ok(app.includes("function isLiveAnalyticsLocationRow(row)"));
-  assert.ok(app.includes("row?.live !== false && LIVE_ANALYTICS_SOURCES.has(source)"));
+  assert.ok(app.includes("row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp)"));
   assert.ok(app.includes("buildLiveMapMarkers(liveLocationRows)"));
   assert.ok(app.includes("analyticsMapState.markers.forEach((marker) => marker.remove())"));
 });
@@ -103,7 +103,19 @@ test("country-only rows are country precision and popups include flag metadata",
 
 test("empty live data keeps real map state without sample markers", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
-  assert.ok(app.includes("No live page-visit location events captured yet."));
+  assert.ok(app.includes("No live page-visit location events captured for this window."));
   assert.ok(app.includes("map.easeTo({ center: [10, 18], zoom: 1.2"));
   assert.equal(app.includes("sampleMarkers"), false);
+});
+
+test("analytics UI exposes diagnostics and dynamic sidebar API status", async () => {
+  const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.ok(index.includes('id="sidebar-status-note"'));
+  assert.ok(app.includes("function updateSidebarApiStatus()"));
+  assert.ok(app.includes("Live Admin API connected. DC_ADMIN_KV/analytics status available."));
+  assert.ok(app.includes("Static/local fallback. No live admin API connected."));
+  assert.ok(app.includes("Source breakdown"));
+  assert.ok(app.includes("Stale analytics rows ignored."));
+  assert.ok(app.includes("Sample analytics rows ignored."));
 });
