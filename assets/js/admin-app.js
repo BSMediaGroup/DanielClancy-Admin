@@ -2600,8 +2600,12 @@ import {
     const dotTone = apiConnected && kvConnected ? "status-dot-success" : apiConnected ? "status-dot-warn" : "status-dot-warn";
     const text = apiConnected
       ? kvConnected
-        ? "Live Admin API connected. DC_ADMIN_KV/analytics status available."
-        : "Live Admin API connected. Durable KV bindings are incomplete."
+        ? analytics?.streamSuitesAnalyticsConnected
+          ? "Live Admin API connected. StreamSuites analytics connected; DC_ADMIN_KV status available."
+          : "Live Admin API connected. DC_ADMIN_KV/analytics status available."
+        : analytics?.streamSuitesAnalyticsConnected
+          ? "Live Admin API connected. StreamSuites analytics connected; durable KV bindings are incomplete."
+          : "Live Admin API connected. Durable KV bindings are incomplete."
       : authWorks
         ? "Admin auth is active. Live Admin API status is still unavailable."
         : "Static/local fallback. No live admin API connected.";
@@ -2624,11 +2628,15 @@ import {
       } else {
         const hasKvEvents = Number(payload?.pageVisits?.events || 0) > 0;
         analyticsStatusState.status = payload.configured || hasKvEvents ? "connected" : "not-configured";
-        analyticsStatusState.message = payload.configured
-          ? `Cloudflare Analytics ${payload.cloudflare?.source?.includes("error") ? "returned an error" : "queried"}; page-visit storage is ${payload.pageVisits?.configured ? "connected" : "unavailable"}.`
-          : hasKvEvents
-            ? "Cloudflare analytics is not configured, but page-visit KV analytics are available."
-            : "Cloudflare analytics not configured. No live analytics rows are shown until real source-tagged events exist.";
+        analyticsStatusState.message = payload.streamSuitesAnalyticsConnected
+          ? "StreamSuites live DanielClancy analytics connected."
+          : payload.streamSuitesAnalyticsConfigured
+            ? "StreamSuites analytics configured but unavailable; local/Cloudflare fallback is active."
+            : payload.configured
+              ? `Cloudflare Analytics ${payload.cloudflare?.source?.includes("error") ? "returned an error" : "queried"}; page-visit storage is ${payload.pageVisits?.configured ? "connected" : "unavailable"}.`
+              : hasKvEvents
+                ? "Cloudflare analytics is not configured, but page-visit KV analytics are available."
+                : "Cloudflare analytics not configured. No live analytics rows are shown until real source-tagged events exist.";
         analyticsStatusState.payload = payload;
         analyticsStatusState.selectedWindow = normalizeAnalyticsWindow(payload.window || selectedWindow);
         analyticsStatusState.lastChecked = payload.lastChecked || new Date().toISOString();
@@ -3419,7 +3427,7 @@ import {
 
   function sourceTone(source) {
     const text = String(source || "");
-    if (text.includes("cloudflare") || text.includes("page_visit")) return "success";
+    if (text.includes("cloudflare") || text.includes("page_visit") || text.includes("streamsuites")) return "success";
     return "warn";
   }
 
@@ -3505,7 +3513,7 @@ import {
     ZA: { lat: -30.5595, lon: 22.9375 }
   };
 
-  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"]);
+  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror", "streamsuites_live"]);
   const ANALYTICS_WINDOWS = Object.freeze([
     ["5m", "5M"],
     ["15m", "15M"],
@@ -3664,6 +3672,9 @@ import {
       page_visit_kv: "Page-visit KV",
       cloudflare_graphql: "Cloudflare GraphQL",
       streamsuites_event_mirror: "StreamSuites mirror",
+      streamsuites_live: "StreamSuites live",
+      streamsuites_configured: "StreamSuites configured",
+      streamsuites_connected: "StreamSuites connected",
       sample_fallback: "Sample fallback",
       stale_unverified: "Stale ignored"
     };
@@ -3882,6 +3893,7 @@ import {
     const warnings = Array.isArray(status?.warnings) ? status.warnings : [];
     const operationalRows = [
       ["Admin API", status?.adminApiConnected ? "Connected" : analyticsStatusState.status === "fallback" ? "Disconnected" : "Checking"],
+      ["StreamSuites analytics", status?.streamSuitesAnalyticsConnected ? "Connected" : status?.streamSuitesAnalyticsConfigured ? "Configured with errors" : "Not configured"],
       ["DC_ADMIN_KV", status?.kvConnected ? "Connected" : "Unavailable"],
       ["Analytics ingest", status?.analyticsIngestConfigured ? "Configured" : "Unavailable"],
       ["Cloudflare GraphQL", status?.cloudflareGraphqlConnected ? "Connected" : configured ? "Configured with errors/partial data" : "Unavailable"],
@@ -3904,8 +3916,9 @@ import {
         ${pageHeader(
           "Analytics",
           "Analytics",
-          `Live Cloudflare metrics and page-visit KV analytics are separated by source for the selected ${selectedWindowLabel} window.`,
-          `${badge(configured ? "Cloudflare Analytics connected" : "Cloudflare Analytics missing config", configured ? "success" : "warn")}
+          `StreamSuites live analytics, Admin KV, and Cloudflare metrics are separated by source for the selected ${selectedWindowLabel} window.`,
+          `${badge(status?.streamSuitesAnalyticsConnected ? "StreamSuites analytics connected" : status?.streamSuitesAnalyticsConfigured ? "StreamSuites analytics error" : "StreamSuites analytics not configured", status?.streamSuitesAnalyticsConnected ? "success" : "warn")}
+           ${badge(configured ? "Cloudflare Analytics connected" : "Cloudflare Analytics missing config", configured ? "success" : "warn")}
            ${badge(pageVisits.configured ? "Page-visit KV connected" : "Page-visit KV unavailable", pageVisits.configured ? "success" : "warn")}
            ${badge(`Freshness: ${status?.sourceFreshnessState || "no_live_events"}`, sourceTone(status?.sourceFreshnessState))}
            <div class="analytics-window-selector" role="group" aria-label="Analytics time window">
@@ -3927,6 +3940,7 @@ import {
           "Source status",
           analyticsStatusState.message,
           `<div class="grid grid-2">
+            ${storageStatusCard("StreamSuites live", status?.streamSuitesAnalyticsConnected ? "Connected" : status?.streamSuitesAnalyticsConfigured ? "Error" : "Not configured", status?.streamSuitesAnalyticsConnected ? `${formatAnalyticsNumber(status?.streamSuitesAnalytics?.rowCount || 0)} DanielClancy row(s) from StreamSuites.` : status?.streamSuitesAnalyticsConfigured ? "Configured but unavailable; local fallbacks are secondary." : "STREAMSUITES_ANALYTICS_URL is not configured.", status?.streamSuitesAnalyticsConnected ? "success" : "warn")}
             ${storageStatusCard("Cloudflare Analytics", configured ? "Connected" : "Missing config", configured ? `Last result: ${cloudflare.lastResult || "not checked"}` : `Missing: ${missingConfig.join(", ") || "unknown"}`, configured && !String(cloudflare.lastResult || "").includes("error") ? "success" : "warn")}
             ${storageStatusCard("Page-visit event storage", pageVisits.configured ? "Connected" : "Unavailable", pageVisits.configured ? `${formatAnalyticsNumber(pageVisits.events || 0)} event(s); ${formatAnalyticsNumber(pageVisits.cityEvents || 0)} with city detail` : "DC_ADMIN_KV is required for request.cf city rollups.", pageVisits.configured ? "success" : "warn")}
           </div>
@@ -3971,6 +3985,8 @@ import {
               ${(status?.requiredConfig || ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_ZONE_ID_DANIELCLANCY", "CLOUDFLARE_API_TOKEN_ANALYTICS"])
                 .map((name) => `<article class="card">${badge(readiness.cloudflare?.[name] ? "Configured" : "Missing", readiness.cloudflare?.[name] ? "success" : "warn")}<p><strong>${escapeHtml(name)}</strong></p></article>`)
                 .join("")}
+              <article class="card">${badge(readiness.streamSuitesAnalyticsConfigured ? "Configured" : "Missing", readiness.streamSuitesAnalyticsConfigured ? "success" : "warn")}<p><strong>STREAMSUITES_ANALYTICS_URL</strong></p></article>
+              <article class="card">${badge(status?.streamSuitesAnalyticsConnected ? "Connected" : "Disconnected", status?.streamSuitesAnalyticsConnected ? "success" : "warn")}<p><strong>StreamSuites live source</strong></p></article>
               <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>DC_ADMIN_KV</strong></p></article>
               <article class="card">${badge(status?.analyticsIngestConfigured ? "Configured" : "Missing", status?.analyticsIngestConfigured ? "success" : "warn")}<p><strong>Analytics ingest</strong></p></article>
               <article class="card">${badge("Cloudflare result", sourceTone(readiness.lastCloudflareQueryResult))}<p>${escapeHtml(readiness.lastCloudflareQueryResult || "Not checked")}</p></article>
@@ -3989,6 +4005,7 @@ import {
             "Only source-tagged current live rows are eligible for the map and live tables.",
             `<div class="grid grid-2">
               ${Object.entries({
+                streamsuites_live: sourceBreakdown.streamsuites_live || 0,
                 page_visit_kv: sourceBreakdown.page_visit_kv || 0,
                 streamsuites_event_mirror: sourceBreakdown.streamsuites_event_mirror || 0,
                 cloudflare_graphql: sourceBreakdown.cloudflare_graphql || 0,

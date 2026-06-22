@@ -22,6 +22,7 @@ const GRAPHQL_ENDPOINT = "https://api.cloudflare.com/client/v4/graphql";
 const RECENT_VISITS_KEY = "analytics:page_visits:recent";
 const ROLLUP_KEY = "analytics:page_visits:rollup";
 const RECENT_VISIT_LIMIT = 1000;
+const LIVE_LOCATION_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror", "streamsuites_live"]);
 
 function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -71,6 +72,11 @@ function cleanText(value, maxLength = 500) {
 function safeNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function positiveIntegerOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.round(number) : null;
 }
 
 function countryCode(value) {
@@ -175,6 +181,183 @@ function detectPlatform(userAgent) {
   if (/iPhone|iPad/i.test(ua)) return "iOS";
   if (/Linux/i.test(ua)) return "Linux";
   return "";
+}
+
+function configuredStreamSuitesAnalyticsUrl(env) {
+  const raw = cleanText(env?.STREAMSUITES_ANALYTICS_URL, 1000);
+  if (!raw) return "";
+  try {
+    return new URL(raw).toString();
+  } catch {
+    return "";
+  }
+}
+
+function normalizeStreamSuitesAnalyticsRow(row, selectedWindow) {
+  if (!row || typeof row !== "object") return null;
+  const recordedAt = cleanText(row.recordedAt || row.recorded_at || row.lastSeen || row.timestamp, 80);
+  const timestamp = Date.parse(recordedAt);
+  if (!Number.isFinite(timestamp)) return null;
+  const country = cleanText(row.country || row.country_name || row.country_code, 120);
+  const code = countryCode(row.country_code || row.countryCode || row.country || country);
+  if (!country && !code) return null;
+  const sessions = positiveIntegerOrNull(row.sessions);
+  const requests = positiveIntegerOrNull(row.requests ?? row.count ?? row.events) ?? 0;
+  if (requests <= 0 && sessions === null) return null;
+  return {
+    eventId: cleanText(row.eventId || row.event_id, 160),
+    source: "streamsuites_live",
+    live: true,
+    project: "danielclancy",
+    source_namespace: "danielclancy",
+    surface: cleanText(row.surface || "danielclancy_public", 120),
+    event_type: cleanText(row.event_type || "danielclancy_page_visit", 120),
+    city: cleanText(row.city, 120),
+    region: cleanText(row.region, 120),
+    regionCode: cleanText(row.regionCode || row.region_code, 40),
+    country,
+    country_code: code,
+    latitude: safeNumber(row.latitude ?? row.lat),
+    longitude: safeNumber(row.longitude ?? row.lon ?? row.lng),
+    precision: cleanText(row.precision || (row.city ? "city" : code ? "country" : "unknown"), 40),
+    sessions,
+    requests: requests || sessions || 0,
+    count: requests || sessions || 0,
+    recordedAt,
+    timestamp: recordedAt,
+    lastSeen: cleanText(row.lastSeen || recordedAt, 80),
+    page_path: cleanText(row.page_path || row.path, 500),
+    page_url: cleanText(row.page_url || row.url, 500),
+    referrer_host: cleanText(row.referrer_host || row.referrerHost, 200),
+    browser: cleanText(row.browser, 80),
+    device: cleanText(row.device, 80),
+    platform: cleanText(row.platform, 80),
+    window: selectedWindow
+  };
+}
+
+function countryRowsFromLiveRows(rows = []) {
+  const grouped = new Map();
+  for (const row of rows) {
+    const code = countryCode(row.country_code || row.country);
+    if (!code) continue;
+    const existing = grouped.get(code) || {
+      country: row.country || code,
+      country_code: code,
+      source: "streamsuites_live",
+      live: true,
+      precision: "country",
+      requests: 0,
+      sessions: null,
+      lastSeen: ""
+    };
+    existing.requests += positiveIntegerOrNull(row.requests ?? row.count) ?? 0;
+    const sessions = positiveIntegerOrNull(row.sessions);
+    if (sessions !== null) existing.sessions = (existing.sessions || 0) + sessions;
+    if (row.lastSeen && row.lastSeen > existing.lastSeen) existing.lastSeen = row.lastSeen;
+    grouped.set(code, existing);
+  }
+  return [...grouped.values()].sort((a, b) => (b.requests || 0) - (a.requests || 0));
+}
+
+function cityRowsFromLiveRows(rows = []) {
+  return rows
+    .filter((row) => row.city)
+    .map((row) => ({
+      ...row,
+      precision: row.precision || "city",
+      source: "streamsuites_live",
+      live: true
+    }))
+    .sort((a, b) => (b.requests || 0) - (a.requests || 0));
+}
+
+function topPagesFromLiveRows(rows = []) {
+  const grouped = new Map();
+  for (const row of rows) {
+    const path = row.page_path || row.page_url || "/";
+    const existing = grouped.get(path) || { path, title: "", source: "streamsuites_live", requests: 0, sessions: null, lastSeen: "" };
+    existing.requests += positiveIntegerOrNull(row.requests) ?? 0;
+    const sessions = positiveIntegerOrNull(row.sessions);
+    if (sessions !== null) existing.sessions = (existing.sessions || 0) + sessions;
+    if (row.lastSeen && row.lastSeen > existing.lastSeen) existing.lastSeen = row.lastSeen;
+    grouped.set(path, existing);
+  }
+  return [...grouped.values()].sort((a, b) => (b.requests || 0) - (a.requests || 0)).slice(0, 20);
+}
+
+function referrersFromLiveRows(rows = []) {
+  const grouped = new Map();
+  for (const row of rows) {
+    if (!row.referrer_host) continue;
+    const existing = grouped.get(row.referrer_host) || { host: row.referrer_host, source: "streamsuites_live", requests: 0, sessions: null, lastSeen: "" };
+    existing.requests += positiveIntegerOrNull(row.requests) ?? 0;
+    const sessions = positiveIntegerOrNull(row.sessions);
+    if (sessions !== null) existing.sessions = (existing.sessions || 0) + sessions;
+    if (row.lastSeen && row.lastSeen > existing.lastSeen) existing.lastSeen = row.lastSeen;
+    grouped.set(row.referrer_host, existing);
+  }
+  return [...grouped.values()].sort((a, b) => (b.requests || 0) - (a.requests || 0)).slice(0, 20);
+}
+
+export async function queryStreamSuitesAnalytics(env, fetchImpl = fetch, options = {}) {
+  const selectedWindow = normalizeAnalyticsWindow(options.window);
+  const endpoint = configuredStreamSuitesAnalyticsUrl(env);
+  if (!endpoint) {
+    return {
+      configured: false,
+      connected: false,
+      source: "streamsuites_not_configured",
+      rows: [],
+      sourceBreakdown: {},
+      warnings: []
+    };
+  }
+  const url = new URL(endpoint);
+  url.searchParams.set("window", selectedWindow);
+  const headers = { accept: "application/json" };
+  const secret = cleanText(env?.DANIELCLANCY_ANALYTICS_READ_SECRET, 500);
+  if (secret) headers.authorization = `Bearer ${secret}`;
+  try {
+    const response = await fetchImpl(url.toString(), {
+      method: "GET",
+      headers
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok !== true) {
+      return {
+        configured: true,
+        connected: false,
+        source: "streamsuites_error",
+        status: response.status,
+        rows: [],
+        sourceBreakdown: {},
+        warnings: ["StreamSuites analytics source returned an error."]
+      };
+    }
+    const rows = (Array.isArray(payload.rows) ? payload.rows : [])
+      .map((row) => normalizeStreamSuitesAnalyticsRow(row, selectedWindow))
+      .filter(Boolean);
+    return {
+      configured: true,
+      connected: true,
+      source: "streamsuites_live",
+      queriedAt: cleanText(payload.generatedAt || new Date().toISOString(), 80),
+      selectedWindow,
+      rows,
+      sourceBreakdown: payload.sourceBreakdown && typeof payload.sourceBreakdown === "object" ? payload.sourceBreakdown : {},
+      warnings: Array.isArray(payload.warnings) ? payload.warnings.map((item) => cleanText(item, 220)).filter(Boolean) : []
+    };
+  } catch {
+    return {
+      configured: true,
+      connected: false,
+      source: "streamsuites_error",
+      rows: [],
+      sourceBreakdown: {},
+      warnings: ["StreamSuites analytics source is configured but unreachable."]
+    };
+  }
 }
 
 export function buildPageVisitEvent(context, payload = {}) {
@@ -573,12 +756,17 @@ function countryRows(pageVisit, cloudflare) {
     sessions: row.sessions ?? null,
     lastSeen: row.lastSeen || (row.source === "cloudflare_graphql" ? cloudflare.queriedAt || "" : ""),
     source: row.source || "unavailable",
-    live: row.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(row.source),
+    live: row.live === true && LIVE_LOCATION_SOURCES.has(row.source),
     precision: "country"
   }));
 }
 
-function freshnessState(pageVisit, cloudflare) {
+function freshnessState(pageVisit, cloudflare, streamsuites) {
+  if (streamsuites?.rows?.length) {
+    const lastEvent = Date.parse(streamsuites.rows[0]?.lastSeen || streamsuites.queriedAt || "");
+    if (!Number.isFinite(lastEvent)) return "live_stale";
+    return Date.now() - lastEvent <= 60 * 60 * 1000 ? "live_recent" : "live_stale";
+  }
   if (pageVisit.sampleRows?.length && !pageVisit.rollup.events) return "sample_only";
   if (!pageVisit.rollup.events && cloudflare.source === "cloudflare_graphql_partial") return "cloudflare_partial";
   if (!pageVisit.rollup.events) return "no_live_events";
@@ -591,43 +779,49 @@ function liveLocationRows(cityRows, countryRowsList) {
   const validCityRows = cityRows.filter((row) => {
     const source = String(row?.source || "");
     const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.timestamp || "");
-    return row?.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(source) && Number.isFinite(timestamp);
+    return row?.live === true && LIVE_LOCATION_SOURCES.has(source) && Number.isFinite(timestamp);
   });
   const cityCountries = new Set(validCityRows.map((row) => countryCode(row.country_code || row.country)).filter(Boolean));
   const validCountryRows = countryRowsList.filter((row) => {
     const source = String(row?.source || "");
     const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.timestamp || "");
     const code = countryCode(row.country_code || row.country);
-    return row?.live === true && ["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"].includes(source) && Number.isFinite(timestamp) && (!code || !cityCountries.has(code));
+    return row?.live === true && LIVE_LOCATION_SOURCES.has(source) && Number.isFinite(timestamp) && (!code || !cityCountries.has(code));
   });
   return [...validCityRows, ...validCountryRows];
 }
 
-function sourceBreakdown(pageVisit, cloudflare, liveRows = []) {
+function sourceBreakdown(pageVisit, cloudflare, streamsuites, liveRows = []) {
   const countSource = (rows, source) => rows.filter((row) => String(row?.source || "") === source).length;
   const sampleRows = pageVisit.sampleRows || [];
   const staleRows = [...(pageVisit.staleRows || []), ...(pageVisit.unknownWindowRows || [])];
   return {
     page_visit_kv: countSource(liveRows, "page_visit_kv"),
     streamsuites_event_mirror: countSource(liveRows, "streamsuites_event_mirror"),
+    streamsuites_live: countSource(liveRows, "streamsuites_live"),
     cloudflare_graphql: countSource(liveRows, "cloudflare_graphql"),
     sample_fallback: sampleRows.length,
-    stale_legacy: staleRows.length
+    stale_legacy: staleRows.length,
+    streamsuites_configured: streamsuites?.configured ? 1 : 0,
+    streamsuites_connected: streamsuites?.connected ? 1 : 0
   };
 }
 
 export async function analyticsStatus(env, options = {}) {
   const selectedWindow = normalizeAnalyticsWindow(options.window);
   const missingConfig = REQUIRED_CONFIG.filter((key) => !hasEnv(env, key));
-  const [cloudflare, pageVisit] = await Promise.all([
+  const [streamsuites, cloudflare, pageVisit] = await Promise.all([
+    queryStreamSuitesAnalytics(env, options.fetchImpl, { window: selectedWindow }),
     queryCloudflareAnalytics(env, options.fetchImpl, { window: selectedWindow }),
     loadStoredPageVisitAnalytics(env, { window: selectedWindow })
   ]);
-  const cityRows = fallbackCityRows(pageVisit, cloudflare);
-  const countries = countryRows(pageVisit, cloudflare);
+  const streamSuitesRows = streamsuites.connected ? streamsuites.rows : [];
+  const streamSuitesCityRows = cityRowsFromLiveRows(streamSuitesRows);
+  const cityRows = streamSuitesCityRows.length ? streamSuitesCityRows : fallbackCityRows(pageVisit, cloudflare);
+  const countries = streamSuitesRows.length ? countryRowsFromLiveRows(streamSuitesRows) : countryRows(pageVisit, cloudflare);
   const liveRows = liveLocationRows(cityRows, countries);
-  const breakdown = sourceBreakdown(pageVisit, cloudflare, liveRows);
-  const freshness = freshnessState(pageVisit, cloudflare);
+  const breakdown = sourceBreakdown(pageVisit, cloudflare, streamsuites, liveRows);
+  const freshness = freshnessState(pageVisit, cloudflare, streamsuites);
   const zeroPageVisitEvents = !pageVisit.rollup.events;
   const partialStatus = {
     pages: cloudflare.sectionStatus?.pages?.status || "unavailable",
@@ -638,6 +832,9 @@ export async function analyticsStatus(env, options = {}) {
     pageVisitCityDetail: pageVisit.rollup.cityEvents ? "available" : zeroPageVisitEvents ? "no_events" : "unavailable"
   };
   const notes = [
+    ...(streamsuites.configured
+      ? [streamsuites.connected ? "StreamSuites analytics source connected." : "StreamSuites analytics source configured but unavailable."]
+      : ["StreamSuites analytics source is not configured."]),
     ...(cloudflare.notes || []),
     ...(pageVisit.rollup.cityEvents
       ? [`City detail is available from ${pageVisit.rollup.cityEvents} page-visit event(s).`]
@@ -650,28 +847,33 @@ export async function analyticsStatus(env, options = {}) {
   const warnings = [
     ...(pageVisit.sampleRows?.length ? ["Sample analytics rows ignored."] : []),
     ...((pageVisit.staleRows?.length || pageVisit.unknownWindowRows?.length) ? ["Stale analytics rows ignored."] : []),
+    ...(!streamsuites.connected && streamsuites.configured ? ["StreamSuites analytics source unavailable; falling back to local/Cloudflare sources."] : []),
     ...(!pageVisit.configured ? ["DC_ADMIN_KV is unavailable; Admin analytics cannot show page-visit location rows."] : []),
     ...(!cloudflare.configured ? ["Cloudflare GraphQL analytics is not configured."] : [])
   ];
-  const source = cloudflare.configured
+  const source = streamsuites.connected
+    ? "streamsuites_live"
+    : cloudflare.configured
     ? cloudflare.source
     : pageVisit.rollup.events
       ? "page_visit_kv"
       : "unavailable";
   return {
     ok: true,
-    configured: missingConfig.length === 0,
+    configured: streamsuites.configured || missingConfig.length === 0,
     source,
     window: selectedWindow,
     supportedWindows: Object.keys(ANALYTICS_WINDOWS),
     adminApiConnected: true,
     kvConnected: Boolean(pageVisit.configured),
+    streamSuitesAnalyticsConfigured: Boolean(streamsuites.configured),
+    streamSuitesAnalyticsConnected: Boolean(streamsuites.connected),
     cloudflareGraphqlConnected: Boolean(cloudflare.configured && !String(cloudflare.source || "").includes("error")),
     analyticsIngestConfigured: hasEnv(env, "DANIELCLANCY_ANALYTICS_INGEST_SECRET") && Boolean(getKv(env)),
     liveRowsCount: liveRows.length,
     staleRowsCount: (pageVisit.staleRows || []).length + (pageVisit.unknownWindowRows || []).length,
     sampleRowsCount: (pageVisit.sampleRows || []).length,
-    lastLiveEventAt: pageVisit.rollup.lastEventAt || "",
+    lastLiveEventAt: streamSuitesRows[0]?.lastSeen || pageVisit.rollup.lastEventAt || "",
     selectedWindow,
     sourceBreakdown: breakdown,
     warnings,
@@ -680,14 +882,14 @@ export async function analyticsStatus(env, options = {}) {
     },
     lastChecked: new Date().toISOString(),
     lastCloudflareQueryTime: cloudflare.queriedAt || "",
-    lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",
+    lastLivePageVisitEventTime: streamSuitesRows[0]?.lastSeen || pageVisit.rollup.lastEventAt || "",
     sourceFreshnessState: freshness,
     totals: {
       ...cloudflare.totals,
-      pageVisitEvents: pageVisit.rollup.events || 0
+      pageVisitEvents: streamSuitesRows.reduce((total, row) => total + (positiveIntegerOrNull(row.requests) ?? 0), 0) || pageVisit.rollup.events || 0
     },
-    topPages: pageVisit.rollup.topPages.length ? pageVisit.rollup.topPages : cloudflare.topPages || [],
-    referrers: pageVisit.rollup.referrers.length ? pageVisit.rollup.referrers : cloudflare.referrers || [],
+    topPages: streamSuitesRows.length ? topPagesFromLiveRows(streamSuitesRows) : pageVisit.rollup.topPages.length ? pageVisit.rollup.topPages : cloudflare.topPages || [],
+    referrers: streamSuitesRows.length ? referrersFromLiveRows(streamSuitesRows) : pageVisit.rollup.referrers.length ? pageVisit.rollup.referrers : cloudflare.referrers || [],
     countries,
     regions: pageVisit.rollup.regions.length ? pageVisit.rollup.regions : cloudflare.regions || [],
     cities: cityRows,
@@ -700,6 +902,14 @@ export async function analyticsStatus(env, options = {}) {
       lastQueryTime: cloudflare.queriedAt || "",
       errors: cloudflare.errors || [],
       windows: cloudflare.windows || null
+    },
+    streamSuitesAnalytics: {
+      configured: Boolean(streamsuites.configured),
+      connected: Boolean(streamsuites.connected),
+      source: streamsuites.source,
+      lastResult: streamsuites.connected ? "connected" : streamsuites.configured ? "error" : "not_configured",
+      lastQueryTime: streamsuites.queriedAt || "",
+      rowCount: streamSuitesRows.length
     },
     partialStatus,
     pageVisits: {
@@ -714,13 +924,13 @@ export async function analyticsStatus(env, options = {}) {
       sampleRows: pageVisit.sampleRows || [],
       staleRows: pageVisit.staleRows || [],
       unknownWindowRows: pageVisit.unknownWindowRows || [],
-      lastLiveEventTime: pageVisit.rollup.lastEventAt || "",
+      lastLiveEventTime: streamSuitesRows[0]?.lastSeen || pageVisit.rollup.lastEventAt || "",
       emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
     location: {
-      source: pageVisit.rollup.events ? "page_visit_kv" : cloudflare.configured ? cloudflare.source : "unavailable",
-      events: pageVisit.rollup.events || 0,
-      eventCount: pageVisit.rollup.events || 0,
+      source: streamSuitesRows.length ? "streamsuites_live" : pageVisit.rollup.events ? "page_visit_kv" : cloudflare.configured ? cloudflare.source : "unavailable",
+      events: streamSuitesRows.reduce((total, row) => total + (positiveIntegerOrNull(row.requests) ?? 0), 0) || pageVisit.rollup.events || 0,
+      eventCount: streamSuitesRows.reduce((total, row) => total + (positiveIntegerOrNull(row.requests) ?? 0), 0) || pageVisit.rollup.events || 0,
       cityEvents: pageVisit.rollup.cityEvents || 0,
       cityEventCount: pageVisit.rollup.cityEvents || 0,
       countryOnlyEvents: pageVisit.rollup.countryOnlyEvents || 0,
@@ -730,16 +940,18 @@ export async function analyticsStatus(env, options = {}) {
       liveLocationRows: liveRows,
       sampleRows: pageVisit.sampleRows || [],
       staleRows: pageVisit.staleRows || [],
-      lastUpdated: pageVisit.rollup.lastEventAt || pageVisit.storage?.updatedAt || cloudflare.queriedAt || "",
+      lastUpdated: streamSuitesRows[0]?.lastSeen || pageVisit.rollup.lastEventAt || pageVisit.storage?.updatedAt || cloudflare.queriedAt || "",
       freshnessState: freshness,
       emptyMessage: zeroPageVisitEvents ? "No page-visit events have been captured yet." : ""
     },
     readiness: {
       cloudflare: Object.fromEntries(REQUIRED_CONFIG.map((key) => [key, hasEnv(env, key)])),
       dcAdminKvConfigured: Boolean(getKv(env)),
+      streamSuitesAnalyticsConfigured: Boolean(streamsuites.configured),
+      streamSuitesAnalyticsConnected: Boolean(streamsuites.connected),
       lastCloudflareQueryResult: cloudflare.source,
       lastCloudflareQueryTime: cloudflare.queriedAt || "",
-      lastLivePageVisitEventTime: pageVisit.rollup.lastEventAt || "",
+      lastLivePageVisitEventTime: streamSuitesRows[0]?.lastSeen || pageVisit.rollup.lastEventAt || "",
       sourceFreshnessState: freshness,
       lastPageVisitStorageResult: pageVisit.storage.lastResult
     },

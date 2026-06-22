@@ -4,12 +4,26 @@ import test from "node:test";
 import {
   aggregatePageVisitEvents,
   analyticsStatus,
+  queryStreamSuitesAnalytics,
   queryCloudflareAnalytics
 } from "../functions/api/admin/analytics.js";
 import {
   filterPageVisitEventsForWindow,
   normalizeAnalyticsWindow
 } from "../functions/_shared/analytics-store.js";
+
+function memoryKv() {
+  const store = new Map();
+  return {
+    store,
+    async get(key) {
+      return store.get(key) || null;
+    },
+    async put(key, value) {
+      store.set(key, value);
+    }
+  };
+}
 
 test("missing Cloudflare analytics env returns configured false", async () => {
   const result = await queryCloudflareAnalytics({});
@@ -193,4 +207,101 @@ test("analytics readiness exposes configured flags only", async () => {
   assert.equal(result.readiness.dcAdminKvConfigured, true);
   assert.equal(result.window, "24h");
   assert.equal(JSON.stringify(result).includes(token), false);
+});
+
+test("StreamSuites analytics URL forwards selected window and normalizes live rows", async () => {
+  const secret = "read-secret-value";
+  const calls = [];
+  const result = await queryStreamSuitesAnalytics(
+    {
+      STREAMSUITES_ANALYTICS_URL: "https://api.streamsuites.app/api/analytics/danielclancy",
+      DANIELCLANCY_ANALYTICS_READ_SECRET: secret
+    },
+    async (url, init) => {
+      calls.push({ url, headers: init.headers });
+      return new Response(JSON.stringify({
+        ok: true,
+        source: "streamsuites_live",
+        generatedAt: "2026-06-22T00:00:00.000Z",
+        rows: [
+          {
+            eventId: "ca-1",
+            source: "streamsuites_live",
+            project: "danielclancy",
+            source_namespace: "danielclancy",
+            surface: "danielclancy_public",
+            event_type: "danielclancy_page_visit",
+            city: "Toronto",
+            region: "Ontario",
+            country: "Canada",
+            country_code: "CA",
+            latitude: 43.6532,
+            longitude: -79.3832,
+            sessions: 2,
+            requests: 3,
+            recordedAt: "2026-06-22T00:00:00.000Z",
+            lastSeen: "2026-06-22T00:00:00.000Z",
+            page_path: "/work"
+          }
+        ],
+        sourceBreakdown: { streamsuites_live: 1 }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    },
+    { window: "15m" }
+  );
+
+  assert.equal(result.connected, true);
+  assert.equal(result.rows[0].source, "streamsuites_live");
+  assert.equal(result.rows[0].live, true);
+  assert.equal(result.rows[0].city, "Toronto");
+  assert.equal(result.rows[0].sessions, 2);
+  assert.equal(result.rows[0].requests, 3);
+  assert.equal(new URL(calls[0].url).searchParams.get("window"), "15m");
+  assert.equal(calls[0].headers.authorization, `Bearer ${secret}`);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+  assert.equal(JSON.stringify(result).includes("api.streamsuites.app"), false);
+});
+
+test("analytics status prefers StreamSuites live rows and keeps stale LA Portland local rows out of live markers", async () => {
+  const kv = memoryKv();
+  kv.store.set("analytics:page_visits:recent", JSON.stringify({
+    items: [
+      { source: "sample_fallback", live: false, city: "Los Angeles", country: "US", timestamp: "2026-06-18T00:00:00.000Z" },
+      { city: "Portland", country: "US", timestamp: "2026-06-18T00:00:01.000Z" }
+    ]
+  }));
+
+  const now = "2026-06-22T00:00:00.000Z";
+  const result = await analyticsStatus(
+    {
+      STREAMSUITES_ANALYTICS_URL: "https://api.streamsuites.app/api/analytics/danielclancy",
+      DANIELCLANCY_ANALYTICS_READ_SECRET: "secret",
+      DC_ADMIN_KV: kv
+    },
+    {
+      window: "24h",
+      fetchImpl: async () => new Response(JSON.stringify({
+        ok: true,
+        source: "streamsuites_live",
+        generatedAt: now,
+        rows: [
+          { city: "Toronto", region: "Ontario", country: "Canada", country_code: "CA", latitude: 43.6532, longitude: -79.3832, sessions: 2, requests: 3, recordedAt: now, lastSeen: now, page_path: "/canada" },
+          { city: "Sao Paulo", region: "Sao Paulo", country: "Brazil", country_code: "BR", latitude: -23.5505, longitude: -46.6333, sessions: 1, requests: 2, recordedAt: now, lastSeen: now, page_path: "/brazil" },
+          { city: "Sydney", region: "NSW", country: "Australia", country_code: "AU", latitude: -33.8688, longitude: 151.2093, sessions: 1, requests: 1, recordedAt: now, lastSeen: now, page_path: "/australia" },
+          { city: "London", region: "England", country: "United Kingdom", country_code: "GB", latitude: 51.5072, longitude: -0.1276, sessions: 4, requests: 5, recordedAt: now, lastSeen: now, page_path: "/uk" }
+        ],
+        sourceBreakdown: { streamsuites_live: 4 }
+      }), { status: 200, headers: { "content-type": "application/json" } })
+    }
+  );
+
+  assert.equal(result.source, "streamsuites_live");
+  assert.equal(result.streamSuitesAnalyticsConnected, true);
+  assert.equal(result.sourceBreakdown.streamsuites_live, 4);
+  assert.equal(result.sourceBreakdown.sample_fallback, 1);
+  assert.equal(result.sourceBreakdown.stale_legacy, 1);
+  assert.deepEqual(result.location.liveLocationRows.map((row) => row.country_code).sort(), ["AU", "BR", "CA", "GB"]);
+  assert.equal(result.location.liveLocationRows.some((row) => row.city === "Los Angeles" || row.city === "Portland"), false);
+  assert.equal(result.cities.find((row) => row.country_code === "CA").city, "Toronto");
+  assert.equal(JSON.stringify(result).includes("secret"), false);
 });

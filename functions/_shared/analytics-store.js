@@ -1,7 +1,7 @@
 const RECENT_VISITS_KEY = "analytics:page_visits:recent";
 const ROLLUP_KEY = "analytics:page_visits:rollup";
 const RECENT_VISIT_LIMIT = 1000;
-const LIVE_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"]);
+const LIVE_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror", "streamsuites_live"]);
 const SAMPLE_SOURCES = new Set(["sample", "sample_fallback", "fallback", "demo", "mock", "test", "local_mock"]);
 export const ANALYTICS_WINDOWS = Object.freeze({
   "5m": 5 * 60 * 1000,

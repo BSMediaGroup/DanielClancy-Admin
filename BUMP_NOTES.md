@@ -1,5 +1,36 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## StreamSuites Live Analytics Primary Source Milestone
+
+### Technical Notes
+
+- Added server-side StreamSuites live analytics consumption through `STREAMSUITES_ANALYTICS_URL`, forwarding the selected `5m`, `15m`, `1h`, or `24h` window and `DANIELCLANCY_ANALYTICS_READ_SECRET` only from the Cloudflare Function environment.
+- Updated Analytics source priority to prefer `streamsuites_live`, then source-tagged Admin KV page visits, then Cloudflare GraphQL aggregate metrics. Sample/fallback/demo/mock/test rows and untagged legacy rows remain quarantined and are not live map markers.
+- Added `streamsuites_live` to the live row model, source breakdown, readiness diagnostics, map/table rows, top pages, referrers, and freshness status without exposing the configured StreamSuites URL or read secret to the browser response.
+- Updated the sidebar/API status logic so a connected Admin API no longer reports “Static foundation. No live admin API connected.” when API status and StreamSuites analytics are connected.
+- Documented `STREAMSUITES_ANALYTICS_URL`, `DANIELCLANCY_ANALYTICS_READ_SECRET`, source priority, StreamSuites live source behavior, stale local analytics quarantine, and the sidebar status fix in `README.md` and `.env.example`.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin now uses the StreamSuites runtime/API DanielClancy analytics feed as the primary live source when configured.
+- Stale local Los Angeles/Portland rows cannot appear as live rows unless StreamSuites returns them as current DanielClancy events.
+- Canada, Brazil, Australia, UK, and other real StreamSuites-returned locations render through the existing MapLibre dark map using the same dot/session and halo/request semantics.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+- `BUMP_NOTES.md`
+- `assets/js/admin-app.js`
+- `functions/_shared/analytics-store.js`
+- `functions/api/admin/analytics.js`
+- `tests/analytics-helpers.test.mjs`
+- `tests/analytics-map-flags.test.mjs`
+
+### Validation Notes
+
+- Validation performed: `node --check assets/js/admin-app.js`; `node --check assets/js/admin-auth.js`; `node --check functions/api/admin/analytics.js`; `node --check functions/_shared/analytics-store.js`; `node --test tests/analytics-helpers.test.mjs`; `node --test tests/analytics-ingest-and-assets.test.mjs`; `node --test tests/analytics-map-flags.test.mjs`; `git diff --check`; Playwright browser validation against the Analytics page with mocked StreamSuites Canada/Brazil/Australia/UK live rows and stale Los Angeles/Portland rows held out of live markers.
+
 ## Emergency Live Analytics Source Repair Milestone
 
 ### Technical Notes

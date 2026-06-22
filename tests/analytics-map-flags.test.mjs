@@ -82,7 +82,7 @@ test("marker model separates sessions and requests and scales dot versus halo", 
 
 test("analytics marker generation excludes samples and rows without coordinates", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
-  assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror"])'));
+  assert.ok(app.includes('LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror", "streamsuites_live"])'));
   assert.ok(app.includes("function isLiveAnalyticsLocationRow(row)"));
   assert.ok(app.includes("row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp)"));
   assert.ok(app.includes("buildLiveMapMarkers(liveLocationRows)"));
