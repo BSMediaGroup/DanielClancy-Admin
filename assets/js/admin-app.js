@@ -220,6 +220,7 @@ import {
   const analyticsMapState = {
     map: null,
     markers: [],
+    markerModels: [],
     ready: false,
     pendingMarkers: [],
     lastSignature: ""
@@ -3578,6 +3579,7 @@ import {
 
   function requestCount(row) {
     const value = row?.requests ?? row?.count ?? row?.events ?? row?.visits ?? null;
+    if (value === null || value === undefined || value === "") return null;
     const number = Number(value);
     return Number.isFinite(number) ? Math.max(0, Math.round(number)) : null;
   }
@@ -3603,11 +3605,25 @@ import {
     return `--analytics-marker-dot:${dotSize.toFixed(2)}px;--analytics-marker-halo:${haloSize.toFixed(2)}px;`;
   }
 
+  function isValidMarkerCoordinate(coord) {
+    const lat = Number(coord?.lat);
+    const lon = Number(coord?.lon);
+    return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  }
+
+  function normalizedMarkerCoordinate(latValue, lonValue, coordinateSource = "source") {
+    const lat = Number(latValue);
+    const lon = Number(lonValue);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const coord = { lat, lon, coordinateSource };
+    return isValidMarkerCoordinate(coord) ? coord : null;
+  }
+
   function cityCoordinate(row) {
     const explicitLat = Number(row?.lat ?? row?.latitude);
     const explicitLon = Number(row?.lng ?? row?.lon ?? row?.longitude);
     if (Number.isFinite(explicitLat) && Number.isFinite(explicitLon)) {
-      return { lat: explicitLat, lon: explicitLon, coordinateSource: row?.coordinateSource || "source" };
+      return normalizedMarkerCoordinate(explicitLat, explicitLon, row?.coordinateSource || "source");
     }
     const city = String(row?.city || "").trim().toLowerCase();
     const country = String(row?.country || "").trim().toLowerCase();
@@ -3615,13 +3631,13 @@ import {
     const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
     if (!city) return null;
     const coord = CITY_COORDINATES[`${city}|${region}|${code}`] || CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[`${city}|${code}`] || null;
-    return coord ? { ...coord, coordinateSource: "lookup" } : null;
+    return coord ? normalizedMarkerCoordinate(coord.lat, coord.lon, "lookup") : null;
   }
 
   function countryCoordinate(row) {
     const code = countryCode(row?.country_code || row?.countryCode || row?.country);
     const coord = COUNTRY_CENTROIDS[code];
-    return coord ? { ...coord, coordinateSource: "country_centroid" } : null;
+    return coord ? normalizedMarkerCoordinate(coord.lat, coord.lon, "country_centroid") : null;
   }
 
   function isLiveAnalyticsLocationRow(row) {
@@ -3637,11 +3653,101 @@ import {
     return null;
   }
 
+  function liveRowCoordinate(row) {
+    const coord = markerCoordinate(row);
+    return isValidMarkerCoordinate(coord) ? coord : null;
+  }
+
+  function roundedCoordinatePart(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(4) : "";
+  }
+
+  function markerGroupKey(row, coord) {
+    const project = String(row?.project || row?.source_namespace || "danielclancy").trim().toLowerCase();
+    const source = String(row?.source || "unknown").trim().toLowerCase();
+    const precision = String(row?.precision || (row?.city ? "city" : "country")).trim().toLowerCase();
+    const city = String(row?.city || "").trim().toLowerCase();
+    const region = String(row?.region || row?.region_code || "").trim().toLowerCase();
+    const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
+    return [
+      project,
+      source,
+      precision,
+      city,
+      region,
+      code,
+      roundedCoordinatePart(coord?.lon),
+      roundedCoordinatePart(coord?.lat)
+    ].join("|");
+  }
+
+  function rowSessionId(row) {
+    return String(row?.session_id ?? row?.sessionId ?? "").trim();
+  }
+
+  function rowEventCount(row) {
+    const requests = requestCount(row);
+    if (requests !== null) return requests;
+    const timestamp = row?.lastSeen || row?.recordedAt || row?.recorded_at || row?.timestamp || "";
+    return Number.isFinite(Date.parse(timestamp)) ? 1 : 0;
+  }
+
+  function latestTimestamp(left, right) {
+    const leftTime = Date.parse(left || "");
+    const rightTime = Date.parse(right || "");
+    if (!Number.isFinite(leftTime)) return right || left || "";
+    if (!Number.isFinite(rightTime)) return left || right || "";
+    return rightTime > leftTime ? right : left;
+  }
+
+  function aggregateMarkerRows(rows) {
+    const aggregate = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      if (!isLiveAnalyticsLocationRow(row)) return;
+      const coord = liveRowCoordinate(row);
+      if (!coord) return;
+      const key = markerGroupKey(row, coord);
+      let model = aggregate.get(key);
+      if (!model) {
+        model = {
+          key,
+          row: { ...row },
+          coord,
+          requests: 0,
+          events: 0,
+          sessionIds: new Set(),
+          sessionTotal: 0,
+          hasSessionCount: false
+        };
+        aggregate.set(key, model);
+      }
+      const requests = rowEventCount(row);
+      model.requests += Math.max(0, requests);
+      model.events += 1;
+      const sessionId = rowSessionId(row);
+      if (sessionId) {
+        model.sessionIds.add(sessionId);
+      } else {
+        const sessions = sessionCount(row);
+        if (sessions !== null) {
+          model.sessionTotal += sessions;
+          model.hasSessionCount = true;
+        }
+      }
+      model.row.lastSeen = latestTimestamp(model.row.lastSeen || model.row.recordedAt || model.row.recorded_at || model.row.timestamp, row.lastSeen || row.recordedAt || row.recorded_at || row.timestamp);
+      model.row.requests = model.requests;
+      model.row.count = model.requests;
+      model.row.events = model.events;
+      model.row.sessions = model.sessionIds.size ? model.sessionIds.size : model.hasSessionCount ? model.sessionTotal : null;
+      model.row.aggregatedRows = model.events;
+      model.row.aggregatedLocationKey = key;
+    });
+    return Array.from(aggregate.values()).sort((left, right) => left.key.localeCompare(right.key));
+  }
+
   function buildLiveMapMarkers(rows) {
-    return (Array.isArray(rows) ? rows : [])
-      .filter(isLiveAnalyticsLocationRow)
-      .map((row) => ({ row, coord: markerCoordinate(row) }))
-      .filter(({ coord }) => coord && Number.isFinite(coord.lat) && Number.isFinite(coord.lon));
+    return aggregateMarkerRows(rows);
   }
 
   function mapStyleConfig() {
@@ -3729,6 +3835,7 @@ import {
       analyticsMapState.map.remove();
       analyticsMapState.map = null;
       analyticsMapState.markers = [];
+      analyticsMapState.markerModels = [];
       analyticsMapState.ready = false;
       analyticsMapState.lastSignature = "";
     }
@@ -3768,14 +3875,18 @@ import {
   function updateAnalyticsMapMarkers(markers) {
     const map = analyticsMapState.map;
     if (!map) return;
-    const signature = JSON.stringify(markers.map(({ row, coord }) => [row.city, row.region, row.country_code || row.country, row.source, row.precision, sessionCount(row), requestCount(row), coord.lat, coord.lon]));
+    const markerModels = Array.isArray(markers) ? markers : [];
+    const signature = JSON.stringify(markerModels.map(({ key, row, coord }) => [key, sessionCount(row), requestCount(row), coord.lon, coord.lat]));
     if (signature === analyticsMapState.lastSignature) return;
     analyticsMapState.lastSignature = signature;
     analyticsMapState.markers.forEach((marker) => marker.remove());
-    analyticsMapState.markers = markers.map(({ row, coord }) => {
+    analyticsMapState.markers = [];
+    analyticsMapState.markerModels = markerModels;
+    analyticsMapState.markers = markerModels.map(({ key, row, coord }) => {
       const markerEl = document.createElement("button");
       markerEl.type = "button";
       markerEl.className = `analytics-map-marker analytics-map-marker-${String(row.precision || "unknown").toLowerCase()}`;
+      markerEl.setAttribute("data-location-key", key);
       markerEl.setAttribute("data-sessions", sessionCount(row) === null ? "unavailable" : String(sessionCount(row)));
       markerEl.setAttribute("data-requests", requestCount(row) === null ? "unavailable" : String(requestCount(row)));
       markerEl.setAttribute("style", markerStyle(row));
@@ -3791,12 +3902,12 @@ import {
       return new window.maplibregl.Marker({ element: markerEl, anchor: "center" }).setLngLat([coord.lon, coord.lat]).setPopup(popup).addTo(map);
     });
 
-    if (markers.length > 1) {
+    if (markerModels.length > 1) {
       const bounds = new window.maplibregl.LngLatBounds();
-      markers.forEach(({ coord }) => bounds.extend([coord.lon, coord.lat]));
+      markerModels.forEach(({ coord }) => bounds.extend([coord.lon, coord.lat]));
       map.fitBounds(bounds, { padding: 58, maxZoom: 6, duration: 350 });
-    } else if (markers.length === 1) {
-      const [{ row, coord }] = markers;
+    } else if (markerModels.length === 1) {
+      const [{ row, coord }] = markerModels;
       map.easeTo({
         center: [coord.lon, coord.lat],
         zoom: row.precision === "country" ? 2.7 : 4.2,
@@ -3827,9 +3938,11 @@ import {
     const pageVisits = status?.pageVisits || {};
     const location = status?.location || {};
     const plottedLocations = buildLiveMapMarkers(liveLocationRows);
+    const liveRows = liveLocationRows.filter(isLiveAnalyticsLocationRow);
+    const mappedLiveRows = liveRows.filter((row) => liveRowCoordinate(row));
     const cityDetailCount = Number(pageVisits.cityEvents || liveCities.length || 0);
     const countryOnlyCount = Number(pageVisits.countryOnlyEvents || 0);
-    const unmappedLocationCount = Math.max(0, liveLocationRows.filter(isLiveAnalyticsLocationRow).length - plottedLocations.length);
+    const unmappedLocationCount = Math.max(0, liveRows.length - mappedLiveRows.length);
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
     return `

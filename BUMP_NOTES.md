@@ -1,5 +1,42 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics MapLibre Marker Smear Repair Milestone
+
+### Technical Notes
+
+- Updated the Analytics MapLibre marker lifecycle to aggregate source-tagged live rows into one marker per stable project/source/location/coordinate group before rendering.
+- Kept the real MapLibre dark map and local marker/popup implementation while aligning marker cleanup, coordinate validation, dot/session scaling, and request/event halo scaling with the StreamSuites-Dashboard analytics map pattern.
+- Hardened marker coordinates so plotted rows require valid latitude and longitude ranges and MapLibre receives `[longitude, latitude]` through `setLngLat`.
+- Changed marker CSS so the marker root is the centered dot anchor, the halo/gradient is centered behind it, and the label chip no longer contributes horizontal layout width that can look like a marker trail.
+- Preserved the table flag rule: City and Region cells stay text-only, while Country cells and map marker popups/tooltips/chips retain flags.
+
+### Human-Readable Notes
+
+- Repeated Portland or Los Angeles events now collapse into a single plotted marker per live source/location instead of a horizontal chain of repeated dots.
+- Request/event volume is shown as a centered halo, session volume controls the dot when session data exists, and missing sessions remain `n/a` instead of being invented.
+- Switching `5M`, `15M`, `1H`, and `24HRS` windows replaces marker state instead of accumulating prior markers.
+
+### Files / Areas Changed
+
+- `assets/js/admin-app.js`
+- `assets/css/admin.css`
+- `tests/analytics-map-flags.test.mjs`
+- `tests/analytics-map-marker-lifecycle.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Passed `node --check assets/js/admin-app.js`.
+- Passed `node --check assets/js/admin-auth.js`.
+- Passed `node --check functions/api/admin/analytics.js`.
+- Passed `node --test tests/analytics-helpers.test.mjs`.
+- Passed `node --test tests/analytics-map-flags.test.mjs`.
+- Passed `node --test tests/analytics-map-marker-lifecycle.test.mjs`.
+- Passed MCP/Playwright browser validation at `http://127.0.0.1:5199/#/analytics` with mocked repeated Portland and Los Angeles live rows across `5M`, `15M`, `1H`, and `24HRS`; MapLibre initialized, Portland/Los Angeles each aggregated to one marker, invalid coordinates stayed unplotted, window changes replaced marker state, popup flags/details rendered, and console checks had no relevant errors.
+- Passed `git diff --check`; Git only reported line-ending normalization warnings for edited files.
+- `npm run check` and `npm run build` were not run because this repo's `package.json` does not define those scripts.
+
 ## StreamSuites Live Analytics Primary Source Milestone
 
 ### Technical Notes

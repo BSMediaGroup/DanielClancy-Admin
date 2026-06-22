@@ -1808,22 +1808,23 @@ body.col-resizing-active {
 
 .analytics-map-marker {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+  display: block;
+  width: var(--analytics-marker-dot);
+  height: var(--analytics-marker-dot);
   padding: 0;
   border: 0;
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  overflow: visible;
   --analytics-marker-dot: 12px;
   --analytics-marker-halo: 32px;
 }
 
 .analytics-map-marker-halo {
   position: absolute;
-  left: calc((var(--analytics-marker-halo) - var(--analytics-marker-dot)) / -2);
-  top: calc((var(--analytics-marker-halo) - var(--analytics-marker-dot)) / -2);
+  left: 50%;
+  top: 50%;
   width: var(--analytics-marker-halo);
   height: var(--analytics-marker-halo);
   border-radius: 999px;
@@ -1831,16 +1832,21 @@ body.col-resizing-active {
     radial-gradient(circle, rgba(159, 77, 255, 0.34) 0%, rgba(29, 77, 147, 0.24) 42%, rgba(29, 77, 147, 0) 72%);
   filter: blur(1px);
   pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 0;
 }
 
 .analytics-map-marker-dot {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: var(--analytics-marker-dot);
   height: var(--analytics-marker-dot);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   background: #d6b8ff;
   box-shadow: 0 0 20px rgba(214, 184, 255, 0.46);
+  transform: translate(-50%, -50%);
   z-index: 1;
 }
 
@@ -1851,8 +1857,8 @@ body.col-resizing-active {
 
 .analytics-map-marker-label {
   position: absolute;
-  left: 22px;
-  top: -10px;
+  left: calc(50% + max(14px, var(--analytics-marker-dot)));
+  top: 50%;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1865,6 +1871,8 @@ body.col-resizing-active {
   color: var(--text);
   font-size: 10px;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  pointer-events: none;
+  transform: translateY(-50%);
   z-index: 2;
 }
 

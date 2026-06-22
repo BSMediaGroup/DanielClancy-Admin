@@ -12,7 +12,8 @@ test("analytics map uses exact city-country coordinates and does not use city-on
   assert.equal(app.includes("CITY_COORDINATES[city]"), false);
   assert.ok(app.includes("Rows without verified coordinates."));
   assert.ok(app.includes("function markerCoordinate(row)"));
-  assert.ok(app.includes("filter(({ coord }) => coord && Number.isFinite(coord.lat) && Number.isFinite(coord.lon))"));
+  assert.ok(app.includes("function isValidMarkerCoordinate(coord)"));
+  assert.ok(app.includes("return isValidMarkerCoordinate(coord) ? coord : null;"));
 });
 
 test("country flag helper resolves broad local SVG paths and fallback", async () => {
@@ -87,6 +88,7 @@ test("analytics marker generation excludes samples and rows without coordinates"
   assert.ok(app.includes("row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp)"));
   assert.ok(app.includes("buildLiveMapMarkers(liveLocationRows)"));
   assert.ok(app.includes("analyticsMapState.markers.forEach((marker) => marker.remove())"));
+  assert.ok(app.includes("function aggregateMarkerRows(rows)"));
 });
 
 test("country-only rows are country precision and popups include flag metadata", async () => {
