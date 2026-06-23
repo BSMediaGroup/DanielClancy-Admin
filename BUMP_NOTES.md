@@ -4,15 +4,17 @@
 
 ### Technical Notes
 
-- Updated the Analytics MapLibre marker lifecycle to aggregate source-tagged live rows into one marker per stable project/source/location/coordinate group before rendering.
-- Kept the real MapLibre dark map and local marker/popup implementation while aligning marker cleanup, coordinate validation, dot/session scaling, and request/event halo scaling with the StreamSuites-Dashboard analytics map pattern.
-- Hardened marker coordinates so plotted rows require valid latitude and longitude ranges and MapLibre receives `[longitude, latitude]` through `setLngLat`.
-- Changed marker CSS so the marker root is the centered dot anchor, the halo/gradient is centered behind it, and the label chip no longer contributes horizontal layout width that can look like a marker trail.
+- Replaced the Analytics map's DOM `maplibregl.Marker` volume-marker path with a MapLibre GeoJSON source plus circle layers: `analytics-location-halo-source`, `analytics-location-halo-layer`, and `analytics-location-dot-layer`.
+- Aggregated source-tagged live rows into one GeoJSON feature per stable project/source/precision/location/coordinate group before rendering; repeated Portland, Los Angeles, and other same-location events no longer create repeated marker elements.
+- Hardened marker coordinates so plotted rows require valid latitude and longitude ranges and GeoJSON geometry is emitted as `[longitude, latitude]`; confidently detected `[lat, lng]` coordinate arrays are corrected and impossible coordinates are rejected.
+- Request/event volume now renders as one centered blurred circle halo layer property, while session volume renders as one centered dot-radius layer property when sessions are available.
+- Removed the old DOM marker child span path and related marker CSS so request volume cannot render as a stacked line/chain of dots.
+- Removed the optional symbol label layer after route validation showed the local raster style lacked MapLibre glyphs; marker details remain available through layer click popups.
 - Preserved the table flag rule: City and Region cells stay text-only, while Country cells and map marker popups/tooltips/chips retain flags.
 
 ### Human-Readable Notes
 
-- Repeated Portland or Los Angeles events now collapse into a single plotted marker per live source/location instead of a horizontal chain of repeated dots.
+- Repeated Portland or Los Angeles events now collapse into a single plotted MapLibre feature per live source/location instead of a horizontal or vertical chain of repeated dots.
 - Request/event volume is shown as a centered halo, session volume controls the dot when session data exists, and missing sessions remain `n/a` instead of being invented.
 - Switching `5M`, `15M`, `1H`, and `24HRS` windows replaces marker state instead of accumulating prior markers.
 
@@ -33,7 +35,7 @@
 - Passed `node --test tests/analytics-helpers.test.mjs`.
 - Passed `node --test tests/analytics-map-flags.test.mjs`.
 - Passed `node --test tests/analytics-map-marker-lifecycle.test.mjs`.
-- Passed MCP/Playwright browser validation at `http://127.0.0.1:5199/#/analytics` with mocked repeated Portland and Los Angeles live rows across `5M`, `15M`, `1H`, and `24HRS`; MapLibre initialized, Portland/Los Angeles each aggregated to one marker, invalid coordinates stayed unplotted, window changes replaced marker state, popup flags/details rendered, and console checks had no relevant errors.
+- Passed MCP/Playwright browser validation at `http://127.0.0.1:5199/?cache=<timestamp>#/analytics` with mocked repeated Portland and Los Angeles live rows across `5M`, `15M`, `1H`, and `24HRS`; the real `#/analytics` route initialized one MapLibre canvas, emitted exactly two GeoJSON features in every window, rendered zero old DOM marker/request-dot elements, kept Portland at `[-122.6784, 45.5152]`, corrected Los Angeles to `[-118.2437, 34.0522]`, rejected invalid coordinates, replaced source data on window changes, opened a layer popup with flag/details, kept flags only in Country table cells, and ended with no console errors or bad responses under the mocked route.
 - Passed `git diff --check`; Git only reported line-ending normalization warnings for edited files.
 - `npm run check` and `npm run build` were not run because this repo's `package.json` does not define those scripts.
 

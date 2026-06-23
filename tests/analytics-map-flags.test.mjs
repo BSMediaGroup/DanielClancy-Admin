@@ -33,15 +33,19 @@ test("analytics location rendering includes MapLibre, flags, freshness, and isol
   const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.ok(app.includes("country-flag"));
   assert.ok(app.includes("location-chip"));
-  assert.ok(app.includes("analytics-map-marker-label"));
-  assert.ok(app.includes("analytics-map-marker-halo"));
+  assert.ok(app.includes("ANALYTICS_MAP_SOURCE_ID"));
+  assert.ok(app.includes("analytics-location-halo-layer"));
+  assert.ok(app.includes("analytics-location-dot-layer"));
   assert.ok(app.includes("analytics-window-selector"));
   assert.ok(app.includes("[\"5m\", \"5M\"]"));
   assert.ok(app.includes("[\"15m\", \"15M\"]"));
   assert.ok(app.includes("[\"1h\", \"1H\"]"));
   assert.ok(app.includes("[\"24h\", \"24HRS\"]"));
   assert.ok(app.includes("window.maplibregl.Map"));
-  assert.ok(app.includes("new window.maplibregl.Marker"));
+  assert.equal(app.includes("new window.maplibregl.Marker"), false);
+  assert.ok(app.includes("markerFeatureCollection"));
+  assert.ok(app.includes("source.setData(featureCollection)"));
+  assert.ok(app.includes("DC_ADMIN_ANALYTICS_MAP_DEBUG"));
   assert.ok(app.includes("mapStyleConfig"));
   assert.ok(app.includes("carto-dark"));
   assert.ok(index.includes("assets/vendor/maplibre-gl/maplibre-gl.css"));
@@ -70,15 +74,13 @@ test("marker model separates sessions and requests and scales dot versus halo", 
   const css = await readFile(new URL("../assets/css/admin.css", import.meta.url), "utf8");
   assert.ok(app.includes("function sessionCount(row)"));
   assert.ok(app.includes("function requestCount(row)"));
-  assert.ok(app.includes("function markerStyle(row)"));
-  assert.ok(app.includes("--analytics-marker-dot"));
-  assert.ok(app.includes("--analytics-marker-halo"));
-  assert.ok(app.includes('markerEl.setAttribute("data-sessions"'));
-  assert.ok(app.includes('markerEl.setAttribute("data-requests"'));
-  assert.ok(app.includes('sessionCount(row) === null ? "unavailable"'));
-  assert.ok(css.includes(".analytics-map-marker-halo"));
-  assert.ok(css.includes("width: var(--analytics-marker-dot);"));
-  assert.ok(css.includes("width: var(--analytics-marker-halo);"));
+  assert.ok(app.includes("function markerDotRadius(row)"));
+  assert.ok(app.includes("function markerHaloRadius(row)"));
+  assert.ok(app.includes("sessionsAvailable: sessions !== null"));
+  assert.ok(app.includes("requests: requests ?? 0"));
+  assert.ok(app.includes('"circle-radius": ["get", "haloRadius"]'));
+  assert.ok(app.includes('"circle-radius": ["get", "dotRadius"]'));
+  assert.equal(css.includes(".analytics-map-marker"), false);
 });
 
 test("analytics marker generation excludes samples and rows without coordinates", async () => {
@@ -87,7 +89,7 @@ test("analytics marker generation excludes samples and rows without coordinates"
   assert.ok(app.includes("function isLiveAnalyticsLocationRow(row)"));
   assert.ok(app.includes("row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp)"));
   assert.ok(app.includes("buildLiveMapMarkers(liveLocationRows)"));
-  assert.ok(app.includes("analyticsMapState.markers.forEach((marker) => marker.remove())"));
+  assert.ok(app.includes("markerFeatureCollection(markerModels)"));
   assert.ok(app.includes("function aggregateMarkerRows(rows)"));
 });
 
@@ -107,6 +109,7 @@ test("empty live data keeps real map state without sample markers", async () => 
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
   assert.ok(app.includes("No live page-visit location events captured for this window."));
   assert.ok(app.includes("map.easeTo({ center: [10, 18], zoom: 1.2"));
+  assert.ok(app.includes('data: { type: "FeatureCollection", features: [] }'));
   assert.equal(app.includes("sampleMarkers"), false);
 });
 

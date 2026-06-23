@@ -219,12 +219,16 @@ import {
   };
   const analyticsMapState = {
     map: null,
-    markers: [],
     markerModels: [],
+    layersReady: false,
+    popup: null,
     ready: false,
     pendingMarkers: [],
     lastSignature: ""
   };
+  const ANALYTICS_MAP_SOURCE_ID = "analytics-location-halo-source";
+  const ANALYTICS_MAP_HALO_LAYER_ID = "analytics-location-halo-layer";
+  const ANALYTICS_MAP_DOT_LAYER_ID = "analytics-location-dot-layer";
   const pageVisitState = {
     lastPath: ""
   };
@@ -3595,14 +3599,16 @@ import {
     return value === null || value === undefined ? "n/a" : formatAnalyticsNumber(value);
   }
 
-  function markerStyle(row) {
+  function markerDotRadius(row) {
     const sessions = sessionCount(row);
-    const requests = requestCount(row);
     const dotMetric = sessions === null ? 0 : sessions;
+    return Math.max(7, Math.min(22, 7 + Math.log10(dotMetric + 1) * 8));
+  }
+
+  function markerHaloRadius(row) {
+    const requests = requestCount(row);
     const haloMetric = requests === null ? 0 : requests;
-    const dotSize = Math.max(8, Math.min(26, 8 + Math.log10(dotMetric + 1) * 9));
-    const haloSize = Math.max(24, Math.min(82, 24 + Math.log10(haloMetric + 1) * 28));
-    return `--analytics-marker-dot:${dotSize.toFixed(2)}px;--analytics-marker-halo:${haloSize.toFixed(2)}px;`;
+    return Math.max(18, Math.min(64, 18 + Math.log10(haloMetric + 1) * 24));
   }
 
   function isValidMarkerCoordinate(coord) {
@@ -3619,12 +3625,25 @@ import {
     return isValidMarkerCoordinate(coord) ? coord : null;
   }
 
+  function normalizedCoordinateArray(values, coordinateSource = "coordinates") {
+    if (!Array.isArray(values) || values.length < 2) return null;
+    const first = Number(values[0]);
+    const second = Number(values[1]);
+    if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
+    const lngLat = normalizedMarkerCoordinate(second, first, coordinateSource);
+    if (lngLat) return lngLat;
+    const latLng = normalizedMarkerCoordinate(first, second, "corrected_lat_lng");
+    return latLng && Math.abs(second) > 90 ? latLng : null;
+  }
+
   function cityCoordinate(row) {
     const explicitLat = Number(row?.lat ?? row?.latitude);
     const explicitLon = Number(row?.lng ?? row?.lon ?? row?.longitude);
     if (Number.isFinite(explicitLat) && Number.isFinite(explicitLon)) {
       return normalizedMarkerCoordinate(explicitLat, explicitLon, row?.coordinateSource || "source");
     }
+    const explicitCoordinates = normalizedCoordinateArray(row?.coordinates, row?.coordinateSource || "coordinates");
+    if (explicitCoordinates) return explicitCoordinates;
     const city = String(row?.city || "").trim().toLowerCase();
     const country = String(row?.country || "").trim().toLowerCase();
     const region = String(row?.region || "").trim().toLowerCase();
@@ -3750,6 +3769,51 @@ import {
     return aggregateMarkerRows(rows);
   }
 
+  function markerFeature({ key, row, coord }) {
+    const sessions = sessionCount(row);
+    const requests = requestCount(row);
+    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
+    return {
+      type: "Feature",
+      id: key,
+      properties: {
+        id: key,
+        city: row.city || "",
+        region: row.region || "",
+        country: row.country || "",
+        country_code: countryCode(row.country_code || row.countryCode || row.country),
+        precision: row.precision || "unavailable",
+        source: row.source || "unavailable",
+        sessions,
+        sessionsAvailable: sessions !== null,
+        requests: requests ?? 0,
+        eventCount: row.events ?? row.aggregatedRows ?? 0,
+        lastSeen: row.lastSeen || row.last_seen || row.recordedAt || row.recorded_at || row.timestamp || "",
+        page_path: row.page_path || row.path || row.page || "",
+        page_url: row.page_url || row.url || "",
+        referrer_host: row.referrer_host || row.referrer || "",
+        flagPath: flagPath(row),
+        markerKind: row.project || row.source_namespace || "danielclancy",
+        coordinateSource: coord.coordinateSource || "source",
+        label,
+        popupHtml: markerPopupHtml(row, coord),
+        dotRadius: markerDotRadius(row),
+        haloRadius: markerHaloRadius(row)
+      },
+      geometry: {
+        type: "Point",
+        coordinates: [coord.lon, coord.lat]
+      }
+    };
+  }
+
+  function markerFeatureCollection(markerModels) {
+    return {
+      type: "FeatureCollection",
+      features: (Array.isArray(markerModels) ? markerModels : []).map(markerFeature)
+    };
+  }
+
   function mapStyleConfig() {
     return {
       version: 8,
@@ -3817,11 +3881,6 @@ import {
     `;
   }
 
-  function markerTitle(row, coord) {
-    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
-    return `${label} - sessions=${formatAnalyticsMetric(sessionCount(row))} - requests=${formatAnalyticsMetric(requestCount(row))} - precision=${row.precision || "unavailable"} - source=${sourceLabel(row.source)} - coordinates=${coord.coordinateSource || "source"} - flag=${flagPath(row)}`;
-  }
-
   function ensureAnalyticsMap(markers) {
     const container = document.getElementById("analytics-location-map");
     const feedback = document.getElementById("analytics-location-map-feedback");
@@ -3831,11 +3890,12 @@ import {
       return;
     }
     if (analyticsMapState.map && analyticsMapState.map.getContainer() !== container) {
-      analyticsMapState.markers.forEach((marker) => marker.remove());
+      analyticsMapState.popup?.remove();
       analyticsMapState.map.remove();
       analyticsMapState.map = null;
-      analyticsMapState.markers = [];
       analyticsMapState.markerModels = [];
+      analyticsMapState.layersReady = false;
+      analyticsMapState.popup = null;
       analyticsMapState.ready = false;
       analyticsMapState.lastSignature = "";
     }
@@ -3861,6 +3921,7 @@ import {
       );
       analyticsMapState.map.once("load", () => {
         analyticsMapState.ready = true;
+        ensureAnalyticsMapLayers();
         updateAnalyticsMapMarkers(analyticsMapState.pendingMarkers);
       });
       analyticsMapState.map.on("error", (event) => {
@@ -3868,39 +3929,100 @@ import {
       });
     }
     analyticsMapState.pendingMarkers = markers;
-    if (analyticsMapState.ready) updateAnalyticsMapMarkers(markers);
+    if (analyticsMapState.ready) {
+      ensureAnalyticsMapLayers();
+      updateAnalyticsMapMarkers(markers);
+    }
     window.setTimeout(() => analyticsMapState.map?.resize(), 0);
+  }
+
+  function ensureAnalyticsMapLayers() {
+    const map = analyticsMapState.map;
+    if (!map || analyticsMapState.layersReady) return;
+    if (!map.getSource(ANALYTICS_MAP_SOURCE_ID)) {
+      map.addSource(ANALYTICS_MAP_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] }
+      });
+    }
+    if (!map.getLayer(ANALYTICS_MAP_HALO_LAYER_ID)) {
+      map.addLayer({
+        id: ANALYTICS_MAP_HALO_LAYER_ID,
+        type: "circle",
+        source: ANALYTICS_MAP_SOURCE_ID,
+        paint: {
+          "circle-radius": ["get", "haloRadius"],
+          "circle-color": "#8758ff",
+          "circle-opacity": 0.28,
+          "circle-blur": 0.45,
+          "circle-stroke-color": "rgba(214, 184, 255, 0.18)",
+          "circle-stroke-width": 1
+        }
+      });
+    }
+    if (!map.getLayer(ANALYTICS_MAP_DOT_LAYER_ID)) {
+      map.addLayer({
+        id: ANALYTICS_MAP_DOT_LAYER_ID,
+        type: "circle",
+        source: ANALYTICS_MAP_SOURCE_ID,
+        paint: {
+          "circle-radius": ["get", "dotRadius"],
+          "circle-color": ["case", ["==", ["get", "precision"], "country"], "#dbc9a6", "#d6b8ff"],
+          "circle-opacity": 0.96,
+          "circle-stroke-color": "rgba(255, 255, 255, 0.72)",
+          "circle-stroke-width": 1.2
+        }
+      });
+    }
+    const openPopup = (event) => {
+      const feature = event?.features?.[0];
+      const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates.slice() : null;
+      if (!coordinates || coordinates.length < 2) return;
+      analyticsMapState.popup?.remove();
+      analyticsMapState.popup = new window.maplibregl.Popup({
+        offset: 14,
+        closeButton: true,
+        closeOnClick: true,
+        className: "analytics-map-popup"
+      })
+        .setLngLat(coordinates)
+        .setHTML(feature.properties?.popupHtml || "")
+        .addTo(map);
+    };
+    [ANALYTICS_MAP_DOT_LAYER_ID, ANALYTICS_MAP_HALO_LAYER_ID].forEach((layerId) => {
+      map.on("click", layerId, openPopup);
+      map.on("mouseenter", layerId, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", layerId, () => {
+        map.getCanvas().style.cursor = "";
+      });
+    });
+    analyticsMapState.layersReady = true;
   }
 
   function updateAnalyticsMapMarkers(markers) {
     const map = analyticsMapState.map;
     if (!map) return;
+    ensureAnalyticsMapLayers();
     const markerModels = Array.isArray(markers) ? markers : [];
     const signature = JSON.stringify(markerModels.map(({ key, row, coord }) => [key, sessionCount(row), requestCount(row), coord.lon, coord.lat]));
     if (signature === analyticsMapState.lastSignature) return;
     analyticsMapState.lastSignature = signature;
-    analyticsMapState.markers.forEach((marker) => marker.remove());
-    analyticsMapState.markers = [];
     analyticsMapState.markerModels = markerModels;
-    analyticsMapState.markers = markerModels.map(({ key, row, coord }) => {
-      const markerEl = document.createElement("button");
-      markerEl.type = "button";
-      markerEl.className = `analytics-map-marker analytics-map-marker-${String(row.precision || "unknown").toLowerCase()}`;
-      markerEl.setAttribute("data-location-key", key);
-      markerEl.setAttribute("data-sessions", sessionCount(row) === null ? "unavailable" : String(sessionCount(row)));
-      markerEl.setAttribute("data-requests", requestCount(row) === null ? "unavailable" : String(requestCount(row)));
-      markerEl.setAttribute("style", markerStyle(row));
-      markerEl.title = markerTitle(row, coord);
-      markerEl.setAttribute("aria-label", markerTitle(row, coord));
-      markerEl.innerHTML = `<span class="analytics-map-marker-halo"></span><span class="analytics-map-marker-dot"></span><span class="analytics-map-marker-label">${flagIcon(row, row.city || row.country || row.country_code || "Location")}</span>`;
-      const popup = new window.maplibregl.Popup({
-        offset: 14,
-        closeButton: true,
-        closeOnClick: true,
-        className: "analytics-map-popup"
-      }).setHTML(markerPopupHtml(row, coord));
-      return new window.maplibregl.Marker({ element: markerEl, anchor: "center" }).setLngLat([coord.lon, coord.lat]).setPopup(popup).addTo(map);
-    });
+    const featureCollection = markerFeatureCollection(markerModels);
+    const source = map.getSource(ANALYTICS_MAP_SOURCE_ID);
+    if (source?.setData) source.setData(featureCollection);
+    window.DC_ADMIN_ANALYTICS_MAP_DEBUG = {
+      map,
+      sourceId: ANALYTICS_MAP_SOURCE_ID,
+      layerIds: [ANALYTICS_MAP_HALO_LAYER_ID, ANALYTICS_MAP_DOT_LAYER_ID],
+      featureCollection,
+      markerCount: featureCollection.features.length,
+      signature
+    };
+    analyticsMapState.popup?.remove();
+    analyticsMapState.popup = null;
 
     if (markerModels.length > 1) {
       const bounds = new window.maplibregl.LngLatBounds();
