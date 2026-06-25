@@ -10,6 +10,12 @@ import {
   registryStoragePayload,
   unpackRegistryStorage
 } from "./registry-reconciliation.js";
+import {
+  buildLocationFeatures,
+  initAnalyticsMap,
+  resizeAnalyticsMap as resizeAnalyticsMapModule,
+  updateAnalyticsMap
+} from "./analytics-map.js";
 
 (function () {
   const data = window.DC_ADMIN_SCAFFOLD_DATA;
@@ -217,18 +223,6 @@ import {
     counts: { projects: 0, companies: 0, platforms: 0, positions: 0, assets: 0 },
     warnings: []
   };
-  const analyticsMapState = {
-    map: null,
-    markerModels: [],
-    layersReady: false,
-    popup: null,
-    ready: false,
-    pendingMarkers: [],
-    lastSignature: ""
-  };
-  const ANALYTICS_MAP_SOURCE_ID = "analytics-location-halo-source";
-  const ANALYTICS_MAP_HALO_LAYER_ID = "analytics-location-halo-layer";
-  const ANALYTICS_MAP_DOT_LAYER_ID = "analytics-location-dot-layer";
   const pageVisitState = {
     lastPath: ""
   };
@@ -3465,60 +3459,6 @@ import {
     `;
   }
 
-  const CITY_COORDINATES = {
-    "portland|oregon|us": { lat: 45.5152, lon: -122.6784 },
-    "portland|us": { lat: 45.5152, lon: -122.6784 },
-    "sydney|australia": { lat: -33.8688, lon: 151.2093 },
-    "sydney|au": { lat: -33.8688, lon: 151.2093 },
-    "sydney|new south wales|au": { lat: -33.8688, lon: 151.2093 },
-    "sydney|nsw|au": { lat: -33.8688, lon: 151.2093 },
-    "perth|australia": { lat: -31.9523, lon: 115.8613 },
-    "perth|au": { lat: -31.9523, lon: 115.8613 },
-    "melbourne|australia": { lat: -37.8136, lon: 144.9631 },
-    "melbourne|au": { lat: -37.8136, lon: 144.9631 },
-    "brisbane|australia": { lat: -27.4698, lon: 153.0251 },
-    "brisbane|au": { lat: -27.4698, lon: 153.0251 },
-    "adelaide|australia": { lat: -34.9285, lon: 138.6007 },
-    "adelaide|au": { lat: -34.9285, lon: 138.6007 },
-    "canberra|australia": { lat: -35.2809, lon: 149.13 },
-    "canberra|au": { lat: -35.2809, lon: 149.13 },
-    "new york|united states": { lat: 40.7128, lon: -74.006 },
-    "new york|us": { lat: 40.7128, lon: -74.006 },
-    "los angeles|united states": { lat: 34.0522, lon: -118.2437 },
-    "los angeles|us": { lat: 34.0522, lon: -118.2437 },
-    "san francisco|united states": { lat: 37.7749, lon: -122.4194 },
-    "san francisco|us": { lat: 37.7749, lon: -122.4194 },
-    "chicago|united states": { lat: 41.8781, lon: -87.6298 },
-    "chicago|us": { lat: 41.8781, lon: -87.6298 },
-    "seattle|united states": { lat: 47.6062, lon: -122.3321 },
-    "seattle|us": { lat: 47.6062, lon: -122.3321 },
-    "london|united kingdom": { lat: 51.5072, lon: -0.1276 },
-    "london|gb": { lat: 51.5072, lon: -0.1276 },
-    "toronto|canada": { lat: 43.6532, lon: -79.3832 },
-    "toronto|ca": { lat: 43.6532, lon: -79.3832 },
-    "vancouver|canada": { lat: 49.2827, lon: -123.1207 },
-    "vancouver|ca": { lat: 49.2827, lon: -123.1207 },
-    "auckland|new zealand": { lat: -36.8509, lon: 174.7645 },
-    "auckland|nz": { lat: -36.8509, lon: 174.7645 },
-    "singapore|singapore": { lat: 1.3521, lon: 103.8198 },
-    "singapore|sg": { lat: 1.3521, lon: 103.8198 }
-  };
-
-  const COUNTRY_CENTROIDS = {
-    AU: { lat: -25.2744, lon: 133.7751 },
-    BR: { lat: -14.235, lon: -51.9253 },
-    CA: { lat: 56.1304, lon: -106.3468 },
-    DE: { lat: 51.1657, lon: 10.4515 },
-    FR: { lat: 46.2276, lon: 2.2137 },
-    GB: { lat: 55.3781, lon: -3.436 },
-    IN: { lat: 20.5937, lon: 78.9629 },
-    JP: { lat: 36.2048, lon: 138.2529 },
-    NZ: { lat: -40.9006, lon: 174.886 },
-    US: { lat: 37.0902, lon: -95.7129 },
-    ZA: { lat: -30.5595, lon: 22.9375 }
-  };
-
-  const LIVE_ANALYTICS_SOURCES = new Set(["page_visit_kv", "cloudflare_graphql", "streamsuites_event_mirror", "streamsuites_live"]);
   const ANALYTICS_WINDOWS = Object.freeze([
     ["5m", "5M"],
     ["15m", "15M"],
@@ -3599,244 +3539,6 @@ import {
     return value === null || value === undefined ? "n/a" : formatAnalyticsNumber(value);
   }
 
-  function markerDotRadius(row) {
-    const sessions = sessionCount(row);
-    const dotMetric = sessions === null ? 0 : sessions;
-    return Math.max(7, Math.min(22, 7 + Math.log10(dotMetric + 1) * 8));
-  }
-
-  function markerHaloRadius(row) {
-    const requests = requestCount(row);
-    const haloMetric = requests === null ? 0 : requests;
-    return Math.max(18, Math.min(64, 18 + Math.log10(haloMetric + 1) * 24));
-  }
-
-  function isValidMarkerCoordinate(coord) {
-    const lat = Number(coord?.lat);
-    const lon = Number(coord?.lon);
-    return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
-  }
-
-  function normalizedMarkerCoordinate(latValue, lonValue, coordinateSource = "source") {
-    const lat = Number(latValue);
-    const lon = Number(lonValue);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    const coord = { lat, lon, coordinateSource };
-    return isValidMarkerCoordinate(coord) ? coord : null;
-  }
-
-  function normalizedCoordinateArray(values, coordinateSource = "coordinates") {
-    if (!Array.isArray(values) || values.length < 2) return null;
-    const first = Number(values[0]);
-    const second = Number(values[1]);
-    if (!Number.isFinite(first) || !Number.isFinite(second)) return null;
-    const lngLat = normalizedMarkerCoordinate(second, first, coordinateSource);
-    if (lngLat) return lngLat;
-    const latLng = normalizedMarkerCoordinate(first, second, "corrected_lat_lng");
-    return latLng && Math.abs(second) > 90 ? latLng : null;
-  }
-
-  function cityCoordinate(row) {
-    const explicitLat = Number(row?.lat ?? row?.latitude);
-    const explicitLon = Number(row?.lng ?? row?.lon ?? row?.longitude);
-    if (Number.isFinite(explicitLat) && Number.isFinite(explicitLon)) {
-      return normalizedMarkerCoordinate(explicitLat, explicitLon, row?.coordinateSource || "source");
-    }
-    const explicitCoordinates = normalizedCoordinateArray(row?.coordinates, row?.coordinateSource || "coordinates");
-    if (explicitCoordinates) return explicitCoordinates;
-    const city = String(row?.city || "").trim().toLowerCase();
-    const country = String(row?.country || "").trim().toLowerCase();
-    const region = String(row?.region || "").trim().toLowerCase();
-    const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
-    if (!city) return null;
-    const coord = CITY_COORDINATES[`${city}|${region}|${code}`] || CITY_COORDINATES[`${city}|${country}`] || CITY_COORDINATES[`${city}|${code}`] || null;
-    return coord ? normalizedMarkerCoordinate(coord.lat, coord.lon, "lookup") : null;
-  }
-
-  function countryCoordinate(row) {
-    const code = countryCode(row?.country_code || row?.countryCode || row?.country);
-    const coord = COUNTRY_CENTROIDS[code];
-    return coord ? normalizedMarkerCoordinate(coord.lat, coord.lon, "country_centroid") : null;
-  }
-
-  function isLiveAnalyticsLocationRow(row) {
-    const source = String(row?.source || "").trim();
-    const timestamp = Date.parse(row?.lastSeen || row?.recordedAt || row?.recorded_at || row?.timestamp || "");
-    return row?.live === true && LIVE_ANALYTICS_SOURCES.has(source) && Number.isFinite(timestamp);
-  }
-
-  function markerCoordinate(row) {
-    const precision = String(row?.precision || "").toLowerCase();
-    if (precision === "city" || row?.city) return cityCoordinate(row);
-    if (precision === "country") return countryCoordinate(row);
-    return null;
-  }
-
-  function liveRowCoordinate(row) {
-    const coord = markerCoordinate(row);
-    return isValidMarkerCoordinate(coord) ? coord : null;
-  }
-
-  function roundedCoordinatePart(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number.toFixed(4) : "";
-  }
-
-  function markerGroupKey(row, coord) {
-    const project = String(row?.project || row?.source_namespace || "danielclancy").trim().toLowerCase();
-    const source = String(row?.source || "unknown").trim().toLowerCase();
-    const precision = String(row?.precision || (row?.city ? "city" : "country")).trim().toLowerCase();
-    const city = String(row?.city || "").trim().toLowerCase();
-    const region = String(row?.region || row?.region_code || "").trim().toLowerCase();
-    const code = countryCode(row?.country_code || row?.countryCode || row?.country).toLowerCase();
-    return [
-      project,
-      source,
-      precision,
-      city,
-      region,
-      code,
-      roundedCoordinatePart(coord?.lon),
-      roundedCoordinatePart(coord?.lat)
-    ].join("|");
-  }
-
-  function rowSessionId(row) {
-    return String(row?.session_id ?? row?.sessionId ?? "").trim();
-  }
-
-  function rowEventCount(row) {
-    const requests = requestCount(row);
-    if (requests !== null) return requests;
-    const timestamp = row?.lastSeen || row?.recordedAt || row?.recorded_at || row?.timestamp || "";
-    return Number.isFinite(Date.parse(timestamp)) ? 1 : 0;
-  }
-
-  function latestTimestamp(left, right) {
-    const leftTime = Date.parse(left || "");
-    const rightTime = Date.parse(right || "");
-    if (!Number.isFinite(leftTime)) return right || left || "";
-    if (!Number.isFinite(rightTime)) return left || right || "";
-    return rightTime > leftTime ? right : left;
-  }
-
-  function aggregateMarkerRows(rows) {
-    const aggregate = new Map();
-    (Array.isArray(rows) ? rows : []).forEach((row) => {
-      if (!isLiveAnalyticsLocationRow(row)) return;
-      const coord = liveRowCoordinate(row);
-      if (!coord) return;
-      const key = markerGroupKey(row, coord);
-      let model = aggregate.get(key);
-      if (!model) {
-        model = {
-          key,
-          row: { ...row },
-          coord,
-          requests: 0,
-          events: 0,
-          sessionIds: new Set(),
-          sessionTotal: 0,
-          hasSessionCount: false
-        };
-        aggregate.set(key, model);
-      }
-      const requests = rowEventCount(row);
-      model.requests += Math.max(0, requests);
-      model.events += 1;
-      const sessionId = rowSessionId(row);
-      if (sessionId) {
-        model.sessionIds.add(sessionId);
-      } else {
-        const sessions = sessionCount(row);
-        if (sessions !== null) {
-          model.sessionTotal += sessions;
-          model.hasSessionCount = true;
-        }
-      }
-      model.row.lastSeen = latestTimestamp(model.row.lastSeen || model.row.recordedAt || model.row.recorded_at || model.row.timestamp, row.lastSeen || row.recordedAt || row.recorded_at || row.timestamp);
-      model.row.requests = model.requests;
-      model.row.count = model.requests;
-      model.row.events = model.events;
-      model.row.sessions = model.sessionIds.size ? model.sessionIds.size : model.hasSessionCount ? model.sessionTotal : null;
-      model.row.aggregatedRows = model.events;
-      model.row.aggregatedLocationKey = key;
-    });
-    return Array.from(aggregate.values()).sort((left, right) => left.key.localeCompare(right.key));
-  }
-
-  function buildLiveMapMarkers(rows) {
-    return aggregateMarkerRows(rows);
-  }
-
-  function markerFeature({ key, row, coord }) {
-    const sessions = sessionCount(row);
-    const requests = requestCount(row);
-    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
-    return {
-      type: "Feature",
-      id: key,
-      properties: {
-        id: key,
-        city: row.city || "",
-        region: row.region || "",
-        country: row.country || "",
-        country_code: countryCode(row.country_code || row.countryCode || row.country),
-        precision: row.precision || "unavailable",
-        source: row.source || "unavailable",
-        sessions,
-        sessionsAvailable: sessions !== null,
-        requests: requests ?? 0,
-        eventCount: row.events ?? row.aggregatedRows ?? 0,
-        lastSeen: row.lastSeen || row.last_seen || row.recordedAt || row.recorded_at || row.timestamp || "",
-        page_path: row.page_path || row.path || row.page || "",
-        page_url: row.page_url || row.url || "",
-        referrer_host: row.referrer_host || row.referrer || "",
-        flagPath: flagPath(row),
-        markerKind: row.project || row.source_namespace || "danielclancy",
-        coordinateSource: coord.coordinateSource || "source",
-        label,
-        popupHtml: markerPopupHtml(row, coord),
-        dotRadius: markerDotRadius(row),
-        haloRadius: markerHaloRadius(row)
-      },
-      geometry: {
-        type: "Point",
-        coordinates: [coord.lon, coord.lat]
-      }
-    };
-  }
-
-  function markerFeatureCollection(markerModels) {
-    return {
-      type: "FeatureCollection",
-      features: (Array.isArray(markerModels) ? markerModels : []).map(markerFeature)
-    };
-  }
-
-  function mapStyleConfig() {
-    return {
-      version: 8,
-      sources: {
-        "carto-dark": {
-          type: "raster",
-          tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
-          tileSize: 256,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }
-      },
-      layers: [
-        {
-          id: "carto-dark",
-          type: "raster",
-          source: "carto-dark",
-          minzoom: 0,
-          maxzoom: 19
-        }
-      ]
-    };
-  }
-
   function sourceLabel(source) {
     const labels = {
       page_visit_kv: "Page-visit KV",
@@ -3851,220 +3553,56 @@ import {
     return labels[source] || source || "Unavailable";
   }
 
-  function markerPopupHtml(row, coord) {
-    const label = [row.city, row.region, row.country || row.country_code].filter(Boolean).join(", ") || "Location";
-    const lastSeen = row.lastSeen || row.last_seen || row.recordedAt || row.recorded_at || row.timestamp || "";
-    const page = row.page_path || row.path || row.page || "";
-    const referrer = row.referrer_host || row.referrer || "";
-    const sessions = sessionCount(row);
-    const requests = requestCount(row);
-    const selectedWindow = row.window || analyticsStatusState.payload?.window || analyticsStatusState.selectedWindow;
-    return `
-      <div class="analytics-map-popup-inner">
-        <strong>${escapeHtml(label)}</strong>
-        <dl>
-          <div><dt>City</dt><dd>${escapeHtml(row.city || "n/a")}</dd></div>
-          <div><dt>Region</dt><dd>${escapeHtml(row.region || "n/a")}</dd></div>
-          <div><dt>Country</dt><dd>${flagIcon(row, row.country || row.country_code || "Unavailable")}</dd></div>
-          <div><dt>Sessions</dt><dd>${escapeHtml(formatAnalyticsMetric(sessions))}</dd></div>
-          <div><dt>Requests</dt><dd>${escapeHtml(formatAnalyticsMetric(requests))}</dd></div>
-          <div><dt>Window</dt><dd>${escapeHtml(analyticsWindowLabel(selectedWindow))}</dd></div>
-          <div><dt>Precision</dt><dd>${escapeHtml(row.precision || "unavailable")}</dd></div>
-          <div><dt>Source</dt><dd>${escapeHtml(sourceLabel(row.source))}</dd></div>
-          <div><dt>Coordinates</dt><dd>${escapeHtml(coord.coordinateSource || "source")}</dd></div>
-          <div><dt>Last seen</dt><dd>${escapeHtml(formatOperationalTimestamp(lastSeen))}</dd></div>
-          ${page ? `<div><dt>Page</dt><dd>${escapeHtml(page)}</dd></div>` : ""}
-          ${referrer ? `<div><dt>Referrer</dt><dd>${escapeHtml(referrer)}</dd></div>` : ""}
-          <div><dt>Flag path</dt><dd>${escapeHtml(flagPath(row))}</dd></div>
-        </dl>
-      </div>
-    `;
-  }
-
-  function ensureAnalyticsMap(markers) {
-    const container = document.getElementById("analytics-location-map");
-    const feedback = document.getElementById("analytics-location-map-feedback");
-    if (!container) return;
-    if (!window.maplibregl || typeof window.maplibregl.Map !== "function") {
-      if (feedback) feedback.textContent = "Map unavailable: local MapLibre GL assets failed to load.";
-      return;
-    }
-    if (analyticsMapState.map && analyticsMapState.map.getContainer() !== container) {
-      analyticsMapState.popup?.remove();
-      analyticsMapState.map.remove();
-      analyticsMapState.map = null;
-      analyticsMapState.markerModels = [];
-      analyticsMapState.layersReady = false;
-      analyticsMapState.popup = null;
-      analyticsMapState.ready = false;
-      analyticsMapState.lastSignature = "";
-    }
-    if (!analyticsMapState.map) {
-      analyticsMapState.map = new window.maplibregl.Map({
-        container,
-        style: mapStyleConfig(),
-        center: [10, 18],
-        zoom: 1.2,
-        minZoom: 1,
-        maxZoom: 12,
-        attributionControl: true,
-        dragRotate: false,
-        pitchWithRotate: false,
-        touchPitch: false
-      });
-      analyticsMapState.map.addControl(
-        new window.maplibregl.NavigationControl({
-          showCompass: false,
-          visualizePitch: false
-        }),
-        "top-right"
-      );
-      analyticsMapState.map.once("load", () => {
-        analyticsMapState.ready = true;
-        ensureAnalyticsMapLayers();
-        updateAnalyticsMapMarkers(analyticsMapState.pendingMarkers);
-      });
-      analyticsMapState.map.on("error", (event) => {
-        if (feedback) feedback.textContent = `Map unavailable: ${event?.error?.message || "tile/style load failed."}`;
-      });
-    }
-    analyticsMapState.pendingMarkers = markers;
-    if (analyticsMapState.ready) {
-      ensureAnalyticsMapLayers();
-      updateAnalyticsMapMarkers(markers);
-    }
-    window.setTimeout(() => analyticsMapState.map?.resize(), 0);
-  }
-
-  function ensureAnalyticsMapLayers() {
-    const map = analyticsMapState.map;
-    if (!map || analyticsMapState.layersReady) return;
-    if (!map.getSource(ANALYTICS_MAP_SOURCE_ID)) {
-      map.addSource(ANALYTICS_MAP_SOURCE_ID, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] }
-      });
-    }
-    if (!map.getLayer(ANALYTICS_MAP_HALO_LAYER_ID)) {
-      map.addLayer({
-        id: ANALYTICS_MAP_HALO_LAYER_ID,
-        type: "circle",
-        source: ANALYTICS_MAP_SOURCE_ID,
-        paint: {
-          "circle-radius": ["get", "haloRadius"],
-          "circle-color": "#8758ff",
-          "circle-opacity": 0.28,
-          "circle-blur": 0.45,
-          "circle-stroke-color": "rgba(214, 184, 255, 0.18)",
-          "circle-stroke-width": 1
-        }
-      });
-    }
-    if (!map.getLayer(ANALYTICS_MAP_DOT_LAYER_ID)) {
-      map.addLayer({
-        id: ANALYTICS_MAP_DOT_LAYER_ID,
-        type: "circle",
-        source: ANALYTICS_MAP_SOURCE_ID,
-        paint: {
-          "circle-radius": ["get", "dotRadius"],
-          "circle-color": ["case", ["==", ["get", "precision"], "country"], "#dbc9a6", "#d6b8ff"],
-          "circle-opacity": 0.96,
-          "circle-stroke-color": "rgba(255, 255, 255, 0.72)",
-          "circle-stroke-width": 1.2
-        }
-      });
-    }
-    const openPopup = (event) => {
-      const feature = event?.features?.[0];
-      const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates.slice() : null;
-      if (!coordinates || coordinates.length < 2) return;
-      analyticsMapState.popup?.remove();
-      analyticsMapState.popup = new window.maplibregl.Popup({
-        offset: 14,
-        closeButton: true,
-        closeOnClick: true,
-        className: "analytics-map-popup"
-      })
-        .setLngLat(coordinates)
-        .setHTML(feature.properties?.popupHtml || "")
-        .addTo(map);
-    };
-    [ANALYTICS_MAP_DOT_LAYER_ID, ANALYTICS_MAP_HALO_LAYER_ID].forEach((layerId) => {
-      map.on("click", layerId, openPopup);
-      map.on("mouseenter", layerId, () => {
-        map.getCanvas().style.cursor = "pointer";
-      });
-      map.on("mouseleave", layerId, () => {
-        map.getCanvas().style.cursor = "";
-      });
-    });
-    analyticsMapState.layersReady = true;
-  }
-
-  function updateAnalyticsMapMarkers(markers) {
-    const map = analyticsMapState.map;
-    if (!map) return;
-    ensureAnalyticsMapLayers();
-    const markerModels = Array.isArray(markers) ? markers : [];
-    const signature = JSON.stringify(markerModels.map(({ key, row, coord }) => [key, sessionCount(row), requestCount(row), coord.lon, coord.lat]));
-    if (signature === analyticsMapState.lastSignature) return;
-    analyticsMapState.lastSignature = signature;
-    analyticsMapState.markerModels = markerModels;
-    const featureCollection = markerFeatureCollection(markerModels);
-    const source = map.getSource(ANALYTICS_MAP_SOURCE_ID);
-    if (source?.setData) source.setData(featureCollection);
-    window.DC_ADMIN_ANALYTICS_MAP_DEBUG = {
-      map,
-      sourceId: ANALYTICS_MAP_SOURCE_ID,
-      layerIds: [ANALYTICS_MAP_HALO_LAYER_ID, ANALYTICS_MAP_DOT_LAYER_ID],
-      featureCollection,
-      markerCount: featureCollection.features.length,
-      signature
-    };
-    analyticsMapState.popup?.remove();
-    analyticsMapState.popup = null;
-
-    if (markerModels.length > 1) {
-      const bounds = new window.maplibregl.LngLatBounds();
-      markerModels.forEach(({ coord }) => bounds.extend([coord.lon, coord.lat]));
-      map.fitBounds(bounds, { padding: 58, maxZoom: 6, duration: 350 });
-    } else if (markerModels.length === 1) {
-      const [{ row, coord }] = markerModels;
-      map.easeTo({
-        center: [coord.lon, coord.lat],
-        zoom: row.precision === "country" ? 2.7 : 4.2,
-        duration: 350
-      });
-    } else {
-      map.easeTo({ center: [10, 18], zoom: 1.2, duration: 350 });
-    }
-  }
-
   function resizeAnalyticsMap() {
-    if (!analyticsMapState.map) return;
-    window.setTimeout(() => analyticsMapState.map?.resize(), 80);
+    resizeAnalyticsMapModule();
   }
 
   function syncAnalyticsLocationMap(status, liveLocationRows) {
-    const markers = buildLiveMapMarkers(liveLocationRows);
-    const overlay = document.getElementById("analytics-location-map-empty");
-    if (overlay) {
-      const hasEvents = Number(status?.pageVisits?.events || status?.location?.events || 0) > 0;
-      overlay.textContent = hasEvents ? "Live location rows do not have verified coordinates yet." : "No live page-visit location events captured for this window.";
-      overlay.hidden = markers.length > 0;
-    }
-    ensureAnalyticsMap(markers);
+    const container = document.getElementById("analytics-location-map");
+    if (!container) return;
+    const selectedWindow = normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow);
+    initAnalyticsMap(container, {
+      emptyElement: document.getElementById("analytics-location-map-empty"),
+      feedbackElement: document.getElementById("analytics-location-map-feedback"),
+      maplibregl: window.maplibregl,
+      selectedWindow,
+      windowLabel: analyticsWindowLabel(selectedWindow)
+    });
+    updateAnalyticsMap({
+      rows: liveLocationRows,
+      selectedWindow,
+      windowLabel: analyticsWindowLabel(selectedWindow),
+      hasEvents: Number(status?.pageVisits?.events || status?.location?.events || 0) > 0,
+      emptyText: "No live page-visit location events captured for this window.",
+      unmappedText: "Live location rows do not have verified coordinates yet."
+    });
+  }
+
+  function detachAnalyticsMapContainerForRender() {
+    const container = document.getElementById("analytics-location-map");
+    const debug = window.DC_ADMIN_ANALYTICS_MAP_DEBUG;
+    if (!container || !debug?.map) return null;
+    container.remove();
+    return container;
+  }
+
+  function restoreAnalyticsMapContainerAfterRender(preservedContainer) {
+    if (!preservedContainer) return;
+    const placeholder = document.getElementById("analytics-location-map");
+    if (!placeholder || placeholder === preservedContainer) return;
+    placeholder.replaceWith(preservedContainer);
   }
 
   function renderLocationMap(status, liveCities, liveCountries, liveLocationRows) {
     const pageVisits = status?.pageVisits || {};
     const location = status?.location || {};
-    const plottedLocations = buildLiveMapMarkers(liveLocationRows);
-    const liveRows = liveLocationRows.filter(isLiveAnalyticsLocationRow);
-    const mappedLiveRows = liveRows.filter((row) => liveRowCoordinate(row));
+    const featureCollection = buildLocationFeatures(liveLocationRows, {
+      selectedWindow: normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow)
+    });
     const cityDetailCount = Number(pageVisits.cityEvents || liveCities.length || 0);
     const countryOnlyCount = Number(pageVisits.countryOnlyEvents || 0);
-    const unmappedLocationCount = Math.max(0, liveRows.length - mappedLiveRows.length);
+    const plottedLocationCount = featureCollection.features.length;
+    const unmappedLocationCount = featureCollection.metadata?.unmappedRows?.length || 0;
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
     return `
@@ -4085,7 +3623,7 @@ import {
             ${storageStatusCard("Tracked events", formatAnalyticsNumber(pageVisits.events || 0), "Bounded page_visit KV events.", pageVisits.configured ? "success" : "warn")}
             ${storageStatusCard("City detail", formatAnalyticsNumber(cityDetailCount), "Rows with city-level precision.", cityDetailCount ? "success" : "warn")}
             ${storageStatusCard("Country-only", formatAnalyticsNumber(countryOnlyCount), "Rows with country but no city.", countryOnlyCount ? "warn" : "success")}
-            ${storageStatusCard("Mapped markers", formatAnalyticsNumber(plottedLocations.length), "Rows with source or verified lookup coordinates.", plottedLocations.length ? "success" : "warn")}
+            ${storageStatusCard("Mapped markers", formatAnalyticsNumber(plottedLocationCount), "Rows with source or verified lookup coordinates.", plottedLocationCount ? "success" : "warn")}
             ${storageStatusCard("Unmapped rows", formatAnalyticsNumber(unmappedLocationCount), "Rows without verified coordinates.", unmappedLocationCount ? "warn" : "success")}
             ${storageStatusCard("Last live event", formatOperationalTimestamp(pageVisits.lastLiveEventTime || location.lastUpdated), "Periodic refresh; not realtime.", pageVisits.lastLiveEventTime ? "success" : "warn")}
           </div>
@@ -4117,7 +3655,7 @@ import {
     const liveCountries = hasRows(status?.countries) ? status.countries : [];
     const liveBrowsers = hasRows(status?.browsers) ? status.browsers : [];
     const liveDevices = hasRows(status?.devices) ? status.devices : [];
-    const liveLocationRows = hasRows(status?.location?.liveLocationRows) ? status.location.liveLocationRows : [...liveCities, ...liveCountries].filter(isLiveAnalyticsLocationRow);
+    const liveLocationRows = hasRows(status?.location?.liveLocationRows) ? status.location.liveLocationRows : [...liveCities, ...liveCountries];
     const hasLiveRows = hasRows(liveTopPages) || hasRows(liveReferrers) || hasRows(liveCities) || hasRows(liveCountries) || hasRows(liveBrowsers) || hasRows(liveDevices);
     const cityUnavailable = !liveCities.some((row) => row.precision === "city" && row.city);
     const sampleGeoRows = data.analytics.geoRows || [];
@@ -4126,6 +3664,7 @@ import {
     const staleRows = pageVisits.staleRows || status?.location?.staleRows || [];
     const sourceBreakdown = status?.sourceBreakdown || {};
     const warnings = Array.isArray(status?.warnings) ? status.warnings : [];
+    const preservedAnalyticsMapContainer = detachAnalyticsMapContainerForRender();
     const operationalRows = [
       ["Admin API", status?.adminApiConnected ? "Connected" : analyticsStatusState.status === "fallback" ? "Disconnected" : "Checking"],
       ["StreamSuites analytics", status?.streamSuitesAnalyticsConnected ? "Connected" : status?.streamSuitesAnalyticsConfigured ? "Configured with errors" : "Not configured"],
@@ -4339,6 +3878,7 @@ import {
           : ""}
       </div>
     `;
+    restoreAnalyticsMapContainerAfterRender(preservedAnalyticsMapContainer);
     syncAnalyticsLocationMap(status, liveLocationRows);
   }
 

@@ -3,115 +3,83 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+const mapModule = await readFile(new URL("../assets/js/analytics-map.js", import.meta.url), "utf8");
 const css = await readFile(new URL("../assets/css/admin.css", import.meta.url), "utf8");
 
-function functionBody(name) {
-  const start = app.indexOf(`function ${name}(`);
-  assert.notEqual(start, -1, `${name} is missing`);
-  const next = app.indexOf("\n  function ", start + 1);
-  return app.slice(start, next === -1 ? undefined : next);
-}
-
-function cssRule(selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(`${escaped}\\s*\\{[\\s\\S]*?\\n\\}`));
-  assert.ok(match, `${selector} CSS rule is missing`);
-  return match[0];
-}
-
-test("analytics map aggregates repeated live rows before plotting markers", () => {
-  const aggregateBody = functionBody("aggregateMarkerRows");
-  const buildBody = functionBody("buildLiveMapMarkers");
-  assert.match(aggregateBody, /const aggregate = new Map\(\)/);
-  assert.match(aggregateBody, /const key = markerGroupKey\(row, coord\)/);
-  assert.match(aggregateBody, /aggregate\.get\(key\)/);
-  assert.match(aggregateBody, /aggregate\.set\(key, model\)/);
-  assert.match(aggregateBody, /model\.requests \+= Math\.max\(0, requests\)/);
-  assert.match(aggregateBody, /model\.row\.aggregatedLocationKey = key/);
-  assert.match(buildBody, /return aggregateMarkerRows\(rows\)/);
-});
-
-test("marker grouping key uses source/project/location and rounded longitude latitude", () => {
-  const keyBody = functionBody("markerGroupKey");
-  assert.match(keyBody, /project/);
-  assert.match(keyBody, /source/);
-  assert.match(keyBody, /precision/);
-  assert.match(keyBody, /countryCode/);
-  assert.match(keyBody, /roundedCoordinatePart\(coord\?\.lon\)/);
-  assert.match(keyBody, /roundedCoordinatePart\(coord\?\.lat\)/);
-});
-
-test("marker coordinates are validated and passed to MapLibre as longitude latitude", () => {
-  assert.match(functionBody("isValidMarkerCoordinate"), /lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180/);
-  assert.match(functionBody("normalizedMarkerCoordinate"), /return isValidMarkerCoordinate\(coord\) \? coord : null/);
-  assert.match(functionBody("normalizedCoordinateArray"), /const lngLat = normalizedMarkerCoordinate\(second, first, coordinateSource\)/);
-  assert.match(functionBody("normalizedCoordinateArray"), /const latLng = normalizedMarkerCoordinate\(first, second, "corrected_lat_lng"\)/);
-  assert.match(functionBody("liveRowCoordinate"), /return isValidMarkerCoordinate\(coord\) \? coord : null/);
-  assert.match(functionBody("markerFeature"), /coordinates: \[coord\.lon, coord\.lat\]/);
-  assert.doesNotMatch(functionBody("updateAnalyticsMapMarkers"), /\.setLngLat\(\[coord\.lat, coord\.lon\]\)/);
-  assert.doesNotMatch(functionBody("markerFeature"), /coordinates: \[coord\.lat, coord\.lon\]/);
-});
-
-test("window refresh replaces GeoJSON source data instead of appending DOM markers", () => {
-  const updateBody = functionBody("updateAnalyticsMapMarkers");
-  assert.match(updateBody, /analyticsMapState\.markerModels = markerModels/);
-  assert.match(updateBody, /const featureCollection = markerFeatureCollection\(markerModels\)/);
-  assert.match(updateBody, /source\.setData\(featureCollection\)/);
-  assert.doesNotMatch(updateBody, /new window\.maplibregl\.Marker/);
-  assert.match(functionBody("ensureAnalyticsMap"), /if \(!analyticsMapState\.map\)/);
-  assert.match(functionBody("ensureAnalyticsMapLayers"), /map\.addSource\(ANALYTICS_MAP_SOURCE_ID/);
-  assert.match(functionBody("ensureAnalyticsMapLayers"), /id: ANALYTICS_MAP_HALO_LAYER_ID/);
-  assert.match(functionBody("ensureAnalyticsMapLayers"), /id: ANALYTICS_MAP_DOT_LAYER_ID/);
-  assert.doesNotMatch(functionBody("ensureAnalyticsMapLayers"), /type: "symbol"/);
-});
-
-test("sessions are not invented when unavailable and requests/events are retained", () => {
-  const aggregateBody = functionBody("aggregateMarkerRows");
-  assert.match(functionBody("requestCount"), /if \(value === null \|\| value === undefined \|\| value === ""\) return null/);
-  assert.match(aggregateBody, /const sessionId = rowSessionId\(row\)/);
-  assert.match(aggregateBody, /model\.sessionIds\.add\(sessionId\)/);
-  assert.match(aggregateBody, /model\.hasSessionCount = true/);
-  assert.match(aggregateBody, /model\.row\.sessions = model\.sessionIds\.size \? model\.sessionIds\.size : model\.hasSessionCount \? model\.sessionTotal : null/);
-  assert.match(functionBody("rowEventCount"), /return Number\.isFinite\(Date\.parse\(timestamp\)\) \? 1 : 0/);
-});
-
-test("DOM marker smear path is removed and request volume is one layer property", () => {
+test("admin route no longer owns the Analytics marker lifecycle", () => {
+  assert.match(app, /from "\.\/analytics-map\.js"/);
+  assert.match(app, /initAnalyticsMap\(container/);
+  assert.match(app, /updateAnalyticsMap\(\{/);
+  assert.match(app, /buildLocationFeatures\(liveLocationRows/);
+  assert.doesNotMatch(app, /analyticsMapState/);
+  assert.doesNotMatch(app, /map\.addSource\(/);
+  assert.doesNotMatch(app, /map\.addLayer\(/);
+  assert.doesNotMatch(app, /source\.setData/);
+  assert.doesNotMatch(app, /new window\.maplibregl\.Popup/);
   assert.doesNotMatch(app, /new window\.maplibregl\.Marker/);
-  assert.doesNotMatch(app, /markerEl\.innerHTML/);
-  assert.doesNotMatch(app, /analytics-map-marker-halo|analytics-map-marker-dot|analytics-map-marker-label/);
-  assert.doesNotMatch(css, /\.analytics-map-marker|request-dot|request-trail|marker-trail/);
-  assert.doesNotMatch(css, /request-dot|request-trail|marker-trail/);
-  assert.match(functionBody("markerFeature"), /requests: requests \?\? 0/);
-  assert.match(functionBody("markerFeature"), /haloRadius: markerHaloRadius\(row\)/);
-  assert.match(functionBody("markerFeature"), /dotRadius: markerDotRadius\(row\)/);
 });
 
-test("country flags stay out of city and region table cells but remain in country and map markup", () => {
-  assert.equal(app.includes("locationChip(row, row.city"), false);
-  assert.equal(app.includes("locationChip(row, row.region"), false);
-  assert.ok(app.includes("plainLocationText(row.city"));
-  assert.ok(app.includes("plainLocationText(row.region"));
-  assert.ok(app.includes("locationChip(row, row.country"));
-  assert.ok(app.includes("markerPopupHtml"));
-  assert.ok(app.includes("flagIcon(row, row.country"));
+test("analytics-map module initializes one MapLibre instance and reuses it", () => {
+  assert.match(mapModule, /export function initAnalyticsMap\(container, options = \{\}\)/);
+  assert.match(mapModule, /if \(state\.map && state\.container !== container\)/);
+  assert.match(mapModule, /destroyAnalyticsMap\(\)/);
+  assert.match(mapModule, /if \(state\.map\) \{/);
+  assert.match(mapModule, /return state\.map/);
+  assert.match(mapModule, /new maplibregl\.Map/);
 });
 
-test("all analytics windows use the same aggregate feature pipeline", () => {
+test("analytics-map module owns required GeoJSON source and centered circle layers", () => {
+  assert.match(mapModule, /const SOURCE_ID = "analytics-live-locations"/);
+  assert.match(mapModule, /halo: "analytics-location-halo"/);
+  assert.match(mapModule, /dot: "analytics-location-dot"/);
+  assert.match(mapModule, /hitbox: "analytics-location-hitbox"/);
+  assert.match(mapModule, /map\.addSource\(SOURCE_ID/);
+  assert.match(mapModule, /type: "geojson"/);
+  assert.match(mapModule, /id: LAYER_IDS\.halo/);
+  assert.match(mapModule, /id: LAYER_IDS\.dot/);
+  assert.match(mapModule, /id: LAYER_IDS\.hitbox/);
+  assert.match(mapModule, /"circle-blur": 0\.72/);
+  assert.doesNotMatch(mapModule, /type: "symbol"/);
+});
+
+test("window refresh replaces GeoJSON source data instead of appending marker DOM", () => {
+  assert.match(mapModule, /state\.pendingFeatureCollection = featureCollection/);
+  assert.match(mapModule, /source\.setData\(featureCollection \|\| emptyFeatureCollection\(\)\)/);
+  assert.match(mapModule, /state\.popup\?\.remove\(\)/);
+  assert.match(mapModule, /fitFeatureBounds\(featureCollection\)/);
+  assert.doesNotMatch(mapModule, /document\.createElement\(["']span["']\)/);
+  assert.doesNotMatch(mapModule, /new (window\.)?maplibregl\.Marker/);
+});
+
+test("coordinate normalization protects longitude latitude order", () => {
+  assert.match(mapModule, /return \{ longitude, latitude, coordinateSource \}/);
+  assert.match(mapModule, /geometry: \{\s+type: "Point",\s+coordinates: \[group\.coordinate\.longitude, group\.coordinate\.latitude\]/);
+  assert.match(mapModule, /"corrected_lat_lng"/);
+  assert.match(mapModule, /"declared_lng_lat"/);
+  assert.doesNotMatch(mapModule, /coordinates: \[group\.coordinate\.latitude, group\.coordinate\.longitude\]/);
+  assert.doesNotMatch(mapModule, /\.setLngLat\(\[.*latitude.*longitude.*\]\)/);
+});
+
+test("sessions are n/a unless real session ids or counts exist", () => {
+  assert.match(mapModule, /rowSessionId\(row\)/);
+  assert.match(mapModule, /group\.sessionIds\.add\(sessionId\)/);
+  assert.match(mapModule, /rowSessionCount\(row\)/);
+  assert.match(mapModule, /sessionsAvailable/);
+  assert.match(mapModule, /Sessions/);
+  assert.match(mapModule, /properties\.sessionsAvailable \? formatNumber\(properties\.sessions\) : "n\/a"/);
+});
+
+test("DOM marker smear classes are absent from app and CSS", () => {
+  assert.doesNotMatch(app, /analytics-location-marker|analytics-marker|request-dot|marker-dot-list|map-marker-stack/);
+  assert.doesNotMatch(css, /\.analytics-location-marker|\.analytics-marker|request-dot|marker-dot-list|map-marker-stack/);
+});
+
+test("all analytics windows still call the module update path", () => {
   for (const windowKey of ['["5m", "5M"]', '["15m", "15M"]', '["1h", "1H"]', '["24h", "24HRS"]']) {
     assert.ok(app.includes(windowKey), `${windowKey} missing`);
   }
-  assert.match(functionBody("syncAnalyticsLocationMap"), /const markers = buildLiveMapMarkers\(liveLocationRows\)/);
-  assert.match(functionBody("syncAnalyticsLocationMap"), /ensureAnalyticsMap\(markers\)/);
-  assert.match(functionBody("renderAnalytics"), /syncAnalyticsLocationMap\(status, liveLocationRows\)/);
-});
-
-test("Portland and Los Angeles lookup coordinates stay on the US west coast", async () => {
-  const lookup = JSON.parse(await readFile(new URL("../assets/data/geo-coordinate-lookup.json", import.meta.url), "utf8"));
-  const portland = lookup.cities.find((row) => row.city === "Portland" && row.region === "Oregon" && row.country_code === "US");
-  const losAngeles = lookup.cities.find((row) => row.city === "Los Angeles" && row.country_code === "US");
-  for (const row of [portland, losAngeles]) {
-    assert.ok(row, "expected coordinate fixture is missing");
-    assert.ok(row.lat >= 30 && row.lat <= 50, `${row.city} latitude should be west-coast North America`);
-    assert.ok(row.lon <= -110 && row.lon >= -130, `${row.city} longitude should be west-coast North America`);
-  }
+  assert.match(app, /detachAnalyticsMapContainerForRender\(\)/);
+  assert.match(app, /restoreAnalyticsMapContainerAfterRender\(preservedAnalyticsMapContainer\)/);
+  assert.match(app, /syncAnalyticsLocationMap\(status, liveLocationRows\)/);
+  assert.match(app, /selectedWindow,\s+windowLabel: analyticsWindowLabel\(selectedWindow\)/);
 });

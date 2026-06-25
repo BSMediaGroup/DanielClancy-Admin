@@ -1,41 +1,47 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
-## Analytics MapLibre Marker Smear Repair Milestone
+## Emergency Analytics Map Rebuild Milestone
 
 ### Technical Notes
 
-- Replaced the Analytics map's DOM `maplibregl.Marker` volume-marker path with a MapLibre GeoJSON source plus circle layers: `analytics-location-halo-source`, `analytics-location-halo-layer`, and `analytics-location-dot-layer`.
-- Aggregated source-tagged live rows into one GeoJSON feature per stable project/source/precision/location/coordinate group before rendering; repeated Portland, Los Angeles, and other same-location events no longer create repeated marker elements.
-- Hardened marker coordinates so plotted rows require valid latitude and longitude ranges and GeoJSON geometry is emitted as `[longitude, latitude]`; confidently detected `[lat, lng]` coordinate arrays are corrected and impossible coordinates are rejected.
-- Request/event volume now renders as one centered blurred circle halo layer property, while session volume renders as one centered dot-radius layer property when sessions are available.
-- Removed the old DOM marker child span path and related marker CSS so request volume cannot render as a stacked line/chain of dots.
-- Removed the optional symbol label layer after route validation showed the local raster style lacked MapLibre glyphs; marker details remain available through layer click popups.
+- Replaced the Analytics route's embedded map/marker code path with isolated `assets/js/analytics-map.js`; `assets/js/admin-app.js` now mounts the map container, renders non-map UI, and passes selected-window live rows into the module.
+- Removed the old route-local marker lifecycle from `admin-app.js`: embedded map state, coordinate lookup, coordinate normalization, marker aggregation, feature building, layer setup, popup HTML, and `source.setData()` are no longer owned by the route file.
+- The rebuilt map uses MapLibre GeoJSON source/layers only: source `analytics-live-locations`; layers `analytics-location-halo`, `analytics-location-dot`, and transparent `analytics-location-hitbox`.
+- Aggregated source-tagged live rows into one GeoJSON feature per stable project/source/location/precision/rounded-coordinate group before rendering; repeated Portland, Los Angeles, and other same-location rows do not create repeated marker elements.
+- Hardened coordinate normalization so GeoJSON geometry is always `[longitude, latitude]`; explicit longitude/latitude fields are validated, suspicious arrays are rejected unless declared or confidently correctable, and `[lat, lng]` west-coast arrays are corrected with `coordinateSource: "corrected_lat_lng"`.
+- Added Portland/Los Angeles west-coast guardrails so positive East Hemisphere longitudes or coordinates outside Oregon/California ranges are rejected.
+- Request/event volume renders as one centered blurred circle halo layer; sessions render as one centered dot-radius expression only when real session IDs/counts exist. Missing sessions remain `n/a`.
+- Preserved the MapLibre instance across Analytics rerenders by detaching/restoring the existing map container before route HTML replacement; window changes now replace source data instead of recreating the map or accumulating markers.
 - Preserved the table flag rule: City and Region cells stay text-only, while Country cells and map marker popups/tooltips/chips retain flags.
 
 ### Human-Readable Notes
 
 - Repeated Portland or Los Angeles events now collapse into a single plotted MapLibre feature per live source/location instead of a horizontal or vertical chain of repeated dots.
 - Request/event volume is shown as a centered halo, session volume controls the dot when session data exists, and missing sessions remain `n/a` instead of being invented.
-- Switching `5M`, `15M`, `1H`, and `24HRS` windows replaces marker state instead of accumulating prior markers.
+- Switching `5M`, `15M`, `1H`, and `24HRS` windows replaces marker source data instead of accumulating prior markers or rebuilding the map instance.
 
 ### Files / Areas Changed
 
 - `assets/js/admin-app.js`
-- `assets/css/admin.css`
+- `assets/js/analytics-map.js`
 - `tests/analytics-map-flags.test.mjs`
 - `tests/analytics-map-marker-lifecycle.test.mjs`
+- `tests/analytics-map-rebuild.test.mjs`
 - `README.md`
 - `BUMP_NOTES.md`
 
 ### Validation Notes
 
 - Passed `node --check assets/js/admin-app.js`.
+- Passed `node --check assets/js/analytics-map.js`.
 - Passed `node --check assets/js/admin-auth.js`.
 - Passed `node --check functions/api/admin/analytics.js`.
 - Passed `node --test tests/analytics-helpers.test.mjs`.
+- Passed `node --test tests/analytics-map-rebuild.test.mjs`.
 - Passed `node --test tests/analytics-map-flags.test.mjs`.
 - Passed `node --test tests/analytics-map-marker-lifecycle.test.mjs`.
-- Passed MCP/Playwright browser validation at `http://127.0.0.1:5199/?cache=<timestamp>#/analytics` with mocked repeated Portland and Los Angeles live rows across `5M`, `15M`, `1H`, and `24HRS`; the real `#/analytics` route initialized one MapLibre canvas, emitted exactly two GeoJSON features in every window, rendered zero old DOM marker/request-dot elements, kept Portland at `[-122.6784, 45.5152]`, corrected Los Angeles to `[-118.2437, 34.0522]`, rejected invalid coordinates, replaced source data on window changes, opened a layer popup with flag/details, kept flags only in Country table cells, and ended with no console errors or bad responses under the mocked route.
+- Passed MCP/Playwright browser validation at `http://127.0.0.1:5199/?cache=<timestamp>#/analytics` with network-level mocked Admin auth/API responses and repeated live rows for every window. The actual route initialized one MapLibre canvas, exposed GeoJSON source `analytics-live-locations`, emitted exactly two features in every window, reused the same map instance across `5M`, `15M`, `1H`, and `24HRS`, rendered zero old DOM marker/request-dot elements, kept Portland at `[-122.6784, 45.5152]`, corrected Los Angeles to `[-118.2437, 34.0522]`, opened a layer popup with flag/country/sessions/requests/source/window/page/referrer details, kept flags only in Country table cells, and ended with no console errors or bad mocked-route responses.
+- Visual screenshot proof was captured at `C:/Users/jupit/AppData/Local/Temp/dc-admin-analytics-map-rebuild.png`; it showed the dark MapLibre map with one centered Portland marker and one centered Los Angeles marker, no marker chain/smear, and the Los Angeles popup open.
 - Passed `git diff --check`; Git only reported line-ending normalization warnings for edited files.
 - `npm run check` and `npm run build` were not run because this repo's `package.json` does not define those scripts.
 
