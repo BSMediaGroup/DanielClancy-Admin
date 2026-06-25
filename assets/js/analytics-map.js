@@ -1,3 +1,5 @@
+import { GEO_COORDINATE_LOOKUP } from "./geo-coordinate-lookup.js";
+
 const SOURCE_ID = "analytics-live-locations";
 const LAYER_IDS = {
   halo: "analytics-location-halo",
@@ -13,72 +15,20 @@ const ALLOWED_LIVE_SOURCES = new Set([
   "streamsuites_live"
 ]);
 const FLAG_BASE_PATH = "/assets/icons/flags";
-const COUNTRY_ALIASES = {
-  UK: "GB",
-  "UNITED KINGDOM": "GB",
-  GREAT_BRITAIN: "GB",
-  "GREAT BRITAIN": "GB",
-  UNITED_STATES: "US",
-  "UNITED STATES": "US",
-  "UNITED STATES OF AMERICA": "US",
-  USA: "US",
-  AUSTRALIA: "AU",
-  CANADA: "CA",
-  BRAZIL: "BR",
-  GERMANY: "DE",
-  FRANCE: "FR",
-  INDIA: "IN",
-  JAPAN: "JP",
-  "NEW ZEALAND": "NZ",
-  SOUTH_AFRICA: "ZA",
-  "SOUTH AFRICA": "ZA"
-};
-const COUNTRY_NAMES = {
-  AU: "Australia",
-  BR: "Brazil",
-  CA: "Canada",
-  DE: "Germany",
-  FR: "France",
-  GB: "United Kingdom",
-  IN: "India",
-  JP: "Japan",
-  NZ: "New Zealand",
-  US: "United States",
-  ZA: "South Africa"
-};
-const CITY_LOOKUP_ROWS = [
-  { city: "Portland", region: "Oregon", country_code: "US", latitude: 45.5152, longitude: -122.6784 },
-  { city: "Los Angeles", region: "California", country_code: "US", latitude: 34.0522, longitude: -118.2437 },
-  { city: "Sydney", region: "New South Wales", country_code: "AU", latitude: -33.8688, longitude: 151.2093 },
-  { city: "Sydney", region: "NSW", country_code: "AU", latitude: -33.8688, longitude: 151.2093 },
-  { city: "Perth", region: "Western Australia", country_code: "AU", latitude: -31.9523, longitude: 115.8613 },
-  { city: "Melbourne", region: "Victoria", country_code: "AU", latitude: -37.8136, longitude: 144.9631 },
-  { city: "Brisbane", region: "Queensland", country_code: "AU", latitude: -27.4698, longitude: 153.0251 },
-  { city: "Adelaide", region: "South Australia", country_code: "AU", latitude: -34.9285, longitude: 138.6007 },
-  { city: "Canberra", region: "ACT", country_code: "AU", latitude: -35.2809, longitude: 149.13 },
-  { city: "New York", region: "New York", country_code: "US", latitude: 40.7128, longitude: -74.006 },
-  { city: "San Francisco", region: "California", country_code: "US", latitude: 37.7749, longitude: -122.4194 },
-  { city: "Chicago", region: "Illinois", country_code: "US", latitude: 41.8781, longitude: -87.6298 },
-  { city: "Seattle", region: "Washington", country_code: "US", latitude: 47.6062, longitude: -122.3321 },
-  { city: "London", region: "England", country_code: "GB", latitude: 51.5072, longitude: -0.1276 },
-  { city: "Toronto", region: "Ontario", country_code: "CA", latitude: 43.6532, longitude: -79.3832 },
-  { city: "Vancouver", region: "British Columbia", country_code: "CA", latitude: 49.2827, longitude: -123.1207 },
-  { city: "Auckland", region: "Auckland", country_code: "NZ", latitude: -36.8509, longitude: 174.7645 },
-  { city: "Singapore", region: "", country_code: "SG", latitude: 1.3521, longitude: 103.8198 }
-];
-const COUNTRY_CENTROIDS = {
-  AU: { latitude: -25.2744, longitude: 133.7751 },
-  BR: { latitude: -14.235, longitude: -51.9253 },
-  CA: { latitude: 56.1304, longitude: -106.3468 },
-  DE: { latitude: 51.1657, longitude: 10.4515 },
-  FR: { latitude: 46.2276, longitude: 2.2137 },
-  GB: { latitude: 55.3781, longitude: -3.436 },
-  IN: { latitude: 20.5937, longitude: 78.9629 },
-  JP: { latitude: 36.2048, longitude: 138.2529 },
-  NZ: { latitude: -40.9006, longitude: 174.886 },
-  US: { latitude: 37.0902, longitude: -95.7129 },
-  ZA: { latitude: -30.5595, longitude: 22.9375 }
-};
+const COUNTRY_ALIASES = Object.fromEntries(
+  Object.entries(GEO_COORDINATE_LOOKUP.countryAliases || {}).map(([alias, code]) => [normalizeAliasKey(alias), code])
+);
+const CITY_LOOKUP_ROWS = GEO_COORDINATE_LOOKUP.cityLookup || [];
+const COUNTRY_CENTROID_ROWS = GEO_COORDINATE_LOOKUP.countryCentroids || [];
+const COUNTRY_CENTROIDS = Object.fromEntries(
+  COUNTRY_CENTROID_ROWS.map((row) => [normalizeCountryCode(row.country_code), row])
+);
+const COUNTRY_NAMES = Object.fromEntries(
+  COUNTRY_CENTROID_ROWS.map((row) => [normalizeCountryCode(row.country_code), row.country_name])
+);
+const COUNTRY_NAME_LOOKUP = new Map(
+  COUNTRY_CENTROID_ROWS.map((row) => [normalizeKeyPart(row.country_name), normalizeCountryCode(row.country_code)])
+);
 
 const CITY_LOOKUP = new Map();
 for (const row of CITY_LOOKUP_ROWS) {
@@ -216,6 +166,8 @@ export function resizeAnalyticsMap() {
 export function buildLocationFeatures(rows, options = {}) {
   const aggregate = aggregateLocationRows(rows, options);
   const features = aggregate.groups.map((group) => groupToFeature(group, options));
+  const cityMarkers = features.filter((feature) => feature.properties?.plottedPrecision === "city").length;
+  const countryFallbackMarkers = features.filter((feature) => feature.properties?.plottedPrecision === "country_fallback").length;
   return {
     type: "FeatureCollection",
     features,
@@ -223,7 +175,9 @@ export function buildLocationFeatures(rows, options = {}) {
       eligibleRows: aggregate.eligibleRows,
       unmappedRows: aggregate.unmappedRows,
       rejectedRows: aggregate.rejectedRows,
-      groupedRows: aggregate.groups.length
+      groupedRows: aggregate.groups.length,
+      cityMarkers,
+      countryFallbackMarkers
     }
   };
 }
@@ -247,7 +201,7 @@ export function aggregateLocationRows(rows, options = {}) {
     eligibleRows.push(row);
     const coordinate = normalizeLocationCoordinate(row);
     if (!coordinate) {
-      unmappedRows.push({ row, reason: "invalid_or_unverified_coordinate" });
+      unmappedRows.push({ row, reason: unmappedReason(row) });
       continue;
     }
 
@@ -265,6 +219,8 @@ export function aggregateLocationRows(rows, options = {}) {
         hasSessionCount: false,
         pages: new Set(),
         referrers: new Set(),
+        contributingCities: new Set(),
+        originalPrecisions: new Set(),
         lastSeen: "",
         sample: row
       };
@@ -272,6 +228,8 @@ export function aggregateLocationRows(rows, options = {}) {
     }
 
     group.rows.push(row);
+    group.contributingCities.add(contributingCityLabel(row));
+    group.originalPrecisions.add(coordinate.originalPrecision || originalRowPrecision(row));
     group.requests += rowRequestWeight(row);
     group.events += rowEventWeight(row);
     const sessionId = rowSessionId(row);
@@ -301,6 +259,7 @@ export function aggregateLocationRows(rows, options = {}) {
 
 export function normalizeLocationCoordinate(row) {
   if (!row || typeof row !== "object") return null;
+  const originalPrecision = originalRowPrecision(row);
 
   const explicitLatitude = firstFiniteField(row, ["latitude", "lat"]);
   const explicitLongitude = firstFiniteField(row, ["longitude", "lng", "lon"]);
@@ -308,28 +267,31 @@ export function normalizeLocationCoordinate(row) {
   const hasExplicitLongitude = hasPresentField(row, ["longitude", "lng", "lon"]);
 
   if (hasExplicitLatitude || hasExplicitLongitude) {
-    if (explicitLatitude === null || explicitLongitude === null) return null;
-    return guardKnownCityCoordinate(
-      row,
-      coordinateFromLngLat(explicitLongitude, explicitLatitude, row.coordinateSource || "explicit_fields")
-    );
+    if (explicitLatitude !== null && explicitLongitude !== null) {
+      const explicitCoordinate = guardKnownCityCoordinate(
+        row,
+        coordinateFromLngLat(explicitLongitude, explicitLatitude, "event_coordinate", "city", originalPrecision)
+      );
+      if (explicitCoordinate) return explicitCoordinate;
+    }
   }
 
   const arrayCoordinate = coordinateFromArray(row);
   if (arrayCoordinate) return guardKnownCityCoordinate(row, arrayCoordinate);
-  if (hasPresentField(row, ["coordinates", "coordinate", "lngLat", "latLng"])) return null;
 
-  const precision = normalizeKeyPart(row.precision || (row.city ? "city" : "country"));
   const cityCoordinate = lookupCityCoordinate(row);
   if (cityCoordinate) return guardKnownCityCoordinate(row, cityCoordinate);
 
-  if (precision === "country" || !row.city) {
-    const code = normalizeCountryCode(row.country_code || row.countryCode || row.country);
-    const centroid = COUNTRY_CENTROIDS[code];
-    if (centroid) return coordinateFromLookup(centroid, "country_centroid");
-  }
+  const countryCoordinate = lookupCountryCoordinate(row);
+  if (countryCoordinate) return countryCoordinate;
 
   return null;
+}
+
+export function locationMapPrecision(row) {
+  const coordinate = normalizeLocationCoordinate(row);
+  if (!coordinate) return "unmapped";
+  return coordinate.plottedPrecision === "country_fallback" ? "country fallback" : "city";
 }
 
 export function assertCoordinateGuardrails() {
@@ -368,7 +330,12 @@ function ensureAnalyticsMapLayers() {
       type: "circle",
       source: SOURCE_ID,
       paint: {
-        "circle-color": "#f0a43a",
+        "circle-color": [
+          "case",
+          ["==", ["get", "plottedPrecision"], "country_fallback"],
+          "#5db9e8",
+          "#f0a43a"
+        ],
         "circle-opacity": [
           "interpolate",
           ["linear"],
@@ -390,7 +357,12 @@ function ensureAnalyticsMapLayers() {
           150, 36,
           400, 48
         ],
-        "circle-stroke-color": "rgba(255, 210, 128, 0.24)",
+        "circle-stroke-color": [
+          "case",
+          ["==", ["get", "plottedPrecision"], "country_fallback"],
+          "rgba(126, 220, 255, 0.42)",
+          "rgba(255, 210, 128, 0.24)"
+        ],
         "circle-stroke-width": 1
       }
     });
@@ -402,10 +374,20 @@ function ensureAnalyticsMapLayers() {
       type: "circle",
       source: SOURCE_ID,
       paint: {
-        "circle-color": "#f6d58a",
+        "circle-color": [
+          "case",
+          ["==", ["get", "plottedPrecision"], "country_fallback"],
+          "#9ee7ff",
+          "#f6d58a"
+        ],
         "circle-opacity": 0.96,
         "circle-blur": 0.08,
-        "circle-stroke-color": "rgba(255, 255, 255, 0.76)",
+        "circle-stroke-color": [
+          "case",
+          ["==", ["get", "plottedPrecision"], "country_fallback"],
+          "rgba(232, 251, 255, 0.9)",
+          "rgba(255, 255, 255, 0.76)"
+        ],
         "circle-stroke-width": 1.1,
         "circle-radius": [
           "case",
@@ -530,21 +512,38 @@ function updateEmptyOverlay(featureCollection, payload) {
 function groupToFeature(group, options = {}) {
   const sample = group.sample || {};
   const countryCode = normalizeCountryCode(sample.country_code || sample.countryCode || sample.country);
-  const country = firstText(sample.country, COUNTRY_NAMES[countryCode], countryCode, "Unavailable");
-  const city = firstText(sample.city);
-  const region = firstText(sample.region, sample.region_code);
+  const country = firstText(
+    normalizeKeyPart(sample.country) === countryCode.toLowerCase() ? "" : sample.country,
+    COUNTRY_NAMES[countryCode],
+    countryCode,
+    "Unavailable"
+  );
+  const plottedPrecision = group.coordinate.plottedPrecision || "city";
+  const isCountryFallback = plottedPrecision === "country_fallback";
+  const city = isCountryFallback ? "" : firstText(sample.city);
+  const region = isCountryFallback ? "" : firstText(sample.region, sample.region_code);
   const sessions = group.sessionIds.size + group.sessionCount;
   const sessionsAvailable = group.sessionIds.size > 0 || group.hasSessionCount;
   const pages = Array.from(group.pages).slice(0, 4);
   const referrers = Array.from(group.referrers).slice(0, 4);
-  const label = [city, region, country || countryCode].filter(Boolean).join(", ") || "Location";
+  const contributingCities = Array.from(group.contributingCities).filter(Boolean).slice(0, 12);
+  const contributingCitiesSummary = summarizeContributingCities(contributingCities);
+  const originalPrecision = Array.from(group.originalPrecisions).filter(Boolean).join(", ") || originalRowPrecision(sample);
+  const label = isCountryFallback
+    ? `${country || countryCode || "Country"} country fallback`
+    : [city, region, country || countryCode].filter(Boolean).join(", ") || "Location";
   const properties = {
     id: group.key,
     city,
     region,
     country,
     country_code: countryCode,
-    precision: firstText(sample.precision, city ? "city" : "country"),
+    precision: isCountryFallback ? "country fallback" : firstText(sample.precision, city ? "city" : "country"),
+    plottedPrecision,
+    originalPrecision,
+    unmappedReason: "",
+    contributingCities,
+    contributingCitiesSummary,
     source: firstText(sample.source, "unavailable"),
     project: firstText(sample.project, sample.source_namespace, "danielclancy"),
     sessions: sessionsAvailable ? sessions : null,
@@ -620,7 +619,13 @@ function lookupCityCoordinate(row) {
     CITY_LOOKUP.get([city, country].join("|")) ||
     CITY_LOOKUP.get([city, code].join("|")) ||
     null;
-  return coord ? coordinateFromLookup(coord, "lookup") : null;
+  return coord ? coordinateFromLookup(coord, "city_lookup", "city", originalRowPrecision(row)) : null;
+}
+
+function lookupCountryCoordinate(row) {
+  const code = normalizeCountryCode(row.country_code || row.countryCode || row.country);
+  const centroid = COUNTRY_CENTROIDS[code];
+  return centroid ? coordinateFromLookup(centroid, "country_centroid", "country_fallback", originalRowPrecision(row)) : null;
 }
 
 function coordinateFromArray(row) {
@@ -632,14 +637,14 @@ function coordinateFromArray(row) {
   const order = normalizeKeyPart(row.coordinateOrder || row.coordinatesOrder || row.coordinate_order || row.order);
 
   if (["lnglat", "lonlat", "longlat", "longitude_latitude"].includes(order)) {
-    return coordinateFromLngLat(first, second, "declared_lng_lat");
+    return coordinateFromLngLat(first, second, "event_coordinate", "city", originalRowPrecision(row));
   }
   if (["latlng", "latlon", "latitude_longitude"].includes(order)) {
-    return coordinateFromLngLat(second, first, "declared_lat_lng");
+    return coordinateFromLngLat(second, first, "event_coordinate", "city", originalRowPrecision(row));
   }
 
-  const asLngLat = coordinateFromLngLat(first, second, "coordinates_lng_lat");
-  const asLatLng = coordinateFromLngLat(second, first, "corrected_lat_lng");
+  const asLngLat = coordinateFromLngLat(first, second, "event_coordinate", "city", originalRowPrecision(row));
+  const asLatLng = coordinateFromLngLat(second, first, "event_coordinate", "city", originalRowPrecision(row));
   if (asLngLat && !asLatLng) return asLngLat;
   if (asLatLng && !asLngLat) return asLatLng;
   if (asLngLat && Math.abs(first) > 90 && Math.abs(second) <= 90) return asLngLat;
@@ -647,16 +652,22 @@ function coordinateFromArray(row) {
   return null;
 }
 
-function coordinateFromLookup(coord, source) {
-  return coordinateFromLngLat(coord.longitude, coord.latitude, source);
+function coordinateFromLookup(coord, source, plottedPrecision, originalPrecision) {
+  return coordinateFromLngLat(coord.longitude, coord.latitude, source, plottedPrecision, originalPrecision);
 }
 
-function coordinateFromLngLat(longitudeValue, latitudeValue, coordinateSource) {
+function coordinateFromLngLat(longitudeValue, latitudeValue, coordinateSource, plottedPrecision, originalPrecision) {
   const longitude = parseFiniteNumber(longitudeValue);
   const latitude = parseFiniteNumber(latitudeValue);
   if (longitude === null || latitude === null) return null;
   if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
-  return { longitude, latitude, coordinateSource };
+  return {
+    longitude,
+    latitude,
+    coordinateSource,
+    plottedPrecision: plottedPrecision || "city",
+    originalPrecision: originalPrecision || "unknown"
+  };
 }
 
 function guardKnownCityCoordinate(row, coordinate) {
@@ -688,9 +699,19 @@ function inRange(coordinate, range) {
 }
 
 function locationGroupKey(row, coordinate) {
+  if (coordinate?.plottedPrecision === "country_fallback") {
+    return [
+      normalizeTokenPart(row.project || row.source_namespace || "danielclancy"),
+      normalizeTokenPart(row.source || "unknown"),
+      "country_fallback",
+      normalizeCountryCode(row.country_code || row.countryCode || row.country).toLowerCase(),
+      roundedCoordinatePart(coordinate.longitude),
+      roundedCoordinatePart(coordinate.latitude)
+    ].join("|");
+  }
   return [
-    normalizeKeyPart(row.project || row.source_namespace || "danielclancy"),
-    normalizeKeyPart(row.source || "unknown"),
+    normalizeTokenPart(row.project || row.source_namespace || "danielclancy"),
+    normalizeTokenPart(row.source || "unknown"),
     normalizeKeyPart(row.city),
     normalizeKeyPart(row.region || row.region_code),
     normalizeCountryCode(row.country_code || row.countryCode || row.country).toLowerCase(),
@@ -698,6 +719,33 @@ function locationGroupKey(row, coordinate) {
     roundedCoordinatePart(coordinate.longitude),
     roundedCoordinatePart(coordinate.latitude)
   ].join("|");
+}
+
+function originalRowPrecision(row) {
+  return normalizeKeyPart(row?.precision || (row?.city ? "city" : normalizeCountryCode(row?.country_code || row?.countryCode || row?.country) ? "country" : "unknown")) || "unknown";
+}
+
+function contributingCityLabel(row) {
+  const city = firstText(row?.city, row?.cityName);
+  const region = firstText(row?.region, row?.region_code, row?.regionCode);
+  if (city && region) return `${city}, ${region}`;
+  if (city) return city;
+  if (region) return `Region: ${region}`;
+  return "Country-only row";
+}
+
+function summarizeContributingCities(values) {
+  const list = Array.from(new Set(values.filter(Boolean)));
+  if (!list.length) return "";
+  if (list.length <= 6) return list.join("; ");
+  return `${list.slice(0, 6).join("; ")}; +${list.length - 6} more`;
+}
+
+function unmappedReason(row) {
+  const code = normalizeCountryCode(row?.country_code || row?.countryCode || row?.country);
+  if (!code) return "missing_country_code";
+  if (!COUNTRY_CENTROIDS[code]) return "missing_country_centroid";
+  return "invalid_or_unverified_coordinate";
 }
 
 function roundedCoordinatePart(value) {
@@ -740,20 +788,25 @@ function buildPopupHtml(properties) {
   const sessions = properties.sessionsAvailable ? formatNumber(properties.sessions) : "n/a";
   const countryLabel = properties.country || properties.country_code || "Unavailable";
   const flagPath = properties.flagPath || countryFlagPath(properties.country_code);
+  const coordinateLabel = coordinateSourceLabel(properties.coordinateSource, properties.plottedPrecision);
+  const isCountryFallback = properties.plottedPrecision === "country_fallback";
   return `
     <div class="analytics-map-popup-inner">
       <strong>${escapeHtml(properties.label || "Location")}</strong>
       <dl>
-        <div><dt>City</dt><dd>${escapeHtml(properties.city || "n/a")}</dd></div>
+        <div><dt>Marker</dt><dd>${escapeHtml(isCountryFallback ? "Country fallback location" : coordinateLabel)}</dd></div>
+        <div><dt>City</dt><dd>${escapeHtml(properties.city || (isCountryFallback ? "Country fallback marker" : "n/a"))}</dd></div>
         <div><dt>Region</dt><dd>${escapeHtml(properties.region || "n/a")}</dd></div>
         <div><dt>Country</dt><dd><span class="location-chip"><img class="country-flag" src="${escapeHtml(flagPath)}" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(countryLabel)}</span></span></dd></div>
+        ${isCountryFallback ? `<div><dt>Cities</dt><dd>${escapeHtml(properties.contributingCitiesSummary || "No city detail")}</dd></div>` : ""}
         <div><dt>Sessions</dt><dd>${escapeHtml(sessions)}</dd></div>
         <div><dt>Requests</dt><dd>${escapeHtml(formatNumber(properties.requests))}</dd></div>
         <div><dt>Events</dt><dd>${escapeHtml(formatNumber(properties.events))}</dd></div>
         <div><dt>Window</dt><dd>${escapeHtml(properties.windowLabel || properties.window || "n/a")}</dd></div>
         <div><dt>Precision</dt><dd>${escapeHtml(properties.precision || "unavailable")}</dd></div>
+        <div><dt>Original precision</dt><dd>${escapeHtml(properties.originalPrecision || "unknown")}</dd></div>
         <div><dt>Source</dt><dd>${escapeHtml(sourceLabel(properties.source))}</dd></div>
-        <div><dt>Coordinates</dt><dd>${escapeHtml(properties.coordinateSource || "source")}</dd></div>
+        <div><dt>Coordinates</dt><dd>${escapeHtml(coordinateLabel)}</dd></div>
         <div><dt>Last seen</dt><dd>${escapeHtml(formatTimestamp(properties.lastSeen))}</dd></div>
         ${properties.page_path ? `<div><dt>Page</dt><dd>${escapeHtml(properties.page_path)}</dd></div>` : ""}
         ${properties.referrer_host ? `<div><dt>Referrer</dt><dd>${escapeHtml(properties.referrer_host)}</dd></div>` : ""}
@@ -761,6 +814,13 @@ function buildPopupHtml(properties) {
       </dl>
     </div>
   `;
+}
+
+function coordinateSourceLabel(source, plottedPrecision) {
+  if (source === "country_centroid" || plottedPrecision === "country_fallback") return "Country fallback";
+  if (source === "city_lookup") return "City lookup";
+  if (source === "event_coordinate") return "City coordinate";
+  return source || "source";
 }
 
 function sourceLabel(source) {
@@ -813,7 +873,9 @@ function emptyFeatureCollection() {
       eligibleRows: [],
       unmappedRows: [],
       rejectedRows: [],
-      groupedRows: 0
+      groupedRows: 0,
+      cityMarkers: 0,
+      countryFallbackMarkers: 0
     }
   };
 }
@@ -821,11 +883,12 @@ function emptyFeatureCollection() {
 function normalizeCountryCode(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  const normalized = raw.toUpperCase().replace(/\s+/g, " ");
-  const aliasKey = normalized.replace(/\s+/g, "_");
-  if (COUNTRY_ALIASES[normalized]) return COUNTRY_ALIASES[normalized];
+  const normalized = raw.toUpperCase().replace(/[^A-Z]/g, "");
+  if (/^[A-Z]{2}$/.test(normalized)) return COUNTRY_ALIASES[normalized] || normalized;
+  const aliasKey = normalizeAliasKey(raw);
   if (COUNTRY_ALIASES[aliasKey]) return COUNTRY_ALIASES[aliasKey];
-  if (/^[A-Z]{2}$/.test(normalized)) return normalized;
+  const countryNameCode = COUNTRY_NAME_LOOKUP.get(normalizeKeyPart(raw));
+  if (countryNameCode) return countryNameCode;
   return "";
 }
 
@@ -836,9 +899,23 @@ function countryFlagPath(countryCodeValue) {
 
 function normalizeKeyPart(value) {
   return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
+    .replace(/[^a-zA-Z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .toLowerCase();
+}
+
+function normalizeTokenPart(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .toLowerCase();
+}
+
+function normalizeAliasKey(value) {
+  return normalizeKeyPart(value).toUpperCase().replace(/\s+/g, "_");
 }
 
 function firstText(...values) {

@@ -75,21 +75,23 @@ test("buildLocationFeatures aggregates 100 Los Angeles rows into one west-coast 
   assert.deepEqual(feature.geometry.coordinates, [-118.2437, 34.0522]);
 });
 
-test("Portland and Los Angeles never normalize to positive East Hemisphere longitudes", () => {
-  assert.equal(
-    normalizeLocationCoordinate(locationRow("Portland", { longitude: 122.6784, latitude: 45.5152 })),
-    null
+test("Portland and Los Angeles never use positive East Hemisphere event longitudes", () => {
+  const portland = normalizeLocationCoordinate(locationRow("Portland", { longitude: 122.6784, latitude: 45.5152 }));
+  const losAngeles = normalizeLocationCoordinate(locationRow("Los Angeles", { longitude: 118.2437, latitude: 34.0522 }));
+  assert.deepEqual(
+    { longitude: portland.longitude, latitude: portland.latitude, coordinateSource: portland.coordinateSource },
+    { longitude: -122.6784, latitude: 45.5152, coordinateSource: "city_lookup" }
   );
-  assert.equal(
-    normalizeLocationCoordinate(locationRow("Los Angeles", { longitude: 118.2437, latitude: 34.0522 })),
-    null
+  assert.deepEqual(
+    { longitude: losAngeles.longitude, latitude: losAngeles.latitude, coordinateSource: losAngeles.coordinateSource },
+    { longitude: -118.2437, latitude: 34.0522, coordinateSource: "city_lookup" }
   );
 });
 
-test("invalid coordinates and ambiguous coordinate arrays are not plotted", () => {
+test("invalid coordinates and ambiguous coordinate arrays without country fallback are not plotted", () => {
   const collection = buildLocationFeatures([
-    locationRow("Portland", { latitude: 200, longitude: -122.6784 }),
-    locationRow("Los Angeles", { coordinates: [34, 45] })
+    locationRow("Portland", { city: "", region: "", country: "", country_code: "", latitude: 200, longitude: -122.6784 }),
+    locationRow("Los Angeles", { city: "", region: "", country: "", country_code: "", coordinates: [34, 45] })
   ]);
   assert.equal(collection.features.length, 0);
   assert.equal(collection.metadata.unmappedRows.length, 2);
@@ -101,7 +103,7 @@ test("lat-lng arrays are corrected only when the order is clear", () => {
   }));
   assert.deepEqual(
     { longitude: coordinate.longitude, latitude: coordinate.latitude, coordinateSource: coordinate.coordinateSource },
-    { longitude: -122.6784, latitude: 45.5152, coordinateSource: "corrected_lat_lng" }
+    { longitude: -122.6784, latitude: 45.5152, coordinateSource: "event_coordinate" }
   );
 });
 

@@ -13,6 +13,7 @@ import {
 import {
   buildLocationFeatures,
   initAnalyticsMap,
+  locationMapPrecision,
   resizeAnalyticsMap as resizeAnalyticsMapModule,
   updateAnalyticsMap
 } from "./analytics-map.js";
@@ -3574,7 +3575,7 @@ import {
       windowLabel: analyticsWindowLabel(selectedWindow),
       hasEvents: Number(status?.pageVisits?.events || status?.location?.events || 0) > 0,
       emptyText: "No live page-visit location events captured for this window.",
-      unmappedText: "Live location rows do not have verified coordinates yet."
+      unmappedText: "Live location rows do not have usable coordinates or country fallback."
     });
   }
 
@@ -3600,9 +3601,9 @@ import {
       selectedWindow: normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow)
     });
     const cityDetailCount = Number(pageVisits.cityEvents || liveCities.length || 0);
-    const countryOnlyCount = Number(pageVisits.countryOnlyEvents || 0);
-    const plottedLocationCount = featureCollection.features.length;
     const unmappedLocationCount = featureCollection.metadata?.unmappedRows?.length || 0;
+    const cityMarkerCount = featureCollection.metadata?.cityMarkers || 0;
+    const countryFallbackMarkerCount = featureCollection.metadata?.countryFallbackMarkers || 0;
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
     return `
@@ -3622,9 +3623,9 @@ import {
           <div class="location-metrics">
             ${storageStatusCard("Tracked events", formatAnalyticsNumber(pageVisits.events || 0), "Bounded page_visit KV events.", pageVisits.configured ? "success" : "warn")}
             ${storageStatusCard("City detail", formatAnalyticsNumber(cityDetailCount), "Rows with city-level precision.", cityDetailCount ? "success" : "warn")}
-            ${storageStatusCard("Country-only", formatAnalyticsNumber(countryOnlyCount), "Rows with country but no city.", countryOnlyCount ? "warn" : "success")}
-            ${storageStatusCard("Mapped markers", formatAnalyticsNumber(plottedLocationCount), "Rows with source or verified lookup coordinates.", plottedLocationCount ? "success" : "warn")}
-            ${storageStatusCard("Unmapped rows", formatAnalyticsNumber(unmappedLocationCount), "Rows without verified coordinates.", unmappedLocationCount ? "warn" : "success")}
+            ${storageStatusCard("City markers", formatAnalyticsNumber(cityMarkerCount), "Markers plotted from event coordinates or verified city lookup.", cityMarkerCount ? "success" : "warn")}
+            ${storageStatusCard("Country fallback markers", formatAnalyticsNumber(countryFallbackMarkerCount), "Markers plotted at verified country centroid fallback precision.", countryFallbackMarkerCount ? "warn" : "success")}
+            ${storageStatusCard("Unmapped rows", formatAnalyticsNumber(unmappedLocationCount), "Rows without usable coordinates or country fallback.", unmappedLocationCount ? "warn" : "success")}
             ${storageStatusCard("Last live event", formatOperationalTimestamp(pageVisits.lastLiveEventTime || location.lastUpdated), "Periodic refresh; not realtime.", pageVisits.lastLiveEventTime ? "success" : "warn")}
           </div>
           <div class="analytics-map-shell">
@@ -3735,20 +3736,23 @@ import {
             "Location breakdown",
             cityUnavailable ? (pageVisits.emptyMessage || "City detail unavailable from current data source") : "City rows are sourced from page-visit KV request geo metadata when available.",
             analyticsTable(
-              ["City", "Region", "Country", "Sessions", "Requests", "Precision", "Source", "Last seen"],
+              ["City", "Region", "Country", "Sessions", "Requests", "Map precision", "Source", "Last seen"],
               liveCities,
-              (row) => `
-                <tr>
-                  <td><strong>${plainLocationText(row.city || "City detail unavailable from current data source")}</strong></td>
-                  <td>${row.region ? plainLocationText(row.region) : ""}</td>
-                  <td>${locationChip(row, row.country || row.country_code || "Unavailable")}</td>
-                  <td>${escapeHtml(formatAnalyticsMetric(sessionCount(row)))}</td>
-                  <td>${escapeHtml(formatAnalyticsMetric(requestCount(row)))}</td>
-                  <td>${badge(row.precision || "unavailable", row.precision === "city" ? "success" : "warn")}</td>
-                  <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
-                  <td>${escapeHtml(formatOperationalTimestamp(row.lastSeen || row.recordedAt || row.timestamp || ""))}</td>
-                </tr>
-              `,
+              (row) => {
+                const precision = locationMapPrecision(row);
+                return `
+                  <tr>
+                    <td><strong>${plainLocationText(row.city || "City detail unavailable from current data source")}</strong></td>
+                    <td>${row.region ? plainLocationText(row.region) : ""}</td>
+                    <td>${locationChip(row, row.country || row.country_code || "Unavailable")}</td>
+                    <td>${escapeHtml(formatAnalyticsMetric(sessionCount(row)))}</td>
+                    <td>${escapeHtml(formatAnalyticsMetric(requestCount(row)))}</td>
+                    <td>${badge(precision, precision === "city" ? "success" : precision === "country fallback" ? "warn" : "danger")}</td>
+                    <td>${badge(row.source || "unavailable", sourceTone(row.source))}</td>
+                    <td>${escapeHtml(formatOperationalTimestamp(row.lastSeen || row.recordedAt || row.timestamp || ""))}</td>
+                  </tr>
+                `;
+              },
               pageVisits.emptyMessage || "No city-level page-visit rows available."
             )
           )}

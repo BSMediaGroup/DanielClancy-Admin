@@ -52,10 +52,11 @@ test("window refresh replaces GeoJSON source data instead of appending marker DO
 });
 
 test("coordinate normalization protects longitude latitude order", () => {
-  assert.match(mapModule, /return \{ longitude, latitude, coordinateSource \}/);
+  assert.match(mapModule, /longitude,\s+latitude,\s+coordinateSource,\s+plottedPrecision/s);
   assert.match(mapModule, /geometry: \{\s+type: "Point",\s+coordinates: \[group\.coordinate\.longitude, group\.coordinate\.latitude\]/);
-  assert.match(mapModule, /"corrected_lat_lng"/);
-  assert.match(mapModule, /"declared_lng_lat"/);
+  assert.match(mapModule, /"event_coordinate"/);
+  assert.match(mapModule, /"city_lookup"/);
+  assert.match(mapModule, /"country_centroid"/);
   assert.doesNotMatch(mapModule, /coordinates: \[group\.coordinate\.latitude, group\.coordinate\.longitude\]/);
   assert.doesNotMatch(mapModule, /\.setLngLat\(\[.*latitude.*longitude.*\]\)/);
 });

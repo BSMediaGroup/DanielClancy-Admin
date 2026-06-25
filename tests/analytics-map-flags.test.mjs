@@ -4,14 +4,18 @@ import test from "node:test";
 
 test("analytics map module uses exact city-country lookup and not city-only fallback", async () => {
   const mapModule = await readFile(new URL("../assets/js/analytics-map.js", import.meta.url), "utf8");
+  const lookupModule = await readFile(new URL("../assets/js/geo-coordinate-lookup.js", import.meta.url), "utf8");
   const lookup = JSON.parse(await readFile(new URL("../assets/data/geo-coordinate-lookup.json", import.meta.url), "utf8"));
   assert.equal(lookup.source, "verified_builtin_lookup");
-  assert.ok(lookup.cities.some((row) => row.city === "Los Angeles" && row.country_code === "US"));
-  assert.ok(lookup.cities.some((row) => row.city === "Portland" && row.region === "Oregon" && row.country_code === "US"));
-  assert.ok(mapModule.includes('city: "Los Angeles"'));
-  assert.ok(mapModule.includes('city: "Portland"'));
+  assert.ok(lookup.cityLookup.some((row) => row.city === "Los Angeles" && row.country_code === "US"));
+  assert.ok(lookup.cityLookup.some((row) => row.city === "Portland" && row.region === "Oregon" && row.country_code === "US"));
+  assert.ok(lookup.cityLookup.some((row) => row.city === "Santa Clara" && row.region === "California" && row.country_code === "US"));
+  assert.ok(lookup.countryCentroids.some((row) => row.country_code === "GB" && row.sourceNotes === "country_centroid_fallback"));
+  assert.ok(lookupModule.includes('city: "Los Angeles"'));
+  assert.ok(lookupModule.includes('city: "Portland"'));
   assert.equal(mapModule.includes("CITY_LOOKUP.get(city)"), false);
   assert.ok(mapModule.includes("CITY_LOOKUP.get([city, region, code].join(\"|\"))"));
+  assert.ok(mapModule.includes("lookupCountryCoordinate"));
   assert.ok(mapModule.includes("guardKnownCityCoordinate"));
 });
 
@@ -66,7 +70,7 @@ test("location table flags are limited to the country column", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
   assert.equal(app.includes("locationChip(row, row.city"), false);
   assert.equal(app.includes("locationChip(row, row.region"), false);
-  assert.ok(app.includes('["City", "Region", "Country", "Sessions", "Requests", "Precision", "Source", "Last seen"]'));
+  assert.ok(app.includes('["City", "Region", "Country", "Sessions", "Requests", "Map precision", "Source", "Last seen"]'));
   assert.ok(app.includes("plainLocationText(row.city"));
   assert.ok(app.includes("plainLocationText(row.region"));
   assert.ok(app.includes("locationChip(row, row.country"));
@@ -83,13 +87,15 @@ test("marker model separates sessions and requests in GeoJSON layer expressions"
   assert.equal(css.includes(".analytics-map-marker"), false);
 });
 
-test("analytics marker generation excludes samples and rows without coordinates", async () => {
+test("analytics marker generation excludes samples and only truly unmappable rows", async () => {
   const app = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
   const mapModule = await readFile(new URL("../assets/js/analytics-map.js", import.meta.url), "utf8");
   assert.ok(mapModule.includes("ALLOWED_LIVE_SOURCES"));
   assert.ok(mapModule.includes("row.live !== true"));
   assert.ok(mapModule.includes("not_live_or_source_tagged"));
-  assert.ok(mapModule.includes("invalid_or_unverified_coordinate"));
+  assert.ok(mapModule.includes("missing_country_code"));
+  assert.ok(mapModule.includes("missing_country_centroid"));
+  assert.ok(mapModule.includes("country_centroid"));
   assert.ok(app.includes("updateAnalyticsMap({"));
 });
 
@@ -101,6 +107,8 @@ test("country-only rows are country precision and popups include flag metadata",
   assert.ok(api.includes("liveLocationRows"));
   assert.ok(mapModule.includes("COUNTRY_CENTROIDS"));
   assert.ok(mapModule.includes("coordinateSource"));
+  assert.ok(mapModule.includes("plottedPrecision"));
+  assert.ok(mapModule.includes("Country fallback location"));
   assert.ok(mapModule.includes("Flag path"));
   assert.ok(mapModule.includes("buildPopupHtml"));
 });

@@ -1,5 +1,41 @@
 # CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
 
+## Analytics Coordinate Fallback Milestone
+
+### Technical Notes
+
+- Split Analytics coordinate data into `assets/js/geo-coordinate-lookup.js` and expanded the documented `assets/data/geo-coordinate-lookup.json` v2 data source with verified approximate city-center rows for Portland, Los Angeles, Santa Clara, Ashburn, London, Sydney, Toronto, Sao Paulo, Rio de Janeiro, Melbourne, Brisbane, Perth, Auckland, Tokyo, Singapore, Dublin, Frankfurt, Paris, and Amsterdam, plus additional existing common rows.
+- Added local ISO alpha-2 country centroid fallbacks for US, GB, CA, BR, AU, NZ, IE, DE, FR, NL, JP, SG, IN, ZA, MX, ES, IT, SE, NO, and DK. No external coordinate service is called at runtime.
+- Updated `assets/js/analytics-map.js` coordinate resolution to prefer verified event coordinates, then exact city lookup, then verified country centroid fallback. City rows without a known city coordinate now plot at country fallback precision instead of becoming useless unmapped rows.
+- Added `coordinateSource`, `plottedPrecision`, `originalPrecision`, `unmappedReason`, and contributing-city summary metadata to map features. Country fallback markers aggregate by project/source/country/coordinate, stay visually distinct in the MapLibre circle layers, and popups say “Country fallback location.”
+- Updated `assets/js/admin-app.js` Analytics summary cards to show City markers, Country fallback markers, and Unmapped rows. The Location Breakdown table keeps real city/region text, keeps flags only in the Country column, and labels Map precision as `city`, `country fallback`, or `unmapped`.
+- Preserved the StreamSuites live analytics source, the existing `5M`, `15M`, `1H`, and `24HRS` windows, the dark MapLibre map, and the country-flag placement rule.
+
+### Human-Readable Notes
+
+- Santa Clara, Ashburn, London, and other real live city rows no longer become uselessly unmapped just because a city lookup row was missing.
+- Unknown cities with valid country codes now plot at labelled country fallback markers. Unknown city coordinates are not invented, and country fallback dots are not labelled as city precision.
+- Rows still count as unmapped only when they lack any usable coordinate, city lookup, or country centroid fallback.
+
+### Files / Areas Changed
+
+- `assets/data/geo-coordinate-lookup.json`
+- `assets/js/geo-coordinate-lookup.js`
+- `assets/js/analytics-map.js`
+- `assets/js/admin-app.js`
+- `tests/analytics-map-coordinate-fallback.test.mjs`
+- `tests/analytics-map-flags.test.mjs`
+- `tests/analytics-map-marker-lifecycle.test.mjs`
+- `tests/analytics-map-rebuild.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Added focused coordinate fallback coverage for Santa Clara, Ashburn, London, unknown-city country fallback, no-country unmapped rows, GB/UK normalization, longitude/latitude GeoJSON ordering, safe US/GB centroids, all four Analytics windows, unmapped counts, country flag placement, and repeated-row aggregation.
+- Final command and MCP/browser validation results for this milestone are recorded in the Codex task summary.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
 ## Emergency Analytics Map Rebuild Milestone
 
 ### Technical Notes
