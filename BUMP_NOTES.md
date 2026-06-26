@@ -1,4 +1,40 @@
-# CURRENT VER= v0.1.2-beta / PENDING VER= v1.0
+# CURRENT VER= v1.0 / PENDING VER= v1.0.1
+
+## v1.0 Release Milestone
+
+### Technical Notes
+
+- Promoted the visible DanielClancy-Admin release label from `v0.1.2-beta -> v1.0` to `v1.0`.
+- Replaced the static shell's default topbar/sidebar pre-release posture with v1.0/local-fallback wording while preserving live/fallback diagnostics.
+- Added GitHub-release-ready `RELEASE_NOTES_v1.0.md` built from the current README, BUMP notes, package metadata, source files, and test coverage.
+- Added a focused version consistency test covering the BUMP heading, visible Admin shell release label, release-notes file, README release status, and absence of stale alpha/beta/pre-release labels in `index.html`.
+- Kept Admin auth behavior, CMS APIs, analytics behavior, registry overlay v3 persistence, public site-data publishing, and disabled Alerts compatibility unchanged for this release documentation pass.
+- No CV, employment, company, software/platform, project, or portfolio facts were changed.
+- StreamSuites and StreamSuites-Dashboard were not mutated.
+
+### Human-Readable Notes
+
+- DanielClancy-Admin is now tracked as the `v1.0` admin dashboard release.
+- The dashboard remains the Admin control surface for Projects, Media, Companies, Platforms, Positions, Accounts, Analytics, Settings, and sanitized public site-data publishing.
+- Alerts rule editing remains removed/disabled in DanielClancy-Admin; StreamSuites-Dashboard remains the only alert-rule UI.
+
+### Files / Areas Changed
+
+- `index.html`
+- `README.md`
+- `BUMP_NOTES.md`
+- `RELEASE_NOTES_v1.0.md`
+- `tests/version-consistency.test.mjs`
+
+### Validation Notes
+
+- Run `node --test tests/version-consistency.test.mjs`.
+- Run existing source/registry/public-site-data/publish tests, syntax checks for changed JS/Functions/scripts, optional npm check/build commands, and `git diff --check` release validation commands.
+
+### Risks / Follow-Ups
+
+- Hosted Cloudflare Pages still needs required env vars and bindings configured before live Admin auth, KV persistence, public publishing, analytics, and uploads can be relied on in production.
+- `package.json` intentionally remains a static-shell package file without a `version`, `check`, or `build` script.
 
 ## Analytics Coordinate Fallback Milestone
 

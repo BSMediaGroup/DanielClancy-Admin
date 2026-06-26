@@ -1,6 +1,13 @@
 # DanielClancy-Admin
 
-Static admin dashboard foundation for `admin.danielclancy.net`.
+Admin dashboard for `admin.danielclancy.net`.
+
+## Current Release
+
+- Current release: `v1.0`
+- App version label: `v1.0`
+- Package metadata: no package `version` field is defined in this static Admin shell.
+- Release notes: `RELEASE_NOTES_v1.0.md`
 
 This repo is the admin surface for the professional DanielClancy.net portfolio/CV ecosystem. It is currently a Cloudflare Pages-compatible dashboard shell with server-side Pages Function auth, durable account-role registry endpoints, admin CMS endpoints for Projects, Media, Companies, Platforms, Positions, and disabled Alerts compatibility, and a real analytics API foundation. The CMS, account, and page-visit analytics paths use KV when configured and retain clearly labelled browser-local/sample fallback for static/dev views. Projects also carry protected public-site baseline and asset-catalog snapshots so existing DanielClancy.net portfolio records/assets are not treated as disposable scaffold rows.
 
@@ -228,7 +235,7 @@ Stale production KV rows or legacy local fallback arrays cannot remove source-re
 
 The Companies and Platforms pages include a “Reset local registry cache” action. It clears only the registry cache keys for Companies, Platforms, Positions, and the registry schema marker, then reloads the source baselines. It does not clear auth/session storage, account data, Projects, Media, disabled Alerts compatibility data, or unrelated CMS content.
 
-Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration from this admin storage remains future work.
+Projects saves use a `baseline_overlay` wrapper and reject unsafe payloads that are smaller than the protected baseline unless baseline hiding is explicit. In the dashboard, baseline project delete/archive actions soft-hide or archive protected public-site records; only admin-created rows can be hard-deleted. The "Reconcile with public site baseline" action rebuilds the merged manifest from the protected baseline plus existing admin overlay data and saves that safe shape back to KV when admin storage is available. Public-site publishing/hydration is handled through `POST /api/admin/publish/site-data` and the public `GET /api/public/site-data` endpoint when live Admin KV is configured.
 
 `public/media/portfolio/thumbs`, `public/media/portfolio`, and `public/docs` contain copied preview files from the public DanielClancy repo at the same relative public paths. This lets Admin editor previews resolve `/media/portfolio/thumbs/...`, `/media/portfolio/...`, and `/docs/...` locally without remote URLs or embedded assets. `assets/data/public-asset-catalog.json` is regenerated from those copied Admin files and records the original `DanielClancy` source repo/source directories.
 
@@ -400,10 +407,12 @@ DanielClancy-Admin/
 │   ├── public-site-data-export.test.mjs
 │   ├── registry-overlay-persistence.test.mjs
 │   ├── registry-reconciliation.test.mjs
-│   └── source-audit-completeness.test.mjs
+│   ├── source-audit-completeness.test.mjs
+│   └── version-consistency.test.mjs
 ├── tools/
 │   └── rebuild-manifests.mjs
 ├── BUMP_NOTES.md
+├── RELEASE_NOTES_v1.0.md
 ├── favicon.ico
 ├── index.html
 ├── package.json
