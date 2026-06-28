@@ -4,6 +4,7 @@ const SOURCE_ID = "analytics-live-locations";
 const LAYER_IDS = {
   halo: "analytics-location-halo",
   dot: "analytics-location-dot",
+  selected: "analytics-location-selected",
   hitbox: "analytics-location-hitbox"
 };
 const DEFAULT_CENTER = [10, 18];
@@ -29,6 +30,71 @@ const COUNTRY_NAMES = Object.fromEntries(
 const COUNTRY_NAME_LOOKUP = new Map(
   COUNTRY_CENTROID_ROWS.map((row) => [normalizeKeyPart(row.country_name), normalizeCountryCode(row.country_code)])
 );
+const LOCATION_COVER_BASE_PATH = "/assets/analytics/location-covers";
+const LOCATION_COVER_LICENSE = "Project-owned generated fallback illustration";
+const LOCATION_COVER_CREDIT = "Generated locally for StreamSuites analytics map location covers";
+const LOCATION_COVER_LOCATIONS = [
+  ["us:oregon:portland", "Portland, Oregon, US", "Portland", "Oregon", "US"],
+  ["us:california:los-angeles", "Los Angeles, California, US", "Los Angeles", "California", "US"],
+  ["us:california:santa-clara", "Santa Clara, California, US", "Santa Clara", "California", "US"],
+  ["us:virginia:ashburn", "Ashburn, Virginia, US", "Ashburn", "Virginia", "US"],
+  ["gb:england:london", "London, England, GB", "London", "England", "GB"],
+  ["ls:maseru-district:maseru", "Maseru, Maseru District, LS", "Maseru", "Maseru District", "LS"],
+  ["dk:capital-region:copenhagen", "Copenhagen, Capital Region, DK", "Copenhagen", "Capital Region", "DK"],
+  ["pt:lisbon", "Lisbon, PT", "Lisbon", "", "PT"],
+  ["pt:faro:portimao", "Portimao, Faro, PT", "Portimao", "Faro", "PT"],
+  ["us:oregon:boardman", "Boardman, Oregon, US", "Boardman", "Oregon", "US"],
+  ["au:new-south-wales:sydney", "Sydney, New South Wales, AU", "Sydney", "New South Wales", "AU"],
+  ["au:victoria:melbourne", "Melbourne, Victoria, AU", "Melbourne", "Victoria", "AU"],
+  ["ca:ontario:toronto", "Toronto, Ontario, CA", "Toronto", "Ontario", "CA"],
+  ["br:sao-paulo:sao-paulo", "Sao Paulo, Sao Paulo, BR", "Sao Paulo", "Sao Paulo", "BR"]
+];
+const LOCATION_COVER_COUNTRY_FALLBACKS = [
+  ["us", "Washington, DC", "Washington", "District of Columbia", "US"],
+  ["gb", "London", "London", "England", "GB"],
+  ["ls", "Maseru", "Maseru", "Maseru District", "LS"],
+  ["dk", "Copenhagen", "Copenhagen", "Capital Region", "DK"],
+  ["pt", "Lisbon", "Lisbon", "", "PT"],
+  ["au", "Canberra", "Canberra", "Australian Capital Territory", "AU"],
+  ["ca", "Ottawa", "Ottawa", "Ontario", "CA"],
+  ["br", "Brasilia", "Brasilia", "Federal District", "BR"],
+  ["de", "Berlin", "Berlin", "Berlin", "DE"],
+  ["fr", "Paris", "Paris", "Ile-de-France", "FR"],
+  ["nl", "Amsterdam", "Amsterdam", "North Holland", "NL"],
+  ["jp", "Tokyo", "Tokyo", "Tokyo", "JP"],
+  ["sg", "Singapore", "Singapore", "", "SG"],
+  ["ie", "Dublin", "Dublin", "Leinster", "IE"],
+  ["nz", "Wellington", "Wellington", "Wellington Region", "NZ"]
+];
+const LOCATION_COVER_IMAGES = {
+  schemaVersion: "location-cover-images.v1",
+  defaultFallback: `${LOCATION_COVER_BASE_PATH}/default-location-cover.svg`,
+  defaultFallbackMeta: {
+    title: "Generated analytics location cover",
+    imagePath: `${LOCATION_COVER_BASE_PATH}/default-location-cover.svg`,
+    sourceUrl: "",
+    license: LOCATION_COVER_LICENSE,
+    credit: LOCATION_COVER_CREDIT,
+    kind: "default",
+    assetType: "generated-illustration",
+    isFallbackIllustration: true
+  },
+  locations: Object.fromEntries(
+    LOCATION_COVER_LOCATIONS.map(([key, title, city, region, countryCode]) => [
+      key,
+      makeLocationCoverEntry("city", title, city, region, countryCode)
+    ])
+  ),
+  countryFallbacks: Object.fromEntries(
+    LOCATION_COVER_COUNTRY_FALLBACKS.map(([key, capital, city, region, countryCode]) => [
+      key,
+      {
+        capital,
+        ...makeLocationCoverEntry("capital", `${capital}, ${countryCode}`, city, region, countryCode)
+      }
+    ])
+  )
+};
 
 const CITY_LOOKUP = new Map();
 for (const row of CITY_LOOKUP_ROWS) {
@@ -50,6 +116,12 @@ const state = {
   layersReady: false,
   options: {},
   pendingFeatureCollection: emptyFeatureCollection(),
+  selectedFeatureId: "",
+  selectedFeature: null,
+  layerVisibility: {
+    dots: true,
+    glow: true
+  },
   updateCount: 0
 };
 
@@ -145,6 +217,29 @@ export function updateAnalyticsMap(data = {}) {
   return featureCollection;
 }
 
+export function setAnalyticsMapLayerVisibility(nextVisibility = {}) {
+  if (Object.prototype.hasOwnProperty.call(nextVisibility, "dots")) {
+    state.layerVisibility.dots = nextVisibility.dots !== false;
+  }
+  if (Object.prototype.hasOwnProperty.call(nextVisibility, "glow")) {
+    state.layerVisibility.glow = nextVisibility.glow !== false;
+  }
+  applyLayerVisibility();
+  updateDebugState();
+  return { ...state.layerVisibility };
+}
+
+export function selectAnalyticsMapFeature(featureId) {
+  const id = String(featureId || "").trim();
+  if (!id) return null;
+  const feature = (state.pendingFeatureCollection?.features || []).find((item) =>
+    String(item?.id || item?.properties?.id || "") === id
+  );
+  if (!feature) return null;
+  selectFeature(feature);
+  return feature.properties || null;
+}
+
 export function destroyAnalyticsMap() {
   state.popup?.remove();
   state.popup = null;
@@ -180,6 +275,42 @@ export function buildLocationFeatures(rows, options = {}) {
       countryFallbackMarkers
     }
   };
+}
+
+export function buildLocationCoverKey(city, region, countryCode) {
+  const code = normalizeCountryCode(countryCode).toLowerCase();
+  const cityPart = normalizeCoverPart(city);
+  const regionPart = normalizeCoverPart(region);
+  if (!code || !cityPart) return "";
+  return regionPart ? `${code}:${regionPart}:${cityPart}` : `${code}:${cityPart}`;
+}
+
+export function getCountryFallbackCover(countryCode) {
+  const code = normalizeCountryCode(countryCode).toLowerCase();
+  return normalizeCoverEntry(LOCATION_COVER_IMAGES.countryFallbacks[code] || null) || getDefaultLocationCover();
+}
+
+export function getDefaultLocationCover() {
+  return normalizeCoverEntry(LOCATION_COVER_IMAGES.defaultFallbackMeta);
+}
+
+export function getLocationCoverImage(locationFeature) {
+  const props = locationFeature?.properties || locationFeature || {};
+  const countryCode = normalizeCountryCode(props.country_code || props.countryCode || props.country);
+  if (props.plottedPrecision === "country_fallback") {
+    return getCountryFallbackCover(countryCode);
+  }
+  const exactKey = buildLocationCoverKey(props.city, props.region, countryCode);
+  const exact = normalizeCoverEntry(LOCATION_COVER_IMAGES.locations[exactKey] || null);
+  if (exact) return exact;
+  const cityPart = normalizeCoverPart(props.city);
+  const countryPart = countryCode.toLowerCase();
+  const cityCountry = Object.values(LOCATION_COVER_IMAGES.locations).find((entry) =>
+    normalizeCountryCode(entry.countryCode).toLowerCase() === countryPart &&
+    normalizeCoverPart(entry.city) === cityPart
+  );
+  if (cityCountry) return normalizeCoverEntry(cityCountry);
+  return getCountryFallbackCover(countryCode);
 }
 
 export function aggregateLocationRows(rows, options = {}) {
@@ -408,6 +539,31 @@ function ensureAnalyticsMapLayers() {
     });
   }
 
+  if (!map.getLayer(LAYER_IDS.selected)) {
+    map.addLayer({
+      id: LAYER_IDS.selected,
+      type: "circle",
+      source: SOURCE_ID,
+      filter: ["==", ["get", "id"], ""],
+      paint: {
+        "circle-color": "rgba(255, 255, 255, 0)",
+        "circle-opacity": 0,
+        "circle-stroke-color": "#f7fbff",
+        "circle-stroke-opacity": 0.95,
+        "circle-stroke-width": 2.4,
+        "circle-radius": [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["get", "requests"], 0],
+          0, 10,
+          10, 13,
+          50, 17,
+          150, 22
+        ]
+      }
+    });
+  }
+
   if (!map.getLayer(LAYER_IDS.hitbox)) {
     map.addLayer({
       id: LAYER_IDS.hitbox,
@@ -431,6 +587,8 @@ function ensureAnalyticsMapLayers() {
 
   bindMapEvents();
   state.layersReady = true;
+  applyLayerVisibility();
+  updateSelectedLayer();
 }
 
 function bindMapEvents() {
@@ -439,18 +597,7 @@ function bindMapEvents() {
   const clickableLayers = [LAYER_IDS.hitbox, LAYER_IDS.dot, LAYER_IDS.halo];
   const openPopup = (event) => {
     const feature = event?.features?.[0];
-    const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates.slice() : null;
-    if (!coordinates || coordinates.length < 2) return;
-    state.popup?.remove();
-    state.popup = new (state.options.maplibregl || globalThis.window?.maplibregl).Popup({
-      offset: 14,
-      closeButton: true,
-      closeOnClick: true,
-      className: "analytics-map-popup"
-    })
-      .setLngLat(coordinates)
-      .setHTML(feature.properties?.popupHtml || buildPopupHtml(feature.properties || {}))
-      .addTo(map);
+    selectFeature(feature);
   };
 
   clickableLayers.forEach((layerId) => {
@@ -474,8 +621,13 @@ function applyFeatureCollection(featureCollection) {
   }
   state.popup?.remove();
   state.popup = null;
+  if (state.selectedFeatureId && !featureById(state.selectedFeatureId, featureCollection)) {
+    state.selectedFeatureId = "";
+    state.selectedFeature = null;
+  }
   state.updateCount += 1;
   fitFeatureBounds(featureCollection);
+  updateSelectedLayer();
   updateDebugState(featureCollection);
 }
 
@@ -557,6 +709,14 @@ function groupToFeature(group, options = {}) {
     referrer_host: referrers[0] || "",
     referrers: referrers.join(", "),
     flagPath: countryFlagPath(countryCode),
+    coverImage: getLocationCoverImage({
+      properties: {
+        city,
+        region,
+        country_code: countryCode,
+        plottedPrecision
+      }
+    }),
     coordinateSource: group.coordinate.coordinateSource,
     longitude: group.coordinate.longitude,
     latitude: group.coordinate.latitude,
@@ -564,6 +724,7 @@ function groupToFeature(group, options = {}) {
     windowLabel: options.windowLabel || options.selectedWindow || options.window || "",
     label
   };
+  properties.coverImagePath = properties.coverImage?.imagePath || "";
   properties.popupHtml = buildPopupHtml(properties);
   return {
     type: "Feature",
@@ -788,11 +949,16 @@ function buildPopupHtml(properties) {
   const sessions = properties.sessionsAvailable ? formatNumber(properties.sessions) : "n/a";
   const countryLabel = properties.country || properties.country_code || "Unavailable";
   const flagPath = properties.flagPath || countryFlagPath(properties.country_code);
+  const cover = normalizeCoverEntry(properties.coverImage) || getLocationCoverImage(properties);
   const coordinateLabel = coordinateSourceLabel(properties.coordinateSource, properties.plottedPrecision);
   const isCountryFallback = properties.plottedPrecision === "country_fallback";
   return `
     <div class="analytics-map-popup-inner">
-      <strong>${escapeHtml(properties.label || "Location")}</strong>
+      <figure class="analytics-map-popup-cover">
+        <img src="${escapeHtml(cover.imagePath)}" alt="" loading="lazy" decoding="async" />
+        <figcaption>Image: ${escapeHtml(cover.credit)} / ${escapeHtml(cover.license)}</figcaption>
+      </figure>
+      <strong><img class="country-flag" src="${escapeHtml(flagPath)}" alt="" loading="lazy" decoding="async" /><span>${escapeHtml(properties.label || "Location")}</span></strong>
       <dl>
         <div><dt>Marker</dt><dd>${escapeHtml(isCountryFallback ? "Country fallback location" : coordinateLabel)}</dd></div>
         <div><dt>City</dt><dd>${escapeHtml(properties.city || (isCountryFallback ? "Country fallback marker" : "n/a"))}</dd></div>
@@ -806,11 +972,11 @@ function buildPopupHtml(properties) {
         <div><dt>Precision</dt><dd>${escapeHtml(properties.precision || "unavailable")}</dd></div>
         <div><dt>Original precision</dt><dd>${escapeHtml(properties.originalPrecision || "unknown")}</dd></div>
         <div><dt>Source</dt><dd>${escapeHtml(sourceLabel(properties.source))}</dd></div>
+        <div><dt>Project</dt><dd>${escapeHtml(properties.project || "danielclancy")}</dd></div>
         <div><dt>Coordinates</dt><dd>${escapeHtml(coordinateLabel)}</dd></div>
         <div><dt>Last seen</dt><dd>${escapeHtml(formatTimestamp(properties.lastSeen))}</dd></div>
         ${properties.page_path ? `<div><dt>Page</dt><dd>${escapeHtml(properties.page_path)}</dd></div>` : ""}
         ${properties.referrer_host ? `<div><dt>Referrer</dt><dd>${escapeHtml(properties.referrer_host)}</dd></div>` : ""}
-        <div><dt>Flag path</dt><dd>${escapeHtml(flagPath)}</dd></div>
       </dl>
     </div>
   `;
@@ -839,12 +1005,111 @@ function updateDebugState(featureCollection = state.pendingFeatureCollection) {
   browserWindow.DC_ADMIN_ANALYTICS_MAP_DEBUG = {
     map: state.map,
     sourceId: SOURCE_ID,
-    layerIds: [LAYER_IDS.halo, LAYER_IDS.dot, LAYER_IDS.hitbox],
+    layerIds: [LAYER_IDS.halo, LAYER_IDS.dot, LAYER_IDS.selected, LAYER_IDS.hitbox],
     featureCollection,
     markerCount: featureCollection?.features?.length || 0,
     updateCount: state.updateCount,
+    layerVisibility: { ...state.layerVisibility },
+    selectedFeatureId: state.selectedFeatureId,
+    selectedFeature: state.selectedFeature,
     ready: state.ready
   };
+}
+
+function selectFeature(feature) {
+  if (!feature) return;
+  const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates.slice() : null;
+  if (!coordinates || coordinates.length < 2) return;
+  const props = feature.properties || {};
+  state.selectedFeatureId = String(feature.id || props.id || "");
+  state.selectedFeature = feature;
+  updateSelectedLayer();
+  applyLayerVisibility();
+  if (state.map && state.ready) {
+    state.popup?.remove();
+    state.popup = new (state.options.maplibregl || globalThis.window?.maplibregl).Popup({
+      offset: 14,
+      closeButton: true,
+      closeOnClick: true,
+      className: "analytics-map-popup"
+    })
+      .setLngLat(coordinates)
+      .setHTML(props.popupHtml || buildPopupHtml(props))
+      .addTo(state.map);
+  }
+  if (typeof state.options.onFeatureSelect === "function") {
+    state.options.onFeatureSelect(props, feature);
+  }
+  updateDebugState();
+}
+
+function featureById(id, featureCollection = state.pendingFeatureCollection) {
+  return (featureCollection?.features || []).find((feature) =>
+    String(feature?.id || feature?.properties?.id || "") === String(id || "")
+  );
+}
+
+function updateSelectedLayer() {
+  if (!state.map || !state.ready || !state.map.getLayer(LAYER_IDS.selected)) return;
+  state.map.setFilter(LAYER_IDS.selected, ["==", ["get", "id"], state.selectedFeatureId || ""]);
+}
+
+function applyLayerVisibility() {
+  if (!state.map || !state.ready) return;
+  setLayerVisibility(LAYER_IDS.dot, state.layerVisibility.dots);
+  setLayerVisibility(LAYER_IDS.selected, state.layerVisibility.dots && Boolean(state.selectedFeatureId));
+  setLayerVisibility(LAYER_IDS.halo, state.layerVisibility.glow);
+  setLayerVisibility(LAYER_IDS.hitbox, true);
+}
+
+function setLayerVisibility(layerId, visible) {
+  if (!state.map?.getLayer(layerId)) return;
+  state.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+}
+
+function makeLocationCoverEntry(kind, title, city, region, countryCode) {
+  return {
+    title,
+    city,
+    region,
+    countryCode,
+    imagePath: `${LOCATION_COVER_BASE_PATH}/${locationCoverFilename(kind, countryCode, region, city || title)}`,
+    sourceUrl: "",
+    license: LOCATION_COVER_LICENSE,
+    credit: LOCATION_COVER_CREDIT,
+    kind,
+    assetType: "generated-illustration",
+    isFallbackIllustration: true
+  };
+}
+
+function locationCoverFilename(kind, countryCode, region, city) {
+  return `${kind}-${normalizeCoverPart(countryCode)}-${normalizeCoverPart(region)}-${normalizeCoverPart(city)}.svg`
+    .replace(/--+/g, "-");
+}
+
+function normalizeCoverEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  return {
+    imagePath: entry.imagePath || LOCATION_COVER_IMAGES.defaultFallback,
+    title: entry.title || "Generated analytics location cover",
+    credit: entry.credit || LOCATION_COVER_CREDIT,
+    license: entry.license || LOCATION_COVER_LICENSE,
+    sourceUrl: entry.sourceUrl || "",
+    kind: entry.kind || "default",
+    assetType: entry.assetType || "generated-illustration",
+    isFallbackIllustration: entry.isFallbackIllustration !== false
+  };
+}
+
+function normalizeCoverPart(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
 }
 
 function scheduleResize(delay = 0) {

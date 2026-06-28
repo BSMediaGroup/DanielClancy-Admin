@@ -4,6 +4,14 @@
 
 ### Technical Notes
 
+- Analytics fullscreen map presentation polish: the fullscreen lightbox now shares the same MapLibre feature/source model, selected time-window rows, location dot layer, request halo/glow layer, country fallback markers, selected-marker ring, and source/project styling as the inline map.
+- Shared map layer controls: added `Location dots` and `Request glow` controls to the Analytics map/fullscreen surfaces. The controls update layer visibility on existing MapLibre layers without removing source data or rebuilding marker data.
+- Selected location details: marker clicks now open a richer dark popup, update the fullscreen selected-location sidebar, highlight the matching mapped-location list row, and keep flag-prefixed titles consistent in popup/sidebar/list contexts while preserving the table rule that flags remain in the Country column only.
+- Fullscreen sidebar polish: the map lightbox now includes a desktop-expanded, user-collapsible details sidebar with selected cover image, precision/source badges, requests/sessions/last-seen stats, mapped/unmapped/source summaries, country fallback contributing rows, and a restore control when collapsed.
+- Local cover image asset pack: added generated project-owned fallback illustration covers under `assets/analytics/location-covers/` plus `assets/data/location-cover-images.json` attribution/coverage metadata. These are local fallback illustrations, not documentary city photos, and no runtime hotlinking or base64 embedding is used.
+- Popup close icon fix: MapLibre popup close buttons in Analytics now render as light visible controls on the dark popup surface, with visible hover/focus states while preserving default MapLibre close behavior.
+- Test coverage: added `tests/analytics-map-fullscreen-polish.test.mjs` and updated map layer assertions so fullscreen controls, layer targeting, marker selection/sidebar hydration, cover manifest coverage, popup close color, country fallback cover resolution, sidebar collapse controls, and mapped-list selection are pinned.
+
 - Promoted the visible DanielClancy-Admin release label from `v0.1.2-beta -> v1.0` to `v1.0`.
 - Replaced the static shell's default topbar/sidebar pre-release posture with v1.0/local-fallback wording while preserving live/fallback diagnostics.
 - Added GitHub-release-ready `RELEASE_NOTES_v1.0.md` built from the current README, BUMP notes, package metadata, source files, and test coverage.

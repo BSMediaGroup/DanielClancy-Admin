@@ -156,6 +156,7 @@ test("module source and layers use MapLibre GeoJSON names required by the route"
   assert.deepEqual(ANALYTICS_MAP_LAYER_IDS, {
     halo: "analytics-location-halo",
     dot: "analytics-location-dot",
+    selected: "analytics-location-selected",
     hitbox: "analytics-location-hitbox"
   });
   assert.ok(moduleSource.includes("map.addSource(SOURCE_ID"));

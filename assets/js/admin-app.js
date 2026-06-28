@@ -12,9 +12,12 @@ import {
 } from "./registry-reconciliation.js";
 import {
   buildLocationFeatures,
+  getLocationCoverImage,
   initAnalyticsMap,
   locationMapPrecision,
   resizeAnalyticsMap as resizeAnalyticsMapModule,
+  selectAnalyticsMapFeature,
+  setAnalyticsMapLayerVisibility,
   updateAnalyticsMap
 } from "./analytics-map.js";
 
@@ -213,7 +216,13 @@ import {
     lastChecked: "",
     selectedWindow: "5m",
     mapExpanded: false,
-    mapFullscreenOpen: false
+    mapFullscreenOpen: false,
+    mapSidebarCollapsed: false,
+    selectedMapFeatureId: "",
+    mapLayers: {
+      dots: true,
+      glow: true
+    }
   };
   const publishState = {
     status: "checking",
@@ -2759,6 +2768,7 @@ import {
   async function runAnalyticsAction(action, target = null) {
     if (action === "window") {
       analyticsStatusState.selectedWindow = normalizeAnalyticsWindow(target?.getAttribute("data-analytics-window"));
+      analyticsStatusState.selectedMapFeatureId = "";
       await hydrateAnalyticsStatus(true);
       return;
     }
@@ -2769,12 +2779,35 @@ import {
     }
     if (action === "map-fullscreen") {
       analyticsStatusState.mapFullscreenOpen = true;
+      analyticsStatusState.mapSidebarCollapsed = false;
       renderAnalytics();
       return;
     }
     if (action === "map-fullscreen-close") {
       analyticsStatusState.mapFullscreenOpen = false;
       renderAnalytics();
+      return;
+    }
+    if (action === "map-layer-toggle") {
+      const layer = String(target?.getAttribute("data-analytics-map-layer") || "").trim();
+      if (layer === "dots" || layer === "glow") {
+        analyticsStatusState.mapLayers[layer] = !analyticsStatusState.mapLayers[layer];
+        setAnalyticsMapLayerVisibility(analyticsStatusState.mapLayers);
+        syncAnalyticsMapLayerButtons();
+      }
+      return;
+    }
+    if (action === "map-sidebar-toggle") {
+      setAnalyticsMapSidebarCollapsed(!analyticsStatusState.mapSidebarCollapsed);
+      return;
+    }
+    if (action === "map-location-select") {
+      const id = String(target?.getAttribute("data-analytics-map-location-id") || "").trim();
+      const selected = selectAnalyticsMapFeature(id);
+      if (selected) {
+        analyticsStatusState.selectedMapFeatureId = selected.id || id;
+        hydrateAnalyticsMapSelectedLocation(selected);
+      }
       return;
     }
     if (action === "refresh") {
@@ -3575,6 +3608,38 @@ import {
     resizeAnalyticsMapModule();
   }
 
+  function analyticsMapLayerControls(context = "inline") {
+    const labelPrefix = context === "fullscreen" ? "Fullscreen " : "";
+    return `
+      <div class="analytics-map-layer-controls" role="group" aria-label="${escapeHtml(labelPrefix)}analytics map layer controls">
+        <button class="button button-secondary analytics-map-layer-button${analyticsStatusState.mapLayers.dots ? " is-active" : ""}" type="button" data-analytics-action="map-layer-toggle" data-analytics-map-layer="dots" aria-pressed="${analyticsStatusState.mapLayers.dots ? "true" : "false"}">Location dots</button>
+        <button class="button button-secondary analytics-map-layer-button${analyticsStatusState.mapLayers.glow ? " is-active" : ""}" type="button" data-analytics-action="map-layer-toggle" data-analytics-map-layer="glow" aria-pressed="${analyticsStatusState.mapLayers.glow ? "true" : "false"}">Request glow</button>
+      </div>
+    `;
+  }
+
+  function syncAnalyticsMapLayerButtons() {
+    document.querySelectorAll("[data-analytics-map-layer]").forEach((button) => {
+      const layer = String(button.getAttribute("data-analytics-map-layer") || "").trim();
+      if (layer !== "dots" && layer !== "glow") return;
+      const active = analyticsStatusState.mapLayers[layer] !== false;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  function setAnalyticsMapSidebarCollapsed(collapsed) {
+    analyticsStatusState.mapSidebarCollapsed = collapsed === true;
+    document.querySelectorAll(".analytics-map-modal-body").forEach((body) => {
+      body.classList.toggle("is-sidebar-collapsed", analyticsStatusState.mapSidebarCollapsed);
+    });
+    document.querySelectorAll("[data-analytics-map-sidebar-toggle-label]").forEach((node) => {
+      node.textContent = analyticsStatusState.mapSidebarCollapsed ? "Show details" : "Hide details";
+    });
+    resizeAnalyticsMap();
+    window.setTimeout(resizeAnalyticsMap, 120);
+  }
+
   function syncAnalyticsLocationMap(status, liveLocationRows) {
     const container = document.getElementById("analytics-location-map");
     if (!container) return;
@@ -3584,8 +3649,13 @@ import {
       feedbackElement: document.getElementById("analytics-location-map-feedback"),
       maplibregl: window.maplibregl,
       selectedWindow,
-      windowLabel: analyticsWindowLabel(selectedWindow)
+      windowLabel: analyticsWindowLabel(selectedWindow),
+      onFeatureSelect: (props) => {
+        analyticsStatusState.selectedMapFeatureId = props?.id || "";
+        hydrateAnalyticsMapSelectedLocation(props);
+      }
     });
+    setAnalyticsMapLayerVisibility(analyticsStatusState.mapLayers);
     updateAnalyticsMap({
       rows: liveLocationRows,
       selectedWindow,
@@ -3594,6 +3664,12 @@ import {
       emptyText: "No live page-visit location events captured for this window.",
       unmappedText: "Live location rows do not have usable coordinates or country fallback."
     });
+    if (analyticsStatusState.selectedMapFeatureId) {
+      const selected = selectAnalyticsMapFeature(analyticsStatusState.selectedMapFeatureId);
+      if (selected) {
+        hydrateAnalyticsMapSelectedLocation(selected);
+      }
+    }
   }
 
   function detachAnalyticsMapContainerForRender() {
@@ -3618,10 +3694,79 @@ import {
     return [city, region, country].filter(Boolean).join(", ") || "Unavailable location";
   }
 
+  function analyticsFlagTitle(props) {
+    const flagPath = props?.flagPath || "/assets/icons/flags/_fallback.svg";
+    const title = props?.label || analyticsRowLocationLabel(props);
+    return `<span class="analytics-map-flag-title"><img class="country-flag" src="${escapeHtml(flagPath)}" alt="" loading="lazy" decoding="async" /><strong>${escapeHtml(title)}</strong></span>`;
+  }
+
+  function analyticsMapSelectedLocationCard(props) {
+    if (!props) {
+      return `
+        <article class="analytics-map-selected-card is-empty" data-analytics-selected-location>
+          <p>Select a map location to inspect details.</p>
+        </article>
+      `;
+    }
+    const cover = getLocationCoverImage(props);
+    const sessions = props.sessionsAvailable ? formatAnalyticsNumber(props.sessions) : "n/a";
+    const isCountryFallback = props.plottedPrecision === "country_fallback";
+    return `
+      <article class="analytics-map-selected-card" data-analytics-selected-location data-selected-map-location-id="${escapeHtml(props.id || "")}">
+        <figure class="analytics-map-selected-cover">
+          <img src="${escapeHtml(cover.imagePath)}" alt="" loading="lazy" decoding="async" />
+          <figcaption>Image: ${escapeHtml(cover.credit)} / ${escapeHtml(cover.license)}</figcaption>
+        </figure>
+        <div class="analytics-map-selected-content">
+          ${analyticsFlagTitle(props)}
+          <div class="analytics-map-selected-badges">
+            ${badge(isCountryFallback ? "country fallback" : props.precision || "city", isCountryFallback ? "warn" : "success")}
+            ${badge(sourceLabel(props.source), sourceTone(props.source))}
+            ${badge(props.project || "danielclancy", "neutral")}
+          </div>
+          <div class="analytics-map-selected-stats">
+            <span><strong>${escapeHtml(formatAnalyticsNumber(props.requests))}</strong><small>requests</small></span>
+            <span><strong>${escapeHtml(sessions)}</strong><small>sessions</small></span>
+            <span><strong>${escapeHtml(formatAnalyticsNumber(props.events))}</strong><small>events</small></span>
+          </div>
+          ${descriptionRows([
+            ["City", props.city || (isCountryFallback ? "Country fallback marker" : "n/a")],
+            ["Region", props.region || "n/a"],
+            ["Country", props.country || props.country_code || "Unavailable"],
+            ["Coordinate source", props.coordinateSource || "unavailable"],
+            ["Original precision", props.originalPrecision || "unknown"],
+            ["Last seen", formatOperationalTimestamp(props.lastSeen)],
+            ["Page", props.page_path || props.pages || "n/a"],
+            ["Referrer", props.referrer_host || props.referrers || "n/a"],
+            ["Contributing rows/cities", props.contributingCitiesSummary || (isCountryFallback ? "Country-only row" : "n/a")]
+          ])}
+        </div>
+      </article>
+    `;
+  }
+
+  function hydrateAnalyticsMapSelectedLocation(props) {
+    const selected = props || null;
+    const target = document.querySelector("[data-analytics-selected-location]");
+    if (target) {
+      target.outerHTML = analyticsMapSelectedLocationCard(selected);
+    }
+    document.querySelectorAll("[data-analytics-map-location-id]").forEach((button) => {
+      const active = selected && button.getAttribute("data-analytics-map-location-id") === String(selected.id || "");
+      button.classList.toggle("is-active", Boolean(active));
+      button.setAttribute("aria-pressed", String(Boolean(active)));
+      button.closest(".analytics-map-sidebar-list-item")?.classList.toggle("is-active", Boolean(active));
+    });
+  }
+
   function analyticsMapSidebar(status, featureCollection, liveLocationRows, sourceBreakdown) {
     const features = Array.isArray(featureCollection?.features) ? featureCollection.features : [];
     const metadata = featureCollection?.metadata || {};
     const unmappedRows = Array.isArray(metadata.unmappedRows) ? metadata.unmappedRows : [];
+    const selectedFeature = features.find((feature) =>
+      String(feature?.properties?.id || feature?.id || "") === String(analyticsStatusState.selectedMapFeatureId || "")
+    );
+    const selectedProps = selectedFeature?.properties || null;
     const sourceRows = Object.entries(sourceBreakdown || {}).filter(([, count]) => Number(count) > 0);
     const projectRows = Array.from(
       (Array.isArray(liveLocationRows) ? liveLocationRows : []).reduce((map, row) => {
@@ -3643,12 +3788,15 @@ import {
       .map((feature) => {
         const props = feature.properties || {};
         const sessions = props.sessionsAvailable ? formatAnalyticsNumber(props.sessions) : "n/a";
+        const active = String(props.id || "") === String(selectedProps?.id || "");
         const locationLabel = props.plottedPrecision === "country_fallback" && props.contributingCitiesSummary
           ? `${props.contributingCitiesSummary} (${props.label || analyticsRowLocationLabel(props)})`
           : props.label || analyticsRowLocationLabel(props);
         return `
-          <li>
-            <span class="analytics-map-sidebar-location">${props.flagPath ? `<img class="country-flag" src="${escapeHtml(props.flagPath)}" alt="" loading="lazy" decoding="async" />` : ""}<strong>${escapeHtml(locationLabel)}</strong></span>
+          <li class="analytics-map-sidebar-list-item${active ? " is-active" : ""}">
+            <button class="analytics-map-sidebar-location-button${active ? " is-active" : ""}" type="button" data-analytics-action="map-location-select" data-analytics-map-location-id="${escapeHtml(props.id || "")}" aria-pressed="${active ? "true" : "false"}">
+              <span class="analytics-map-sidebar-location">${props.flagPath ? `<img class="country-flag" src="${escapeHtml(props.flagPath)}" alt="" loading="lazy" decoding="async" />` : ""}<strong>${escapeHtml(locationLabel)}</strong></span>
+            </button>
             <span>${badge(props.plottedPrecision === "country_fallback" ? "country fallback" : "city", props.plottedPrecision === "country_fallback" ? "warn" : "success")}</span>
             <small>${escapeHtml(formatAnalyticsNumber(props.requests))} requests · ${escapeHtml(sessions)} sessions · ${escapeHtml(sourceLabel(props.source))}</small>
           </li>
@@ -3666,6 +3814,10 @@ import {
       .join("");
     return `
       <aside class="analytics-map-sidebar" data-analytics-map-sidebar>
+        <section data-analytics-map-sidebar-section="selected">
+          <h3>Selected location</h3>
+          ${analyticsMapSelectedLocationCard(selectedProps)}
+        </section>
         <section data-analytics-map-sidebar-section="summary">
           <h3>Map summary</h3>
           ${descriptionRows([
@@ -3719,6 +3871,7 @@ import {
   function analyticsMapFullscreenModal(status, featureCollection, liveLocationRows, sourceBreakdown) {
     if (!analyticsStatusState.mapFullscreenOpen) return "";
     const selectedWindow = normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow);
+    const sidebarCollapsed = analyticsStatusState.mapSidebarCollapsed === true;
     return `
       <div class="modal-backdrop analytics-map-modal-backdrop" data-analytics-map-modal-backdrop>
         <section class="modal analytics-map-modal" role="dialog" aria-modal="true" aria-labelledby="analytics-map-modal-title">
@@ -3731,14 +3884,17 @@ import {
                   <button class="button button-secondary analytics-window-button${value === selectedWindow ? " is-active" : ""}" type="button" data-analytics-action="window" data-analytics-window="${escapeHtml(value)}" aria-pressed="${value === selectedWindow ? "true" : "false"}">${escapeHtml(label)}</button>
                 `).join("")}
               </div>
+              ${analyticsMapLayerControls("fullscreen")}
             </div>
+            <button class="button button-secondary analytics-map-sidebar-toggle" type="button" data-analytics-action="map-sidebar-toggle" aria-pressed="${sidebarCollapsed ? "true" : "false"}"><span data-analytics-map-sidebar-toggle-label>${sidebarCollapsed ? "Show details" : "Hide details"}</span></button>
             <button class="icon-close" type="button" aria-label="Close analytics map" data-analytics-action="map-fullscreen-close">x</button>
           </header>
-          <div class="analytics-map-modal-body">
+          <div class="analytics-map-modal-body${sidebarCollapsed ? " is-sidebar-collapsed" : ""}">
             <div class="analytics-map-modal-map">
               <div id="analytics-location-map" class="analytics-location-map" aria-label="Fullscreen interactive live analytics location map"></div>
               <div id="analytics-location-map-empty" class="analytics-map-empty" hidden>No live page-visit location events captured for this window.</div>
               <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>
+              <button class="button button-secondary analytics-map-sidebar-restore" type="button" data-analytics-action="map-sidebar-toggle">Show details</button>
             </div>
             ${analyticsMapSidebar(status, featureCollection, liveLocationRows, sourceBreakdown)}
           </div>
@@ -3771,6 +3927,7 @@ import {
             ${badge(`Source: ${source}`, sourceTone(source))}
             ${badge(location.freshnessState || status?.sourceFreshnessState || "no_live_events", sourceTone(location.freshnessState || status?.sourceFreshnessState))}
             ${badge(location.precision || (liveCities.length ? "city" : liveCountries.length ? "country" : "unavailable"), liveCities.length ? "success" : "warn")}
+            ${analyticsMapLayerControls("inline")}
             <button class="button button-secondary" type="button" data-analytics-action="map-expanded" aria-pressed="${expanded ? "true" : "false"}">${expanded ? "Restore map" : "Expand map"}</button>
             <button class="button" type="button" data-analytics-action="map-fullscreen">Fullscreen map</button>
           </div>
