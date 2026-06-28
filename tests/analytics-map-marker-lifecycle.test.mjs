@@ -84,3 +84,31 @@ test("all analytics windows still call the module update path", () => {
   assert.match(app, /syncAnalyticsLocationMap\(status, liveLocationRows\)/);
   assert.match(app, /selectedWindow,\s+windowLabel: analyticsWindowLabel\(selectedWindow\)/);
 });
+
+test("fullscreen map controls and detailed sidebar sections are rendered", () => {
+  assert.match(app, /data-analytics-action="map-expanded"/);
+  assert.match(app, /data-analytics-action="map-fullscreen"/);
+  assert.match(app, /data-analytics-action="map-fullscreen-close"/);
+  assert.match(app, /analytics-map-modal/);
+  assert.match(app, /analytics-map-modal-window-selector/);
+  assert.match(app, /Fullscreen analytics time window/);
+  assert.match(app, /props\.contributingCitiesSummary/);
+  for (const section of ["summary", "mapped", "unmapped", "source", "project", "precision", "marker"]) {
+    assert.ok(app.includes(`data-analytics-map-sidebar-section="${section}"`), `${section} sidebar section missing`);
+  }
+  assert.match(app, /Mapped locations/);
+  assert.match(app, /Unmapped rows/);
+  assert.match(app, /Source breakdown/);
+  assert.match(app, /Precision legend/);
+});
+
+test("fullscreen modal reuses the module map path and window refresh state", () => {
+  assert.match(app, /mapFullscreenOpen/);
+  assert.match(app, /analyticsStatusState\.mapFullscreenOpen = true/);
+  assert.match(app, /analyticsStatusState\.mapFullscreenOpen = false/);
+  assert.match(app, /analyticsStatusState\.selectedWindow = normalizeAnalyticsWindow/);
+  assert.match(app, /await hydrateAnalyticsStatus\(true\)/);
+  assert.match(app, /analyticsMapFullscreenModal\(status, buildLocationFeatures\(liveLocationRows/);
+  assert.match(app, /id="analytics-location-map"/);
+  assert.doesNotMatch(app, /id="analytics-location-map-fullscreen"/);
+});

@@ -36,6 +36,41 @@
 - Hosted Cloudflare Pages still needs required env vars and bindings configured before live Admin auth, KV persistence, public publishing, analytics, and uploads can be relied on in production.
 - `package.json` intentionally remains a static-shell package file without a `version`, `check`, or `build` script.
 
+## Analytics Expanded Map / Fullscreen Parity Milestone
+
+### Technical Notes
+
+- Added Maseru, Maseru District, LS city lookup coverage and Lesotho (`LS`) country centroid fallback coverage to the local analytics coordinate lookup data.
+- Added expanded inline map state and a fullscreen MapLibre lightbox for the Analytics location map while preserving the existing GeoJSON source/layer implementation in `assets/js/analytics-map.js`.
+- The fullscreen map reuses the same `#analytics-location-map` MapLibre instance and feature pipeline as the inline view, avoiding a second live map instance and preventing duplicate marker/layer lifecycle leaks on open/close/reopen.
+- Added a detailed map sidebar with selected window, total rows/events, sessions, city marker count, country fallback marker count, unmapped rows, last live event, mapped locations, unmapped rows, source breakdown, precision legend, and marker legend.
+- Kept the coordinate standard aligned with StreamSuites-Dashboard: explicit event coordinates first, exact city lookup second, country centroid fallback third, and unmapped only when no usable coordinate or country fallback exists.
+
+### Human-Readable Notes
+
+- Maseru, Maseru District, LS is no longer an unmapped analytics location.
+- Unknown cities with valid country codes continue to plot as honestly labelled country fallback markers rather than fake city markers.
+- Admin users can now inspect the analytics map in inline, expanded, and fullscreen modes with the same selected window and source-backed rows.
+
+### Files / Areas Changed
+
+- `assets/data/geo-coordinate-lookup.json`
+- `assets/js/geo-coordinate-lookup.js`
+- `assets/js/admin-app.js`
+- `assets/css/admin.css`
+- `tests/analytics-map-coordinate-fallback.test.mjs`
+- `tests/analytics-map-marker-lifecycle.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Validation Notes
+
+- Validation performed for this milestone: `node --check assets/js/admin-app.js`; `node --check assets/js/analytics-map.js`; `node --check assets/js/geo-coordinate-lookup.js`; `node --test tests/analytics-map-coordinate-fallback.test.mjs tests/analytics-map-marker-lifecycle.test.mjs`; `git diff --check`; Playwright MCP browser validation against the Analytics route with mocked StreamSuites live rows for Maseru, country fallback, fullscreen open/close, and window switching.
+
+### Risks / Follow-Ups
+
+- Browser validation uses mocked selected-window API responses through the real route path because local static hosting does not have production Cloudflare KV/Auth bindings.
+
 ## Analytics Coordinate Fallback Milestone
 
 ### Technical Notes

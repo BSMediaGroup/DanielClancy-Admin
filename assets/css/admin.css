@@ -673,7 +673,8 @@ body.nav-hidden .sidebar {
   color: var(--muted);
 }
 
-.analytics-window-selector {
+.analytics-window-selector,
+.analytics-map-modal-window-selector {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -681,6 +682,11 @@ body.nav-hidden .sidebar {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: rgba(6, 9, 13, 0.58);
+}
+
+.analytics-map-modal-window-selector {
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 .analytics-window-button {
@@ -1741,6 +1747,10 @@ body.col-resizing-active {
   isolation: isolate;
 }
 
+.analytics-map-shell.is-expanded {
+  min-height: min(780px, 78vh);
+}
+
 .analytics-location-map {
   position: absolute;
   inset: 0;
@@ -1854,6 +1864,86 @@ body.col-resizing-active {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
+}
+
+.analytics-map-modal {
+  width: min(1680px, 98vw);
+  max-height: min(980px, 96vh);
+}
+
+.analytics-map-modal-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.34fr);
+  gap: 0;
+  min-height: min(780px, calc(96vh - 92px));
+  overflow: hidden;
+}
+
+.analytics-map-modal-map {
+  position: relative;
+  min-height: min(780px, calc(96vh - 92px));
+  border-right: 1px solid var(--line);
+  background: rgba(5, 8, 10, 0.96);
+}
+
+.analytics-map-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  max-height: min(780px, calc(96vh - 92px));
+  overflow: auto;
+  padding: 16px;
+  background: rgba(10, 13, 17, 0.96);
+}
+
+.analytics-map-sidebar h3 {
+  margin: 0 0 8px;
+  font-family: "Recharge", "Sui Generis", sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.045em;
+}
+
+.analytics-map-sidebar section {
+  min-width: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.analytics-map-sidebar-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-map-sidebar-list li {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.analytics-map-sidebar-list li:last-child {
+  border-bottom: 0;
+}
+
+.analytics-map-sidebar-list small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.analytics-map-sidebar-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.analytics-map-sidebar-location strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .country-flag {
@@ -2065,5 +2155,21 @@ body.nav-collapsed .nav-link {
 
   .map-shell {
     min-height: 300px;
+  }
+
+  .analytics-map-modal-body {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .analytics-map-modal-map {
+    min-height: 58vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .analytics-map-sidebar {
+    max-height: none;
   }
 }

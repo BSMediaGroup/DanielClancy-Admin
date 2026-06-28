@@ -211,7 +211,9 @@ import {
     message: "Checking analytics status...",
     payload: null,
     lastChecked: "",
-    selectedWindow: "5m"
+    selectedWindow: "5m",
+    mapExpanded: false,
+    mapFullscreenOpen: false
   };
   const publishState = {
     status: "checking",
@@ -2760,6 +2762,21 @@ import {
       await hydrateAnalyticsStatus(true);
       return;
     }
+    if (action === "map-expanded") {
+      analyticsStatusState.mapExpanded = !analyticsStatusState.mapExpanded;
+      renderAnalytics();
+      return;
+    }
+    if (action === "map-fullscreen") {
+      analyticsStatusState.mapFullscreenOpen = true;
+      renderAnalytics();
+      return;
+    }
+    if (action === "map-fullscreen-close") {
+      analyticsStatusState.mapFullscreenOpen = false;
+      renderAnalytics();
+      return;
+    }
     if (action === "refresh") {
       await hydrateAnalyticsStatus(true);
       return;
@@ -3594,6 +3611,142 @@ import {
     placeholder.replaceWith(preservedContainer);
   }
 
+  function analyticsRowLocationLabel(row) {
+    const city = String(row?.city || "").trim();
+    const region = String(row?.region || row?.region_code || "").trim();
+    const country = String(row?.country || row?.country_code || "").trim();
+    return [city, region, country].filter(Boolean).join(", ") || "Unavailable location";
+  }
+
+  function analyticsMapSidebar(status, featureCollection, liveLocationRows, sourceBreakdown) {
+    const features = Array.isArray(featureCollection?.features) ? featureCollection.features : [];
+    const metadata = featureCollection?.metadata || {};
+    const unmappedRows = Array.isArray(metadata.unmappedRows) ? metadata.unmappedRows : [];
+    const sourceRows = Object.entries(sourceBreakdown || {}).filter(([, count]) => Number(count) > 0);
+    const projectRows = Array.from(
+      (Array.isArray(liveLocationRows) ? liveLocationRows : []).reduce((map, row) => {
+        const project = String(row?.project || row?.source_namespace || "danielclancy").trim() || "danielclancy";
+        map.set(project, (map.get(project) || 0) + 1);
+        return map;
+      }, new Map())
+    );
+    const sessionsTotal = features.reduce((sum, feature) => {
+      const value = Number(feature?.properties?.sessions);
+      return Number.isFinite(value) ? sum + value : sum;
+    }, 0);
+    const hasSessions = features.some((feature) => feature?.properties?.sessionsAvailable === true);
+    const requestsTotal = features.reduce((sum, feature) => {
+      const value = Number(feature?.properties?.requests);
+      return Number.isFinite(value) ? sum + value : sum;
+    }, 0);
+    const mappedList = features
+      .map((feature) => {
+        const props = feature.properties || {};
+        const sessions = props.sessionsAvailable ? formatAnalyticsNumber(props.sessions) : "n/a";
+        const locationLabel = props.plottedPrecision === "country_fallback" && props.contributingCitiesSummary
+          ? `${props.contributingCitiesSummary} (${props.label || analyticsRowLocationLabel(props)})`
+          : props.label || analyticsRowLocationLabel(props);
+        return `
+          <li>
+            <span class="analytics-map-sidebar-location">${props.flagPath ? `<img class="country-flag" src="${escapeHtml(props.flagPath)}" alt="" loading="lazy" decoding="async" />` : ""}<strong>${escapeHtml(locationLabel)}</strong></span>
+            <span>${badge(props.plottedPrecision === "country_fallback" ? "country fallback" : "city", props.plottedPrecision === "country_fallback" ? "warn" : "success")}</span>
+            <small>${escapeHtml(formatAnalyticsNumber(props.requests))} requests · ${escapeHtml(sessions)} sessions · ${escapeHtml(sourceLabel(props.source))}</small>
+          </li>
+        `;
+      })
+      .join("");
+    const unmappedList = unmappedRows
+      .slice(0, 25)
+      .map(({ row, reason }) => `
+        <li>
+          <strong>${escapeHtml(analyticsRowLocationLabel(row))}</strong>
+          <small>${escapeHtml(reason || "unmapped")}</small>
+        </li>
+      `)
+      .join("");
+    return `
+      <aside class="analytics-map-sidebar" data-analytics-map-sidebar>
+        <section data-analytics-map-sidebar-section="summary">
+          <h3>Map summary</h3>
+          ${descriptionRows([
+            ["Selected window", analyticsWindowLabel(status?.window || analyticsStatusState.selectedWindow)],
+            ["Source/project filters", "Current live source payload"],
+            ["Total rows", formatAnalyticsNumber(liveLocationRows?.length || 0)],
+            ["Total requests/events", formatAnalyticsNumber(requestsTotal || status?.liveRowsCount || 0)],
+            ["Sessions", hasSessions ? formatAnalyticsNumber(sessionsTotal) : "n/a"],
+            ["City markers", formatAnalyticsNumber(metadata.cityMarkers || 0)],
+            ["Country fallback markers", formatAnalyticsNumber(metadata.countryFallbackMarkers || 0)],
+            ["Unmapped rows", formatAnalyticsNumber(unmappedRows.length)],
+            ["Last live event", formatOperationalTimestamp(status?.lastLiveEventAt || status?.pageVisits?.lastLiveEventTime || status?.location?.lastUpdated)]
+          ])}
+        </section>
+        <section data-analytics-map-sidebar-section="mapped">
+          <h3>Mapped locations</h3>
+          <ul class="analytics-map-sidebar-list">${mappedList || "<li><strong>No mapped locations</strong><small>No usable coordinates for this window.</small></li>"}</ul>
+        </section>
+        <section data-analytics-map-sidebar-section="unmapped">
+          <h3>Unmapped rows</h3>
+          <ul class="analytics-map-sidebar-list">${unmappedList || "<li><strong>None</strong><small>Every eligible row has city coordinates or country fallback.</small></li>"}</ul>
+        </section>
+        <section data-analytics-map-sidebar-section="source">
+          <h3>Source breakdown</h3>
+          <ul class="analytics-map-sidebar-list">${sourceRows.map(([source, count]) => `<li><strong>${escapeHtml(sourceLabel(source))}</strong><small>${escapeHtml(formatAnalyticsNumber(count))} row(s)</small></li>`).join("") || "<li><strong>No source rows</strong><small>No live source rows in this window.</small></li>"}</ul>
+        </section>
+        <section data-analytics-map-sidebar-section="project">
+          <h3>Project breakdown</h3>
+          <ul class="analytics-map-sidebar-list">${projectRows.map(([project, count]) => `<li><strong>${escapeHtml(project)}</strong><small>${escapeHtml(formatAnalyticsNumber(count))} row(s)</small></li>`).join("") || "<li><strong>DanielClancy</strong><small>Current admin analytics surface.</small></li>"}</ul>
+        </section>
+        <section data-analytics-map-sidebar-section="precision">
+          <h3>Precision legend</h3>
+          <ul class="analytics-map-sidebar-list">
+            <li><strong>Exact event coordinate</strong><small>Trusted latitude/longitude from the event row.</small></li>
+            <li><strong>City lookup</strong><small>Exact city/region/country lookup.</small></li>
+            <li><strong>Country fallback</strong><small>Verified country centroid; city text is retained.</small></li>
+            <li><strong>Unmapped</strong><small>No usable coordinate or country fallback.</small></li>
+          </ul>
+        </section>
+        <section data-analytics-map-sidebar-section="marker">
+          <h3>Marker legend</h3>
+          <ul class="analytics-map-sidebar-list">
+            <li><strong>City marker</strong><small>Warm marker plotted at city precision.</small></li>
+            <li><strong>Country fallback marker</strong><small>Blue marker plotted at country centroid precision.</small></li>
+          </ul>
+        </section>
+      </aside>
+    `;
+  }
+
+  function analyticsMapFullscreenModal(status, featureCollection, liveLocationRows, sourceBreakdown) {
+    if (!analyticsStatusState.mapFullscreenOpen) return "";
+    const selectedWindow = normalizeAnalyticsWindow(status?.window || analyticsStatusState.selectedWindow);
+    return `
+      <div class="modal-backdrop analytics-map-modal-backdrop" data-analytics-map-modal-backdrop>
+        <section class="modal analytics-map-modal" role="dialog" aria-modal="true" aria-labelledby="analytics-map-modal-title">
+          <header class="modal-header">
+            <div>
+              <h2 id="analytics-map-modal-title">Live Location Map</h2>
+              <p>Fullscreen MapLibre view for ${escapeHtml(analyticsWindowLabel(selectedWindow))}.</p>
+              <div class="analytics-map-modal-window-selector" role="group" aria-label="Fullscreen analytics time window">
+                ${ANALYTICS_WINDOWS.map(([value, label]) => `
+                  <button class="button button-secondary analytics-window-button${value === selectedWindow ? " is-active" : ""}" type="button" data-analytics-action="window" data-analytics-window="${escapeHtml(value)}" aria-pressed="${value === selectedWindow ? "true" : "false"}">${escapeHtml(label)}</button>
+                `).join("")}
+              </div>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close analytics map" data-analytics-action="map-fullscreen-close">x</button>
+          </header>
+          <div class="analytics-map-modal-body">
+            <div class="analytics-map-modal-map">
+              <div id="analytics-location-map" class="analytics-location-map" aria-label="Fullscreen interactive live analytics location map"></div>
+              <div id="analytics-location-map-empty" class="analytics-map-empty" hidden>No live page-visit location events captured for this window.</div>
+              <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>
+            </div>
+            ${analyticsMapSidebar(status, featureCollection, liveLocationRows, sourceBreakdown)}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
   function renderLocationMap(status, liveCities, liveCountries, liveLocationRows) {
     const pageVisits = status?.pageVisits || {};
     const location = status?.location || {};
@@ -3606,6 +3759,7 @@ import {
     const countryFallbackMarkerCount = featureCollection.metadata?.countryFallbackMarkers || 0;
     const hasEvents = Number(pageVisits.events || location.events || 0) > 0;
     const source = location.source || (hasEvents ? "page_visit_kv" : "unavailable");
+    const expanded = analyticsStatusState.mapExpanded === true && !analyticsStatusState.mapFullscreenOpen;
     return `
       <section class="panel">
         <header class="panel-header">
@@ -3617,6 +3771,8 @@ import {
             ${badge(`Source: ${source}`, sourceTone(source))}
             ${badge(location.freshnessState || status?.sourceFreshnessState || "no_live_events", sourceTone(location.freshnessState || status?.sourceFreshnessState))}
             ${badge(location.precision || (liveCities.length ? "city" : liveCountries.length ? "country" : "unavailable"), liveCities.length ? "success" : "warn")}
+            <button class="button button-secondary" type="button" data-analytics-action="map-expanded" aria-pressed="${expanded ? "true" : "false"}">${expanded ? "Restore map" : "Expand map"}</button>
+            <button class="button" type="button" data-analytics-action="map-fullscreen">Fullscreen map</button>
           </div>
         </header>
         <div class="panel-body">
@@ -3628,10 +3784,12 @@ import {
             ${storageStatusCard("Unmapped rows", formatAnalyticsNumber(unmappedLocationCount), "Rows without usable coordinates or country fallback.", unmappedLocationCount ? "warn" : "success")}
             ${storageStatusCard("Last live event", formatOperationalTimestamp(pageVisits.lastLiveEventTime || location.lastUpdated), "Periodic refresh; not realtime.", pageVisits.lastLiveEventTime ? "success" : "warn")}
           </div>
-          <div class="analytics-map-shell">
-            <div id="analytics-location-map" class="analytics-location-map" aria-label="Interactive live analytics location map"></div>
-            <div id="analytics-location-map-empty" class="analytics-map-empty" ${hasEvents ? "hidden" : ""}>No live page-visit location events captured for this window.</div>
-            <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>
+          <div class="analytics-map-shell${expanded ? " is-expanded" : ""}">
+            ${analyticsStatusState.mapFullscreenOpen
+              ? `<div class="analytics-map-empty">Map is open in fullscreen.</div>`
+              : `<div id="analytics-location-map" class="analytics-location-map" aria-label="Interactive live analytics location map"></div>
+                 <div id="analytics-location-map-empty" class="analytics-map-empty" ${hasEvents ? "hidden" : ""}>No live page-visit location events captured for this window.</div>
+                 <div id="analytics-location-map-feedback" class="analytics-map-feedback" aria-live="polite"></div>`}
           </div>
         </div>
       </section>
@@ -3730,6 +3888,7 @@ import {
         </section>
 
         ${renderLocationMap(status, liveCities, liveCountries, liveLocationRows)}
+        ${analyticsMapFullscreenModal(status, buildLocationFeatures(liveLocationRows, { selectedWindow }), liveLocationRows, sourceBreakdown)}
 
         <section class="grid analytics-grid">
           ${panel(
@@ -5963,6 +6122,12 @@ import {
       return;
     }
 
+    if (event.target instanceof HTMLElement && event.target.matches("[data-analytics-map-modal-backdrop]")) {
+      analyticsStatusState.mapFullscreenOpen = false;
+      renderAnalytics();
+      return;
+    }
+
     const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
@@ -6256,6 +6421,12 @@ import {
   });
 
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && analyticsStatusState.mapFullscreenOpen) {
+      analyticsStatusState.mapFullscreenOpen = false;
+      renderAnalytics();
+      return;
+    }
+
     if (event.key === "Escape" && alertsState.modal) {
       alertsState.modal = null;
       renderAlerts();

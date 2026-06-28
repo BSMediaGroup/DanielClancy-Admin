@@ -40,16 +40,19 @@ test("Santa Clara, Ashburn, and London are no longer unmapped", () => {
   const collection = buildLocationFeatures([
     liveRow({ city: "Santa Clara", region: "California", country: "United States", country_code: "US" }),
     liveRow({ city: "Ashburn", region: "Virginia", country: "United States", country_code: "US" }),
-    liveRow({ city: "London", region: "England", country: "United Kingdom", country_code: "GB" })
+    liveRow({ city: "London", region: "England", country: "United Kingdom", country_code: "GB" }),
+    liveRow({ city: "Maseru", region: "Maseru District", country: "Lesotho", country_code: "LS" })
   ], { selectedWindow: "5m" });
 
   assert.equal(collection.metadata.unmappedRows.length, 0);
   assert.equal(featureByCity(collection, "Santa Clara")?.properties.coordinateSource, "city_lookup");
   assert.equal(featureByCity(collection, "Ashburn")?.properties.coordinateSource, "city_lookup");
   assert.equal(featureByCity(collection, "London")?.properties.coordinateSource, "city_lookup");
+  assert.equal(featureByCity(collection, "Maseru")?.properties.coordinateSource, "city_lookup");
   assert.deepEqual(featureByCity(collection, "Santa Clara")?.geometry.coordinates, [-121.9552, 37.3541]);
   assert.deepEqual(featureByCity(collection, "Ashburn")?.geometry.coordinates, [-77.4874, 39.0438]);
   assert.deepEqual(featureByCity(collection, "London")?.geometry.coordinates, [-0.1276, 51.5072]);
+  assert.deepEqual(featureByCity(collection, "Maseru")?.geometry.coordinates, [27.48, -29.31]);
 });
 
 test("unknown city rows with valid countries use labelled country centroid fallback", () => {
@@ -85,6 +88,7 @@ test("rows without usable country or coordinates remain genuinely unmapped", () 
 test("country fallback markers use longitude latitude order and safe continental centroids", () => {
   const us = normalizeLocationCoordinate(liveRow({ city: "Missing US City", region: "Unknown", country_code: "US" }));
   const gb = normalizeLocationCoordinate(liveRow({ city: "Missing UK City", region: "Unknown", country_code: "UK", country: "UK" }));
+  const ls = normalizeLocationCoordinate(liveRow({ city: "Missing LS City", region: "Unknown", country_code: "LS", country: "Lesotho" }));
 
   assert.deepEqual([us.longitude, us.latitude], [-98.5795, 39.8283]);
   assert.equal(us.coordinateSource, "country_centroid");
@@ -95,6 +99,10 @@ test("country fallback markers use longitude latitude order and safe continental
   assert.deepEqual([gb.longitude, gb.latitude], [-3.436, 55.3781]);
   assert.ok(gb.longitude > -12 && gb.longitude < 4, "GB fallback should not plot in the US");
   assert.ok(gb.latitude > 49 && gb.latitude < 61, "GB fallback should not plot in Africa");
+
+  assert.deepEqual([ls.longitude, ls.latitude], [28.2336, -29.61]);
+  assert.equal(ls.coordinateSource, "country_centroid");
+  assert.equal(ls.plottedPrecision, "country_fallback");
 });
 
 test("GB and UK normalization work for city lookup and country fallback", () => {
