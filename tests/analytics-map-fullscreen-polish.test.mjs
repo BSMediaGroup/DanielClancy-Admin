@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
@@ -53,10 +53,10 @@ test("popup/sidebar styling fixes close icon color and renders covers", () => {
 
 test("location cover helpers resolve required city and country fallback images", () => {
   assert.equal(buildLocationCoverKey("Portland", "Oregon", "US"), "us:oregon:portland");
-  assert.match(getLocationCoverImage({ city: "Maseru", region: "Maseru District", countryCode: "LS" }).imagePath, /city-ls-maseru-district-maseru\.svg$/);
-  assert.match(getCountryFallbackCover("LS").imagePath, /capital-ls-maseru-district-maseru\.svg$/);
+  assert.match(getLocationCoverImage({ city: "Maseru", region: "Maseru District", countryCode: "LS" }).imagePath, /city-ls-maseru-district-maseru\.webp$/);
+  assert.match(getCountryFallbackCover("LS").imagePath, /capital-ls-maseru-district-maseru\.webp$/);
   assert.match(getCountryFallbackCover("US").title, /Washington/);
-  assert.match(getDefaultLocationCover().imagePath, /default-location-cover\.svg$/);
+  assert.match(getDefaultLocationCover().imagePath, /default-location-cover\.webp$/);
 });
 
 test("feature model gives popup and sidebar the same selected feature details", () => {
@@ -89,8 +89,8 @@ test("feature model gives popup and sidebar the same selected feature details", 
   assert.match(portland.properties.popupHtml, /analytics-map-popup-cover/);
   assert.match(portland.properties.popupHtml, /country-flag/);
   assert.match(portland.properties.popupHtml, /Page/);
-  assert.match(portland.properties.coverImagePath, /city-us-oregon-portland\.svg$/);
-  assert.match(fallback.properties.coverImagePath, /capital-ls-maseru-district-maseru\.svg$/);
+  assert.match(portland.properties.coverImagePath, /city-us-oregon-portland\.webp$/);
+  assert.match(fallback.properties.coverImagePath, /capital-ls-maseru-district-maseru\.webp$/);
   assert.match(fallback.properties.popupHtml, /Country fallback location/);
 });
 
@@ -109,10 +109,11 @@ test("location cover manifest covers required keys with local files and attribut
     "au:new-south-wales:sydney",
     "au:victoria:melbourne",
     "ca:ontario:toronto",
-    "br:sao-paulo:sao-paulo"
+    "br:sao-paulo:sao-paulo",
+    "br:rio-de-janeiro:rio-de-janeiro"
   ];
   const requiredCountries = ["us", "gb", "ls", "dk", "pt", "au", "ca", "br", "de", "fr", "nl", "jp", "sg", "ie", "nz"];
-  assert.equal(coverManifest.schemaVersion, "location-cover-images.v1");
+  assert.equal(coverManifest.schemaVersion, "location-cover-images.v2");
   for (const key of requiredLocations) {
     assert.ok(coverManifest.locations[key], `${key} missing`);
   }
@@ -127,9 +128,10 @@ test("location cover manifest covers required keys with local files and attribut
   for (const entry of entries) {
     assert.ok(entry.imagePath.startsWith("/assets/analytics/location-covers/"), entry.imagePath);
     assert.equal(/^https?:\/\//.test(entry.imagePath), false, entry.imagePath);
+    assert.ok(entry.sourceQuality, entry.title);
     assert.ok(entry.credit);
     assert.ok(entry.license);
     assert.ok(existsSync(join(repoRoot, entry.imagePath.replace(/^\//, ""))), entry.imagePath);
   }
-  assert.match(readFileSync(new URL("../assets/analytics/location-covers/city-ls-maseru-district-maseru.svg", import.meta.url), "utf8"), /Maseru/);
+  assert.ok(existsSync(new URL("../assets/analytics/location-covers/city-ls-maseru-district-maseru.webp", import.meta.url)));
 });
