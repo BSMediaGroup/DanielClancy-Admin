@@ -8,6 +8,7 @@ import {
 
 const COLLECTIONS = {
   projects: { key: "cms:projects" },
+  products: { key: "cms:products" },
   companies: { key: "cms:companies" },
   platforms: { key: "cms:platforms" },
   positions: { key: "cms:positions" }
@@ -58,14 +59,16 @@ export async function buildPublicSiteData(context, options = {}) {
   }
 
   const kv = storageConfigured ? env.DC_ADMIN_KV : null;
-  const [projectsRaw, companiesRaw, platformsRaw, positionsRaw] = await Promise.all([
+  const [projectsRaw, productsRaw, companiesRaw, platformsRaw, positionsRaw] = await Promise.all([
     getKvValue(kv, COLLECTIONS.projects.key, warnings),
+    getKvValue(kv, COLLECTIONS.products.key, warnings),
     getKvValue(kv, COLLECTIONS.companies.key, warnings),
     getKvValue(kv, COLLECTIONS.platforms.key, warnings),
     getKvValue(kv, COLLECTIONS.positions.key, warnings)
   ]);
 
   const projectsStored = parseStoredCollection(projectsRaw, warnings, "projects");
+  const productsStored = parseStoredCollection(productsRaw, warnings, "products");
   const companiesStored = parseStoredValue(companiesRaw, warnings, "companies");
   const platformsStored = parseStoredValue(platformsRaw, warnings, "platforms");
   const positionsStored = parseStoredValue(positionsRaw, warnings, "positions");
@@ -97,6 +100,7 @@ export async function buildPublicSiteData(context, options = {}) {
     publishedAt: null,
     collections: {
       projects: projectsResult.items.map((item) => sanitizeProject(item)).filter(Boolean),
+      products: productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean),
       companies: companiesResult.items.map((item) => sanitizeCompany(item)).filter(Boolean),
       platforms: platformsResult.items.map((item) => sanitizePlatform(item)).filter(Boolean),
       positions: positionsResult.items.map((item) => sanitizePosition(item, companiesResult.items)).filter(Boolean)
@@ -256,6 +260,32 @@ export function sanitizeProject(raw = {}) {
     featured: Boolean(raw.featured),
     sortOrder: safeNumber(raw.sortOrder, 1000),
     source: safeString(raw.source || "public_baseline")
+  });
+}
+
+export function sanitizeProductOverride(raw = {}) {
+  const visibility = safeString(raw.visibility || "public").toLowerCase();
+  if (["private", "internal"].includes(visibility)) return null;
+  const gallery = safeArray(raw.galleryOverride || raw.gallery)
+    .map((item) => safeProductImageUrl(item))
+    .filter(Boolean);
+  return removeInternalFields({
+    productId: safeString(raw.productId || raw.printfulProductId || raw.syncProductId),
+    printfulProductId: safeString(raw.printfulProductId || raw.syncProductId || raw.productId),
+    externalId: safeString(raw.externalId),
+    slug: safeProductSlug(raw.slug || raw.slugOverride),
+    slugOverride: safeProductSlug(raw.slugOverride || raw.slug),
+    displayTitle: safeString(raw.displayTitle || raw.titleOverride),
+    descriptionOverride: safeString(raw.descriptionOverride || raw.description),
+    categoryOverride: safeString(raw.categoryOverride || raw.category || raw.collectionOverride),
+    visibility,
+    featured: Boolean(raw.featured),
+    heroImageOverride: safeProductImageUrl(raw.heroImageOverride || raw.heroImage),
+    galleryOverride: gallery,
+    altText: safeString(raw.altText || raw.displayLabel),
+    displayLabel: safeString(raw.displayLabel || raw.altText),
+    sortOrder: safeNumber(raw.sortOrder, 1000),
+    updatedAt: safeString(raw.updatedAt)
   });
 }
 
@@ -512,11 +542,27 @@ function safeAssetPath(value, options = {}) {
   return "";
 }
 
+function safeProductImageUrl(value) {
+  const text = safeString(value);
+  if (!text) return "";
+  if (/^https:\/\//i.test(text)) return text;
+  return safeAssetPath(text);
+}
+
+function safeProductSlug(value) {
+  return safeString(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export function collectionCounts(payload = {}) {
   const collections = payload.collections || {};
   const assets = payload.assets || {};
   return {
     projects: Array.isArray(collections.projects) ? collections.projects.length : 0,
+    products: Array.isArray(collections.products) ? collections.products.length : 0,
     companies: Array.isArray(collections.companies) ? collections.companies.length : 0,
     platforms: Array.isArray(collections.platforms) ? collections.platforms.length : 0,
     positions: Array.isArray(collections.positions) ? collections.positions.length : 0,

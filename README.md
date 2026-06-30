@@ -19,7 +19,7 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -74,6 +74,11 @@ Optional Cloudflare R2 asset binding:
 
 - `DC_ADMIN_ASSETS_R2` - required for persistent Projects image/document uploads, registry logo uploads, and account avatar uploads from the Admin dashboard
 - `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - optional public base URL used to return browser-ready URLs after R2 upload; without it the upload API returns a relative key-style path
+
+Printful Products env:
+
+- `PRINTFUL_STORE_API` - server-only Printful token used by Admin Products Pages Functions; never expose it to browser code, Vite env, public JSON, or logs
+- Product image upload to Printful requires durable public media storage. The existing upload path needs `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` so the Admin can upload an image, obtain a public HTTPS URL, and register that URL with Printful `/v2/files`. If public media storage is not configured, the Products image upload UI remains disabled and existing Printful image selection still works.
 
 Recommended shared-cookie env var:
 
@@ -247,6 +252,23 @@ Projects now use autocomplete/dropdowns and previews for thumbnail (`/media/port
 
 `POST /api/admin/assets/upload` requires a signed admin session and `DC_ADMIN_ASSETS_R2`. It accepts multipart image uploads for Projects image fields, registry logos, and account avatars, plus PDF uploads for document paths; validates common web image MIME types and `application/pdf`; enforces a 10MB cap; and stores files under `portfolio/thumbs/<project-slug>/`, `portfolio/projects/<project-slug>/`, `docs/projects/<project-slug>/`, or `accounts/avatars/` depending on the field. It returns the R2 key and a browser-ready URL only when `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` is configured. When R2 is missing, the API returns `storage_not_configured`; the editor keeps manual/autocomplete path fields and unsaved form data intact.
 
+## Products API And Printful Storefront Overrides
+
+Implemented admin endpoints:
+
+- `GET /api/admin/products`
+- `GET /api/admin/products/health`
+- `GET /api/admin/products/detail/*`
+- `POST /api/admin/products/override`
+- `POST /api/admin/products/bulk`
+- `POST /api/admin/products/files`
+
+The Products page (`#/products`) is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, and base thumbnails. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category, slug, hero image, gallery order, alt text/display label, and sort order.
+
+The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL.
+
+If `PRINTFUL_STORE_API` is missing, Products renders a clear missing-token state and the API returns safe errors without leaking auth detail. If `DC_ADMIN_KV` is missing, write endpoints return `storage_not_configured` and the UI labels overrides as local/unpublished rather than pretending persistence worked.
+
 ## Public Site-Data Export
 
 Implemented endpoint:
@@ -267,6 +289,7 @@ The response contract is stable JSON:
 - `revision`
 - `publishedAt`
 - `collections.projects`
+- `collections.products`
 - `collections.companies`
 - `collections.platforms`
 - `collections.positions`
@@ -275,13 +298,13 @@ The response contract is stable JSON:
 - `assets.docs`
 - `warnings`
 
-Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
+Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
 
 CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use short caching with `Cache-Control: public, max-age=60, stale-while-revalidate=300` plus an ETag when a revision exists; errors use `no-store`.
 
 ## Publishing Workflow
 
-1. Save/Sync edits in the Projects, Companies, Platforms, or Positions CMS page.
+1. Save/Sync edits in the Projects, Products, Companies, Platforms, or Positions CMS page.
 2. Use Overview or Settings `Publish site data`.
 3. Confirm the returned revision, published timestamp, and counts.
 4. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
@@ -373,6 +396,7 @@ DanielClancy-Admin/
 │   │   ├── admin-accounts.js
 │   │   ├── analytics-store.js
 │   │   ├── alert-sender.js
+│   │   ├── printful-products.js
 │   │   ├── public-site-data.js
 │   │   ├── registry-reconciliation.js
 │   │   └── turnstile.js
@@ -388,6 +412,8 @@ DanielClancy-Admin/
 │       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
+│       │   ├── products/
+│       │   │   └── [[path]].js
 │       │   ├── publish/
 │       │   │   └── site-data.js
 │       │   └── status.js
@@ -431,15 +457,16 @@ DanielClancy-Admin/
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, Projects, Media, Companies, Platforms, Positions, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Projects, Products, Media, Companies, Platforms, Positions, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
-- Overview, Settings, Projects, Companies, Platforms, and Positions show public site-data publish status, source, revision, counts, and warnings. `Publish site data` writes only a sanitized snapshot when live Admin KV is available.
+- Overview, Settings, Projects, Products, Companies, Platforms, and Positions show public site-data publish status, source, revision, counts, and warnings. `Publish site data` writes only a sanitized snapshot when live Admin KV is available.
 - Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, API/KV/ingest/GraphQL status is separated, map precision is labelled per row, and the location section uses a real dark MapLibre GL map with an aggregated GeoJSON source, halo/dot circle layers, shared layer toggles, country fallback markers, flag-prefixed popups/sidebar details, local sourced raster cover images, and a collapsible fullscreen selected-location sidebar. Empty live analytics shows “No live page-visit location events captured yet.” over the real basemap and no fake sample markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
+- Products manager with server-side Printful product hydration, table/CMS controls, search/filter/sort, bulk storefront override saves, product edit modal, image management modal, existing Printful image selection, and disabled/config-needed upload state unless durable public media storage is configured for Printful file ingestion.
 - Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with registry overlay v3 reconciliation, client-only names excluded, source-required employers restored from baseline, source/provenance/override/custom classification shown, KV/local fallback, active/archive status, local registry cache repair/reset, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
 - Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
 - Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.

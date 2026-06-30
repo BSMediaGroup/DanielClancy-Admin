@@ -159,6 +159,55 @@ test("public site-data export uses KV overlay when available and keeps fallback-
   assert.equal(project.updatedBy, undefined);
 });
 
+test("public site-data export includes sanitized product overrides only", async () => {
+  const kv = {
+    async get(key) {
+      if (key === "cms:products") {
+        return JSON.stringify({
+          collection: "products",
+          items: [
+            {
+              productId: "123",
+              printfulProductId: "123",
+              slugOverride: "signature-tee",
+              displayTitle: "Signature Tee",
+              descriptionOverride: "Published storefront copy.",
+              categoryOverride: "Apparel",
+              visibility: "public",
+              featured: true,
+              heroImageOverride: "https://cdn.example.test/signature-tee.webp",
+              galleryOverride: ["https://cdn.example.test/signature-tee.webp", "javascript:alert(1)"],
+              sortOrder: 4,
+              updatedBy: "admin@example.test",
+              secretToken: "never-public"
+            },
+            {
+              productId: "999",
+              printfulProductId: "999",
+              slugOverride: "private-sample",
+              visibility: "private",
+              displayTitle: "Private sample"
+            }
+          ]
+        });
+      }
+      return null;
+    }
+  };
+
+  const payload = await buildPublicSiteData({
+    request: mockRequest(),
+    env: { ASSETS: mockAssets(), DC_ADMIN_KV: kv }
+  });
+
+  assert.equal(payload.collections.products.length, 1);
+  assert.equal(payload.collections.products[0].slugOverride, "signature-tee");
+  assert.equal(payload.collections.products[0].heroImageOverride, "https://cdn.example.test/signature-tee.webp");
+  assert.deepEqual(payload.collections.products[0].galleryOverride, ["https://cdn.example.test/signature-tee.webp"]);
+  assert.equal(payload.collections.products[0].updatedBy, undefined);
+  assert.equal(payload.collections.products[0].secretToken, undefined);
+});
+
 test("admin publish endpoint requires an admin session", async () => {
   const response = await publishSiteData({
     request: new Request("https://admin.danielclancy.net/api/admin/publish/site-data", { method: "POST" }),

@@ -1,5 +1,39 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Printful Products Manager Foundation Milestone
+
+### Technical Notes
+
+- Added a Products route/page to the Admin dashboard navigation with server-side Printful hydration, product table, search/filter/sort controls, bulk override preparation/save, edit modal, image management modal, and publish-status visibility.
+- Added admin-session-protected Products Pages Functions for product list, health, detail lookup, single override save, bulk override save, and Printful file registration.
+- Added a shared Printful helper that resolves the `Daniel Clancy` store through Printful v2 stores where possible, then uses legacy sync product endpoints for list/detail data because sync product/store-product management is not available through Printful v2 yet.
+- Extended public site-data export/publish to include sanitized `collections.products` storefront overrides from `cms:products`, filtering private/internal rows and stripping admin-only fields.
+- Integrated image upload UI with the existing Admin R2 upload path only when durable public media storage is configured; uploaded public HTTPS URLs are then registered with Printful `/v2/files`.
+
+### Human-Readable Notes
+
+- Admin now has a real Products management foundation for DanielClancy.net merch storefront display settings while Printful remains the product/variant/source authority.
+- Storefront overrides can be saved and published through the existing Admin publish workflow when `DC_ADMIN_KV` is configured.
+- Product image selection works from existing Printful/mockup images even when uploads are not configured.
+
+### Setup / Config Still Required
+
+- `PRINTFUL_STORE_API` must be configured as a server-only Cloudflare Pages secret before live product hydration works.
+- `DC_ADMIN_KV` is required before override save/bulk save can persist.
+- `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` are required before product image uploads can produce public URLs for Printful ingestion. Until then, the upload control remains disabled with a config-needed message.
+- Merch checkout/payment and Printful fulfillment order creation remain intentionally out of scope.
+
+### Files / Areas Changed
+
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/printful-products.js`
+- `functions/_shared/public-site-data.js`
+- `functions/api/admin/products/[[path]].js`
+- `tests/public-site-data-export.test.mjs`
+- `README.md`
+- `BUMP_NOTES.md`
+
 ## v1.0 Release Milestone
 
 ### Technical Notes

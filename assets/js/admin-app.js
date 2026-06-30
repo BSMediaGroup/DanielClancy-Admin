@@ -36,6 +36,7 @@ import {
   const routes = [
     { id: "overview", label: "Overview", icon: "home.svg", path: "#/overview" },
     { id: "analytics", label: "Analytics", icon: "globe.svg", path: "#/analytics" },
+    { id: "products", label: "Products", icon: "package.svg", path: "#/products" },
     { id: "accounts", label: "Accounts", icon: "identity.svg", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "cog.svg", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
@@ -128,6 +129,26 @@ import {
     modal: null,
     message: "Local project data loaded. Protected public-site baseline will be merged when available.",
     storage: cmsStorageState.projects
+  };
+  const productState = {
+    products: [],
+    overrides: [],
+    search: "",
+    visibility: "all",
+    featured: "all",
+    sort: "title",
+    selected: new Set(),
+    bulkMode: false,
+    modal: null,
+    imageModal: null,
+    loading: false,
+    loaded: false,
+    message: "Products load from server-side Printful endpoints. Storefront overrides save to Admin KV when configured.",
+    health: {
+      printful: { ok: false, configured: false },
+      storage: { ok: false },
+      upload: { durableStorage: false, publicBaseUrl: false, printfulFileRegistration: false }
+    }
   };
   const publicAssetCatalogState = {
     status: "checking",
@@ -2137,6 +2158,235 @@ import {
     return parseRoute().page === collection;
   }
 
+  async function hydrateProductsManager(renderAfter = false) {
+    productState.loading = true;
+    productState.message = "Loading Printful products...";
+    if (renderAfter && activePageIs("products")) renderProductsManager();
+    try {
+      const [listResponse, healthResponse] = await Promise.all([
+        fetch("/api/admin/products", { credentials: "include", headers: { accept: "application/json" } }),
+        fetch("/api/admin/products/health", { credentials: "include", headers: { accept: "application/json" } })
+      ]);
+      const listPayload = await listResponse.json().catch(() => null);
+      const healthPayload = await healthResponse.json().catch(() => null);
+      productState.health = {
+        printful: healthPayload?.printful || { ok: Boolean(listPayload?.ok), configured: Boolean(listPayload?.configured) },
+        storage: healthPayload?.storage || { ok: Boolean(listPayload?.storageConfigured) },
+        upload: healthPayload?.upload || { durableStorage: false, publicBaseUrl: false, printfulFileRegistration: false }
+      };
+      if (!listResponse.ok || !listPayload?.ok) {
+        productState.products = [];
+        productState.overrides = Array.isArray(listPayload?.overrides) ? listPayload.overrides : [];
+        productState.message = listPayload?.message || listPayload?.error || "Printful products are unavailable.";
+      } else {
+        productState.products = Array.isArray(listPayload.products) ? listPayload.products : [];
+        productState.overrides = Array.isArray(listPayload.overrides) ? listPayload.overrides : [];
+        productState.message = productState.products.length ? "Printful product feed loaded." : "Printful returned no products for this store.";
+      }
+      productState.loaded = true;
+    } catch {
+      productState.products = [];
+      productState.message = "Products API unavailable. Local static mode can show the UI, but cannot read Printful or save overrides.";
+    } finally {
+      productState.loading = false;
+      if (renderAfter && activePageIs("products")) renderProductsManager();
+    }
+  }
+
+  async function hydrateProductDetail(id, openMode = "edit") {
+    const existing = productState.products.find((product) => (product.printfulProductId || product.id) === id);
+    productState.message = `Refreshing product detail for ${existing?.title || id}...`;
+    if (activePageIs("products")) renderProductsManager();
+    try {
+      const response = await fetch(`/api/admin/products/detail/${encodeURIComponent(id)}`, { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        productState.message = payload?.message || payload?.error || "Product detail unavailable.";
+        if (existing && openMode === "edit") productState.modal = { product: existing, dirty: false };
+        if (existing && openMode === "images") productState.imageModal = { product: existing };
+        return;
+      }
+      const detail = payload.product;
+      const index = productState.products.findIndex((product) => (product.printfulProductId || product.id) === (detail.printfulProductId || detail.id));
+      if (index >= 0) productState.products[index] = detail;
+      if (openMode === "images") {
+        productState.imageModal = { product: detail };
+        productState.modal = null;
+      } else {
+        productState.modal = { product: detail, dirty: false };
+      }
+      productState.message = "Product detail loaded.";
+    } catch {
+      productState.message = "Product detail API unavailable.";
+      if (existing && openMode === "edit") productState.modal = { product: existing, dirty: false };
+      if (existing && openMode === "images") productState.imageModal = { product: existing };
+    } finally {
+      if (activePageIs("products")) renderProductsManager();
+    }
+  }
+
+  function filteredProductsManager() {
+    const term = productState.search.trim().toLowerCase();
+    return productState.products
+      .filter((product) => {
+        const visibility = product.visibility || "public";
+        if (productState.visibility !== "all" && visibility !== productState.visibility) return false;
+        if (productState.featured === "featured" && !product.featured) return false;
+        if (productState.featured === "standard" && product.featured) return false;
+        if (!term) return true;
+        return [product.title, product.slug, product.category, product.printfulProductId, product.externalId, product.status, product.availability]
+          .join(" ")
+          .toLowerCase()
+          .includes(term);
+      })
+      .sort((left, right) => {
+        if (productState.sort === "updated") return String(right.overrideUpdatedAt || right.updatedAt || "").localeCompare(String(left.overrideUpdatedAt || left.updatedAt || ""));
+        if (productState.sort === "variants") return (right.variantCount || 0) - (left.variantCount || 0);
+        if (productState.sort === "images") return (right.imageCount || 0) - (left.imageCount || 0);
+        return String(left.title || "").localeCompare(String(right.title || ""));
+      });
+  }
+
+  function productOverrideFromProduct(product = {}) {
+    const keys = [product.printfulProductId, product.id, product.externalId, product.slug].map(createSlug).filter(Boolean);
+    const existing = productState.overrides.find((override) => [override.productId, override.printfulProductId, override.externalId, override.slug, override.slugOverride].map(createSlug).some((key) => keys.includes(key)));
+    return {
+      productId: product.printfulProductId || product.id || existing?.productId || "",
+      printfulProductId: product.printfulProductId || product.id || existing?.printfulProductId || "",
+      slugOverride: existing?.slugOverride || product.slug || "",
+      displayTitle: existing?.displayTitle || "",
+      descriptionOverride: existing?.descriptionOverride || "",
+      categoryOverride: existing?.categoryOverride || "",
+      visibility: existing?.visibility || product.visibility || "public",
+      featured: Boolean(existing?.featured ?? product.featured),
+      heroImageOverride: existing?.heroImageOverride || "",
+      galleryOverride: Array.isArray(existing?.galleryOverride) ? existing.galleryOverride : [],
+      altText: existing?.altText || "",
+      displayLabel: existing?.displayLabel || "",
+      sortOrder: existing?.sortOrder || product.sortOrder || 1000
+    };
+  }
+
+  async function saveProductFromForm(form) {
+    const productId = formValue(form, "productId");
+    const existing = productState.products.find((product) => (product.printfulProductId || product.id) === productId) || {};
+    const payload = {
+      productId,
+      printfulProductId: productId,
+      slugOverride: formValue(form, "slugOverride"),
+      displayTitle: formValue(form, "displayTitle"),
+      descriptionOverride: formValue(form, "descriptionOverride"),
+      categoryOverride: formValue(form, "categoryOverride"),
+      visibility: formValue(form, "visibility"),
+      featured: Boolean(form.querySelector("[name='featured']")?.checked),
+      heroImageOverride: formValue(form, "heroImageOverride"),
+      galleryOverride: textareaArray(formValue(form, "galleryOverride")),
+      altText: formValue(form, "altText"),
+      displayLabel: formValue(form, "altText"),
+      sortOrder: Number(formValue(form, "sortOrder") || 1000)
+    };
+    if (!payload.productId) {
+      productState.message = "Printful product ID is required before saving an override.";
+      renderProductsManager();
+      return;
+    }
+    try {
+      const response = await fetch("/api/admin/products/override", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        productState.message = result?.message || result?.error || "Product override save failed.";
+        renderProductsManager();
+        return;
+      }
+      productState.overrides = Array.isArray(result.items) ? result.items : productState.overrides;
+      productState.products = productState.products.map((product) =>
+        (product.printfulProductId || product.id) === productId
+          ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, overrideUpdatedAt: new Date().toISOString() }
+          : product
+      );
+      productState.modal = null;
+      productState.message = "Product override saved. Publish site data before expecting /shop to consume the public override snapshot.";
+      hydratePublishStatus(activePageIs("products"));
+    } catch {
+      productState.message = "Product override save API unavailable.";
+    }
+    renderProductsManager();
+  }
+
+  async function saveProductBulkPatch(patch) {
+    const ids = Array.from(productState.selected);
+    if (!ids.length) return;
+    try {
+      const response = await fetch("/api/admin/products/bulk", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids, patch })
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        productState.message = result?.message || result?.error || "Bulk product override save failed.";
+      } else {
+        productState.overrides = Array.isArray(result.items) ? result.items : productState.overrides;
+        productState.products = productState.products.map((product) =>
+          ids.includes(product.printfulProductId || product.id) ? { ...product, ...patch, overrideUpdatedAt: new Date().toISOString() } : product
+        );
+        productState.message = `Saved storefront overrides for ${ids.length} selected product(s).`;
+        hydratePublishStatus(activePageIs("products"));
+      }
+    } catch {
+      productState.message = "Bulk product override API unavailable.";
+    }
+    renderProductsManager();
+  }
+
+  async function uploadProductImage() {
+    const modal = productState.imageModal;
+    const input = app.querySelector("[data-product-image-upload-input]");
+    const status = app.querySelector("[data-product-image-upload-status]");
+    const file = input?.files?.[0];
+    if (!modal || !file) return;
+    if (status) status.textContent = "Uploading image...";
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("field", "product-media");
+    formData.set("projectSlug", modal.product.slug || modal.product.printfulProductId || "product");
+    try {
+      const uploadResponse = await fetch("/api/admin/assets/upload", { method: "POST", credentials: "include", body: formData });
+      const upload = await uploadResponse.json().catch(() => null);
+      const publicUrl = upload?.url || upload?.path || "";
+      if (!uploadResponse.ok || !upload?.ok || !/^https:\/\//i.test(publicUrl)) {
+        if (status) status.textContent = "Upload needs DC_ADMIN_ASSETS_R2 plus a public HTTPS base URL before Printful can ingest it.";
+        return;
+      }
+      const fileResponse = await fetch("/api/admin/products/files", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ publicUrl })
+      });
+      const registered = await fileResponse.json().catch(() => null);
+      if (!fileResponse.ok || !registered?.ok) {
+        if (status) status.textContent = registered?.message || registered?.error || "Printful file registration failed.";
+        return;
+      }
+      const override = productOverrideFromProduct(modal.product);
+      override.galleryOverride = Array.from(new Set([...(override.galleryOverride || []), publicUrl]));
+      productState.overrides = productState.overrides.filter((item) => createSlug(item.productId || item.printfulProductId) !== createSlug(override.productId));
+      productState.overrides.push(override);
+      modal.product.images = Array.from(new Set([...(modal.product.images || []), publicUrl]));
+      if (status) status.textContent = "Uploaded and registered with Printful files.";
+      renderProductsManager();
+    } catch {
+      if (status) status.textContent = "Product image upload unavailable.";
+    }
+  }
+
   function cmsStatusText(storage) {
     if (storage.status === "connected") return "Admin storage: connected";
     if (storage.status === "not-configured") return "Admin storage: not configured";
@@ -2758,7 +3008,7 @@ import {
   }
 
   function isPublishCollectionPage() {
-    return ["projects", "companies", "platforms", "positions"].includes(parseRoute().page);
+    return ["projects", "companies", "platforms", "positions", "products"].includes(parseRoute().page);
   }
 
   function canPublishSiteData() {
@@ -4345,6 +4595,231 @@ import {
     `;
   }
 
+  function renderProductsManager() {
+    routeTitle.textContent = "Products";
+    const visibleProducts = filteredProductsManager();
+    const selectedVisible = visibleProducts.filter((product) => productState.selected.has(product.printfulProductId || product.id)).length;
+    const featuredCount = productState.products.filter((product) => product.featured).length;
+    const hiddenCount = productState.products.filter((product) => product.visibility && product.visibility !== "public").length;
+
+    app.innerHTML = `
+      <div class="page products-page">
+        ${pageHeader(
+          "Printful products",
+          "Products",
+          "Manage Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, and base thumbnails.",
+          `<button class="button" type="button" data-product-action="refresh">Refresh Printful</button>
+           <button class="button button-secondary" type="button" data-product-action="health">Check API health</button>`
+        )}
+
+        ${panel(
+          "Printful and storage status",
+          "Storefront data is read through server-side Pages Functions. Override saves require a signed admin session and DC_ADMIN_KV.",
+          metricCards([
+            { label: "Printful", value: productState.health?.printful?.ok ? "Connected" : productState.loading ? "Checking" : "Unavailable", note: productState.health?.printful?.store?.name || productState.message, tone: productState.health?.printful?.ok ? "success" : "warn" },
+            { label: "Products", value: String(productState.products.length), note: "Rows returned by the server-side Printful sync product feed.", tone: productState.products.length ? "success" : "warn" },
+            { label: "Overrides", value: String(productState.overrides.length), note: productState.health?.storage?.ok ? "Admin KV override rows." : "DC_ADMIN_KV unavailable or not checked.", tone: productState.health?.storage?.ok ? "success" : "warn" },
+            { label: "Featured", value: String(featuredCount), note: "Storefront display flag only.", tone: featuredCount ? "success" : "" },
+            { label: "Hidden/private", value: String(hiddenCount), note: "Excluded from public /shop after publish.", tone: hiddenCount ? "warn" : "" }
+          ])
+        )}
+        ${publishStatusPanel(true)}
+
+        ${panel(
+          "Filters and bulk controls",
+          "Search product metadata, select rows, and apply confirmed storefront override changes.",
+          renderProductControls(visibleProducts.length, selectedVisible)
+        )}
+
+        ${panel(
+          "Product table",
+          "CMS-style product manager backed by Printful product records and Admin storefront overrides.",
+          renderProductTable(visibleProducts)
+        )}
+
+        ${productState.modal ? renderProductEditModal(productState.modal) : ""}
+        ${productState.imageModal ? renderProductImageModal(productState.imageModal) : ""}
+      </div>
+    `;
+  }
+
+  function renderProductControls(visibleCount, selectedVisible) {
+    return `
+      <div class="cms-toolbar">
+        <label class="field field-wide"><span>Search</span><input class="input" type="search" data-product-filter="search" value="${escapeHtml(productState.search)}" placeholder="Title, slug, Printful ID, category" /></label>
+        <label class="field"><span>Visibility</span><select class="input" data-product-filter="visibility">
+          ${["all", "public", "hidden", "private", "draft"].map((item) => `<option value="${item}"${productState.visibility === item ? " selected" : ""}>${item === "all" ? "All visibility" : item}</option>`).join("")}
+        </select></label>
+        <label class="field"><span>Featured</span><select class="input" data-product-filter="featured">
+          <option value="all"${productState.featured === "all" ? " selected" : ""}>All products</option>
+          <option value="featured"${productState.featured === "featured" ? " selected" : ""}>Featured only</option>
+          <option value="standard"${productState.featured === "standard" ? " selected" : ""}>Not featured</option>
+        </select></label>
+        <label class="field"><span>Sort</span><select class="input" data-product-filter="sort">
+          ${["title", "updated", "variants", "images"].map((item) => `<option value="${item}"${productState.sort === item ? " selected" : ""}>${item}</option>`).join("")}
+        </select></label>
+        <div class="cms-toolbar-summary">${badge(`${visibleCount} visible`, "warn")}${badge(`${selectedVisible} selected`, selectedVisible ? "success" : "warn")}</div>
+      </div>
+      <div class="bulk-panel ${productState.bulkMode ? "is-open" : ""}">
+        <div>
+          <strong>Bulk edit mode</strong>
+          <p>Bulk saves write storefront overrides only. Printful product records are not mutated.</p>
+        </div>
+        <button class="button button-secondary" type="button" data-product-action="toggle-bulk">${productState.bulkMode ? "Close bulk mode" : "Open bulk mode"}</button>
+        <select class="input input-compact" data-product-bulk-field="visibility" ${productState.selected.size ? "" : "disabled"}>
+          <option value="">Set visibility</option>
+          <option value="public">public</option>
+          <option value="hidden">hidden</option>
+          <option value="private">private</option>
+          <option value="draft">draft</option>
+        </select>
+        <select class="input input-compact" data-product-bulk-field="featured" ${productState.selected.size ? "" : "disabled"}>
+          <option value="">Set featured</option>
+          <option value="true">featured</option>
+          <option value="false">not featured</option>
+        </select>
+        <input class="input input-compact" type="text" placeholder="Category override" data-product-bulk-category ${productState.selected.size ? "" : "disabled"} />
+        <button class="button button-secondary" type="button" data-product-action="bulk-category" ${productState.selected.size ? "" : "disabled"}>Apply category</button>
+        <button class="button" type="button" data-product-action="bulk-save" ${productState.selected.size ? "" : "disabled"}>Bulk save</button>
+      </div>
+      <div class="project-message">${escapeHtml(productState.loading ? "Loading Printful products..." : productState.message)}</div>
+    `;
+  }
+
+  function renderProductTable(products) {
+    return `
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" data-product-select-all ${products.length && products.every((product) => productState.selected.has(product.printfulProductId || product.id)) ? "checked" : ""} /></th>
+              <th>Product</th><th>Category</th><th>Slug</th><th>Printful ID</th><th>Visibility</th><th>Featured</th><th>Variants</th><th>Images</th><th>Updated</th><th>Status/API</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${products.map(renderProductRow).join("") || `<tr><td colspan="12"><div class="empty-state">No Printful products match this view. ${escapeHtml(productState.message)}</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderProductRow(product) {
+    const id = product.printfulProductId || product.id;
+    return `
+      <tr>
+        <td><input type="checkbox" data-product-select="${escapeHtml(id)}" ${productState.selected.has(id) ? "checked" : ""} /></td>
+        <td><div class="product-cell">${product.thumbnailUrl ? `<img src="${escapeHtml(product.thumbnailUrl)}" alt="" loading="lazy" />` : `<span class="product-thumb-empty">No image</span>`}<div><strong>${escapeHtml(product.title || "Untitled product")}</strong><br><span>${escapeHtml(product.priceRange?.text || "Price pending")}</span></div></div></td>
+        <td>${escapeHtml(product.category || "Category pending")}</td>
+        <td><code>${escapeHtml(product.slug || "")}</code></td>
+        <td><code>${escapeHtml(id)}</code></td>
+        <td>${badge(product.visibility || "public", product.visibility && product.visibility !== "public" ? "warn" : "success")}</td>
+        <td>${badge(product.featured ? "featured" : "standard", product.featured ? "success" : "")}</td>
+        <td>${escapeHtml(String(product.variantCount || product.variants?.length || 0))}</td>
+        <td>${escapeHtml(String(product.imageCount || product.images?.length || 0))}</td>
+        <td>${escapeHtml(formatTimestamp(product.overrideUpdatedAt || product.updatedAt))}</td>
+        <td>${badge(product.health || product.status || "listed", product.health === "ignored" ? "warn" : "success")}</td>
+        <td><div class="row-actions">
+          <button class="button button-secondary" type="button" data-product-action="edit" data-product-id="${escapeHtml(id)}">Edit</button>
+          <button class="button button-secondary" type="button" data-product-action="images" data-product-id="${escapeHtml(id)}">Images</button>
+          <button class="button button-secondary" type="button" data-product-action="detail" data-product-id="${escapeHtml(id)}">Refresh detail</button>
+        </div></td>
+      </tr>
+    `;
+  }
+
+  function renderProductEditModal(modal) {
+    const product = modal.product;
+    const override = productOverrideFromProduct(product);
+    return `
+      <div class="modal-backdrop" data-product-modal-backdrop>
+        <section class="modal product-modal" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">Printful storefront override</span>
+              <h2 id="product-modal-title">${escapeHtml(product.title || "Product")}</h2>
+              <p>Save changes only to Admin storefront overrides. Product IDs, variants, sync status, and base thumbnails remain Printful-owned.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close product editor" data-product-action="close-modal">x</button>
+          </header>
+          <form class="modal-body project-form product-form" data-product-form>
+            <input type="hidden" name="productId" value="${escapeHtml(product.printfulProductId || product.id)}" />
+            <div class="form-grid">
+              ${field("Display title override", "displayTitle", override.displayTitle, "text", false, false)}
+              ${field("Slug override", "slugOverride", override.slugOverride || product.slug, "text", false, false)}
+              ${field("Category / collection override", "categoryOverride", override.categoryOverride || product.category, "text", false, false)}
+              <label class="field"><span>Visibility</span><select class="input" name="visibility">${["public", "hidden", "private", "draft"].map((item) => `<option value="${item}"${(override.visibility || "public") === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>
+              <label class="checkbox-field"><input type="checkbox" name="featured" ${override.featured ? "checked" : ""} /><span>Featured storefront product</span></label>
+              ${field("Hero image override", "heroImageOverride", override.heroImageOverride, "url", false, false)}
+              ${field("Alt text / display label", "altText", override.altText || override.displayLabel, "text", false, false)}
+              ${field("Sort order", "sortOrder", override.sortOrder, "number", false, false)}
+              ${textareaField("Description override", "descriptionOverride", override.descriptionOverride, false)}
+              ${textareaField("Gallery override URLs", "galleryOverride", (override.galleryOverride || []).join("\n"), false)}
+            </div>
+            <aside class="asset-status-box">
+              <h3>Product metadata</h3>
+              <div class="description-list">
+                <div class="description-row"><dt>Printful ID</dt><dd>${escapeHtml(product.printfulProductId || product.id)}</dd></div>
+                <div class="description-row"><dt>External ID</dt><dd>${escapeHtml(product.externalId || "Not returned")}</dd></div>
+                <div class="description-row"><dt>Variants</dt><dd>${escapeHtml(String(product.variantCount || product.variants?.length || 0))}</dd></div>
+                <div class="description-row"><dt>Images</dt><dd>${escapeHtml(String(product.imageCount || product.images?.length || 0))}</dd></div>
+              </div>
+              ${renderProductVariantPanel(product)}
+            </aside>
+            <footer class="modal-footer">
+              <span class="project-message" data-product-dirty-state>${modal.dirty ? "Unsaved changes" : "No unsaved changes"}</span>
+              <button class="button button-secondary" type="button" data-product-action="close-modal">Cancel</button>
+              <button class="button button-secondary" type="button" data-product-action="images" data-product-id="${escapeHtml(product.printfulProductId || product.id)}">Manage images</button>
+              <button class="button" type="submit">Save product override</button>
+            </footer>
+          </form>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderProductVariantPanel(product) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    if (!variants.length) return `<p class="muted">Variant details are not available until the detail endpoint returns sync variants.</p>`;
+    return `<div class="variant-panel">${variants.slice(0, 12).map((variant) => `<div><strong>${escapeHtml(variant.name || variant.sku || variant.id)}</strong><span>${escapeHtml(variant.retailPrice ? `${variant.retailPrice}${variant.currency ? ` ${variant.currency}` : ""}` : "Price pending")}</span></div>`).join("")}</div>`;
+  }
+
+  function renderProductImageModal(modal) {
+    const product = modal.product;
+    const override = productOverrideFromProduct(product);
+    const images = Array.from(new Set([...(product.images || []), ...(override.galleryOverride || []), override.heroImageOverride].filter(Boolean)));
+    const uploadReady = productState.health?.upload?.durableStorage && productState.health?.upload?.publicBaseUrl && productState.health?.upload?.printfulFileRegistration;
+    return `
+      <div class="modal-backdrop" data-product-image-modal-backdrop>
+        <section class="modal product-modal" role="dialog" aria-modal="true" aria-labelledby="product-image-modal-title">
+          <header class="modal-header">
+            <div>
+              <span class="section-kicker">Image management</span>
+              <h2 id="product-image-modal-title">${escapeHtml(product.title || "Product images")}</h2>
+              <p>Choose display images from Printful/mockup URLs or register a public upload URL with Printful when storage is configured.</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close image manager" data-product-action="close-image-modal">x</button>
+          </header>
+          <div class="modal-body">
+            <div class="product-image-grid">
+              ${images.map((image) => `<button class="product-image-option${image === override.heroImageOverride ? " is-active" : ""}" type="button" data-product-action="set-hero-image" data-product-image="${escapeHtml(image)}"><img src="${escapeHtml(image)}" alt="" loading="lazy" /><span>${image === override.heroImageOverride ? "Hero image" : "Use as hero"}</span></button>`).join("") || `<div class="empty-state">No Printful images were returned for this product.</div>`}
+            </div>
+            <div class="asset-status-box">
+              <h3>Upload and Printful file registration</h3>
+              <p>${uploadReady ? "Upload uses the existing Admin R2 asset endpoint, then registers the returned public HTTPS URL with Printful /v2/files." : "PRODUCT_MEDIA_BUCKET / public media storage must be configured before Printful can ingest uploaded images. Existing Printful thumbnails and image selection remain available."}</p>
+              <div class="input-with-action">
+                <input class="input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-product-image-upload-input ${uploadReady ? "" : "disabled"} />
+                <button class="button button-secondary" type="button" data-product-action="upload-image" ${uploadReady ? "" : "disabled"}>Upload</button>
+              </div>
+              <span class="upload-status" data-product-image-upload-status></span>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button class="button button-secondary" type="button" data-product-action="close-image-modal">Close</button>
+          </footer>
+        </section>
+      </div>
+    `;
+  }
+
   function renderMedia() {
     routeTitle.textContent = "Media";
     const visibleItems = filteredMediaItems();
@@ -5884,6 +6359,8 @@ import {
       renderAccountDetail(decodeURIComponent(route.id));
     } else if (route.page === "accounts") {
       renderAccounts();
+    } else if (route.page === "products") {
+      renderProductsManager();
     } else if (route.page === "projects") {
       renderProjects();
     } else if (route.page === "media") {
@@ -5902,6 +6379,7 @@ import {
       renderOverview();
     }
 
+    if (route.page === "products" && !productState.loaded && !productState.loading) hydrateProductsManager();
     if (route.page === "projects") initProjectTableResize();
     app.focus({ preventScroll: true });
     document.body.classList.remove("mobile-nav-open");
@@ -5972,6 +6450,12 @@ import {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (target.closest("[data-product-form]")) {
+      productState.modal = productState.modal ? { ...productState.modal, dirty: true } : productState.modal;
+      const dirtyState = target.closest("[data-product-form]")?.querySelector("[data-product-dirty-state]");
+      if (dirtyState) dirtyState.textContent = "Unsaved changes";
+    }
+
     if (target.matches("[data-project-filter='search']")) {
       projectState.search = target.value;
       renderProjects();
@@ -5980,6 +6464,11 @@ import {
     if (target.matches("[data-media-filter='search']")) {
       mediaState.search = target.value;
       renderMedia();
+    }
+
+    if (target.matches("[data-product-filter='search']")) {
+      productState.search = target.value;
+      renderProductsManager();
     }
 
     if (target.matches("[data-alert-filter='search']")) {
@@ -6004,6 +6493,12 @@ import {
   app.addEventListener("change", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+
+    if (target.closest("[data-product-form]")) {
+      productState.modal = productState.modal ? { ...productState.modal, dirty: true } : productState.modal;
+      const dirtyState = target.closest("[data-product-form]")?.querySelector("[data-product-dirty-state]");
+      if (dirtyState) dirtyState.textContent = "Unsaved changes";
+    }
 
     if (target.matches("[data-project-upload-input]")) {
       uploadProjectAsset(target, target.getAttribute("data-project-upload-input"));
@@ -6053,6 +6548,24 @@ import {
     if (target.matches("[data-project-filter='asset']")) {
       projectState.asset = target.value;
       renderProjects();
+      return;
+    }
+
+    if (target.matches("[data-product-filter='visibility']")) {
+      productState.visibility = target.value;
+      renderProductsManager();
+      return;
+    }
+
+    if (target.matches("[data-product-filter='featured']")) {
+      productState.featured = target.value;
+      renderProductsManager();
+      return;
+    }
+
+    if (target.matches("[data-product-filter='sort']")) {
+      productState.sort = target.value;
+      renderProductsManager();
       return;
     }
 
@@ -6121,6 +6634,30 @@ import {
       return;
     }
 
+    if (target.matches("[data-product-select]")) {
+      const id = target.getAttribute("data-product-select");
+      if (target.checked) {
+        productState.selected.add(id);
+      } else {
+        productState.selected.delete(id);
+      }
+      renderProductsManager();
+      return;
+    }
+
+    if (target.matches("[data-product-select-all]")) {
+      filteredProductsManager().forEach((product) => {
+        const id = product.printfulProductId || product.id;
+        if (target.checked) {
+          productState.selected.add(id);
+        } else {
+          productState.selected.delete(id);
+        }
+      });
+      renderProductsManager();
+      return;
+    }
+
     if (target.matches("[data-media-select]")) {
       const id = target.getAttribute("data-media-select");
       if (target.checked) {
@@ -6184,6 +6721,25 @@ import {
       return;
     }
 
+    if (target.matches("[data-product-bulk-field='visibility']") && target.value) {
+      productState.products = productState.products.map((product) =>
+        productState.selected.has(product.printfulProductId || product.id) ? { ...product, visibility: target.value, overrideUpdatedAt: new Date().toISOString() } : product
+      );
+      productState.message = `Prepared visibility change for ${productState.selected.size} selected product(s). Use Bulk save to persist.`;
+      renderProductsManager();
+      return;
+    }
+
+    if (target.matches("[data-product-bulk-field='featured']") && target.value) {
+      const featured = target.value === "true";
+      productState.products = productState.products.map((product) =>
+        productState.selected.has(product.printfulProductId || product.id) ? { ...product, featured, overrideUpdatedAt: new Date().toISOString() } : product
+      );
+      productState.message = `Prepared featured change for ${productState.selected.size} selected product(s). Use Bulk save to persist.`;
+      renderProductsManager();
+      return;
+    }
+
     if (target.matches("[data-media-bulk-field='status']") && target.value) {
       bulkUpdateMedia((item) => ({ ...item, status: target.value, updatedAt: new Date().toISOString() }));
       mediaState.message = `Updated status for ${mediaState.selected.size} selected media scaffold row(s).`;
@@ -6232,6 +6788,12 @@ import {
     if (form.matches("[data-media-form]")) {
       event.preventDefault();
       saveMediaFromForm(form);
+      return;
+    }
+
+    if (form.matches("[data-product-form]")) {
+      event.preventDefault();
+      saveProductFromForm(form);
       return;
     }
 
@@ -6285,13 +6847,14 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const uploadField = target.getAttribute("data-project-upload");
     const clearField = target.getAttribute("data-project-clear");
     const mediaAction = target.getAttribute("data-media-action");
+    const productAction = target.getAttribute("data-product-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
@@ -6304,6 +6867,7 @@ import {
     const positionId = target.getAttribute("data-position-id");
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
+    const productId = target.getAttribute("data-product-id");
     const alertId = target.getAttribute("data-alert-id");
     const accountAccessId = target.getAttribute("data-account-access-id");
     const accountId = target.getAttribute("data-account-id");
@@ -6384,7 +6948,87 @@ import {
       return;
     }
 
-    if (!action && !mediaAction && !alertAction && !positionAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]") || target.matches("[data-position-modal-backdrop]"))) {
+    if (!action && !mediaAction && !productAction && !alertAction && !positionAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-product-modal-backdrop]") || target.matches("[data-product-image-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]") || target.matches("[data-position-modal-backdrop]"))) {
+      return;
+    }
+
+    if (productAction === "refresh") {
+      hydrateProductsManager(true);
+      return;
+    } else if (productAction === "health") {
+      hydrateProductsManager(true);
+      return;
+    } else if (productAction === "edit") {
+      const product = productState.products.find((entry) => (entry.printfulProductId || entry.id) === productId);
+      if (product) productState.modal = { product, dirty: false };
+      renderProductsManager();
+      return;
+    } else if (productAction === "detail") {
+      hydrateProductDetail(productId, "edit");
+      return;
+    } else if (productAction === "images") {
+      const product = productState.products.find((entry) => (entry.printfulProductId || entry.id) === productId) || productState.modal?.product;
+      if (product) productState.imageModal = { product };
+      renderProductsManager();
+      return;
+    } else if (productAction === "close-modal") {
+      if (productState.modal?.dirty && !window.confirm("Discard unsaved product override changes?")) return;
+      productState.modal = null;
+      renderProductsManager();
+      return;
+    } else if (productAction === "close-image-modal") {
+      productState.imageModal = null;
+      renderProductsManager();
+      return;
+    } else if (productAction === "toggle-bulk") {
+      productState.bulkMode = !productState.bulkMode;
+      renderProductsManager();
+      return;
+    } else if (productAction === "bulk-category") {
+      const input = app.querySelector("[data-product-bulk-category]");
+      const categoryOverride = String(input?.value || "").trim();
+      if (!categoryOverride) {
+        productState.message = "Enter a category override before applying it.";
+      } else {
+        productState.products = productState.products.map((product) =>
+          productState.selected.has(product.printfulProductId || product.id) ? { ...product, category: categoryOverride, categoryOverride, overrideUpdatedAt: new Date().toISOString() } : product
+        );
+        productState.message = `Prepared category override for ${productState.selected.size} selected product(s). Use Bulk save to persist.`;
+      }
+      renderProductsManager();
+      return;
+    } else if (productAction === "bulk-save") {
+      const selected = productState.products.filter((product) => productState.selected.has(product.printfulProductId || product.id));
+      if (!selected.length) return;
+      if (!window.confirm(`Save storefront overrides for ${selected.length} selected product(s)?`)) return;
+      const first = selected[0];
+      const patch = {
+        visibility: first.visibility || "public",
+        featured: Boolean(first.featured),
+        categoryOverride: first.categoryOverride || first.category || ""
+      };
+      saveProductBulkPatch(patch);
+      return;
+    } else if (productAction === "set-hero-image") {
+      const image = target.getAttribute("data-product-image");
+      const modalProduct = productState.imageModal?.product;
+      if (image && modalProduct) {
+        const override = productOverrideFromProduct(modalProduct);
+        override.heroImageOverride = image;
+        override.galleryOverride = Array.from(new Set([...(override.galleryOverride || []), image]));
+        productState.overrides = productState.overrides.filter((item) => createSlug(item.productId || item.printfulProductId) !== createSlug(override.productId));
+        productState.overrides.push(override);
+        productState.products = productState.products.map((product) =>
+          (product.printfulProductId || product.id) === (modalProduct.printfulProductId || modalProduct.id)
+            ? { ...product, thumbnailUrl: image, images: Array.from(new Set([image, ...(product.images || [])])), overrideUpdatedAt: new Date().toISOString() }
+            : product
+        );
+        productState.message = "Hero image override selected locally. Save the product override to persist.";
+      }
+      renderProductsManager();
+      return;
+    } else if (productAction === "upload-image") {
+      uploadProductImage();
       return;
     }
 
@@ -7697,6 +8341,7 @@ import {
   reconcilePositionsFromStorage();
   hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();
+  hydrateProductsManager(activePageIs("products"));
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));
   hydrateAnalyticsStatus(activePageIs("analytics"));
