@@ -2261,6 +2261,7 @@ import {
       featured: Boolean(existing?.featured ?? product.featured),
       heroImageOverride: existing?.heroImageOverride || "",
       galleryOverride: Array.isArray(existing?.galleryOverride) ? existing.galleryOverride : [],
+      uploadedImages: Array.isArray(existing?.uploadedImages) ? existing.uploadedImages : [],
       altText: existing?.altText || "",
       displayLabel: existing?.displayLabel || "",
       sortOrder: existing?.sortOrder || product.sortOrder || 1000
@@ -2281,6 +2282,7 @@ import {
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
       heroImageOverride: formValue(form, "heroImageOverride"),
       galleryOverride: textareaArray(formValue(form, "galleryOverride")),
+      uploadedImages: Array.isArray(existing.uploadedImages) ? existing.uploadedImages : [],
       altText: formValue(form, "altText"),
       displayLabel: formValue(form, "altText"),
       sortOrder: Number(formValue(form, "sortOrder") || 1000)
@@ -2357,30 +2359,32 @@ import {
     formData.set("field", "product-media");
     formData.set("projectSlug", modal.product.slug || modal.product.printfulProductId || "product");
     try {
-      const uploadResponse = await fetch("/api/admin/assets/upload", { method: "POST", credentials: "include", body: formData });
+      formData.set("productId", modal.product.printfulProductId || modal.product.id || "");
+      formData.set("printfulProductId", modal.product.printfulProductId || modal.product.id || "");
+      const uploadResponse = await fetch("/api/admin/products/upload", { method: "POST", credentials: "include", body: formData });
       const upload = await uploadResponse.json().catch(() => null);
       const publicUrl = upload?.url || upload?.path || "";
       if (!uploadResponse.ok || !upload?.ok || !/^https:\/\//i.test(publicUrl)) {
         if (status) status.textContent = "Upload needs DC_ADMIN_ASSETS_R2 plus a public HTTPS base URL before Printful can ingest it.";
         return;
       }
-      const fileResponse = await fetch("/api/admin/products/files", {
-        method: "POST",
-        credentials: "include",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ publicUrl })
-      });
-      const registered = await fileResponse.json().catch(() => null);
-      if (!fileResponse.ok || !registered?.ok) {
-        if (status) status.textContent = registered?.message || registered?.error || "Printful file registration failed.";
-        return;
-      }
       const override = productOverrideFromProduct(modal.product);
       override.galleryOverride = Array.from(new Set([...(override.galleryOverride || []), publicUrl]));
+      override.uploadedImages = [
+        ...(override.uploadedImages || []),
+        {
+          url: publicUrl,
+          role: "preview-gallery",
+          uploadedAt: new Date().toISOString(),
+          printfulFileId: upload.printful?.id || "",
+          printfulStatus: upload.printful?.status || "",
+          printfulThumbnailUrl: upload.printful?.thumbnailUrl || ""
+        }
+      ];
       productState.overrides = productState.overrides.filter((item) => createSlug(item.productId || item.printfulProductId) !== createSlug(override.productId));
       productState.overrides.push(override);
       modal.product.images = Array.from(new Set([...(modal.product.images || []), publicUrl]));
-      if (status) status.textContent = "Uploaded and registered with Printful files.";
+      if (status) status.textContent = upload.printful?.registered ? "Uploaded and registered with Printful files." : "Uploaded to R2. Printful file registration needs review before using as a print file.";
       renderProductsManager();
     } catch {
       if (status) status.textContent = "Product image upload unavailable.";
@@ -4786,7 +4790,7 @@ import {
     const product = modal.product;
     const override = productOverrideFromProduct(product);
     const images = Array.from(new Set([...(product.images || []), ...(override.galleryOverride || []), override.heroImageOverride].filter(Boolean)));
-    const uploadReady = productState.health?.upload?.durableStorage && productState.health?.upload?.publicBaseUrl && productState.health?.upload?.printfulFileRegistration;
+    const uploadReady = productState.health?.upload?.durableStorage && productState.health?.upload?.publicBaseUrl;
     return `
       <div class="modal-backdrop" data-product-image-modal-backdrop>
         <section class="modal product-modal" role="dialog" aria-modal="true" aria-labelledby="product-image-modal-title">
@@ -4804,9 +4808,9 @@ import {
             </div>
             <div class="asset-status-box">
               <h3>Upload and Printful file registration</h3>
-              <p>${uploadReady ? "Upload uses the existing Admin R2 asset endpoint, then registers the returned public HTTPS URL with Printful /v2/files." : "PRODUCT_MEDIA_BUCKET / public media storage must be configured before Printful can ingest uploaded images. Existing Printful thumbnails and image selection remain available."}</p>
+              <p>${uploadReady ? "Upload uses DC_ADMIN_ASSETS_R2, returns a public HTTPS CDN URL, then registers the image with Printful /v2/files for preview/gallery use." : "DC_ADMIN_ASSETS_R2 and DC_ADMIN_ASSETS_PUBLIC_BASE_URL must be configured before Printful can ingest uploaded images. Existing Printful thumbnails and image selection remain available."}</p>
               <div class="input-with-action">
-                <input class="input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-product-image-upload-input ${uploadReady ? "" : "disabled"} />
+                <input class="input" type="file" accept="image/jpeg,image/png,image/webp" data-product-image-upload-input ${uploadReady ? "" : "disabled"} />
                 <button class="button button-secondary" type="button" data-product-action="upload-image" ${uploadReady ? "" : "disabled"}>Upload</button>
               </div>
               <span class="upload-status" data-product-image-upload-status></span>

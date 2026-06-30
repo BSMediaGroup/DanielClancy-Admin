@@ -1,0 +1,65 @@
+127.0.0.1 - - [30/Jun/2026 18:40:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/vendor/maplibre-gl/maplibre-gl.css HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/css/admin.css HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/logos/logomattesilver.webp HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/icons/ui/sidebarclose.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/js/admin-app.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/js/scaffold-data.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/icons/ui/hidden.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/icons/ui/sidebaropen.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/js/turnstile.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/js/admin-auth.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/vendor/maplibre-gl/maplibre-gl.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:25] "GET /assets/fonts/Recharge-Bold.otf HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/fonts/SuiGeneris-Regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/js/registry-reconciliation.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/js/analytics-map.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/js/geo-coordinate-lookup.js HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/products HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/products/health HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/data/public-projects-baseline.json HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/data/public-asset-catalog.json HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/projects HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/alerts HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/media HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/companies HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/platforms HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/cms/positions HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/products HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/products/health HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/public/site-data HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] code 404, message File not found
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/status HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/accounts HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/admin/analytics?window=5m HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /api/auth/session HTTP/1.1" 404 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/github.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/x.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/google.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/logos/logo.webp HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/home.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/globe.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/cog.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/identity.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/package.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/photostack.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/media.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/profilecard.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/appspark.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /assets/icons/ui/idbadge.svg HTTP/1.1" 200 -
+127.0.0.1 - - [30/Jun/2026 18:41:26] "GET /favicon.ico HTTP/1.1" 200 -

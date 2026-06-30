@@ -172,9 +172,12 @@ export async function registerPrintfulFile(env, publicUrl) {
       message: "Printful file ingestion requires a public HTTPS file URL."
     };
   }
+  const store = await resolvePrintfulStore(env);
+  if (!store.ok) return store;
   return printfulFetch(env, "/files", {
     version: "v2",
     method: "POST",
+    storeId: store.storeId,
     body: { url }
   });
 }

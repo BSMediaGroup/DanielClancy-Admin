@@ -15,6 +15,13 @@ const PRODUCTS_KEY = "cms:products";
 const JSON_HEADERS = {
   "cache-control": "no-store"
 };
+const PRODUCT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const PRODUCT_IMAGE_MIME = new Map([
+  ["image/png", "png"],
+  ["image/jpeg", "jpg"],
+  ["image/webp", "webp"]
+]);
+const PRODUCT_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp"]);
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -60,6 +67,9 @@ async function handleAdminProducts(context, session, parts) {
   }
   if (request.method === "POST" && action === "files") {
     return registerProductFile(request, env);
+  }
+  if (request.method === "POST" && action === "upload") {
+    return uploadProductImage(request, env, session);
   }
 
   return json({ ok: false, error: "method_or_route_not_allowed" }, { status: 405, headers: JSON_HEADERS });
@@ -207,6 +217,84 @@ async function registerProductFile(request, env) {
   );
 }
 
+async function uploadProductImage(request, env, session) {
+  const bucket = env?.DC_ADMIN_ASSETS_R2;
+  const publicBaseUrl = cleanString(env?.DC_ADMIN_ASSETS_PUBLIC_BASE_URL, 500).replace(/\/+$/g, "");
+  if (!bucket || typeof bucket.put !== "function") {
+    return json({ ok: false, error: "storage_not_configured", binding: "DC_ADMIN_ASSETS_R2" }, { status: 503, headers: JSON_HEADERS });
+  }
+  if (!/^https:\/\//i.test(publicBaseUrl)) {
+    return json({ ok: false, error: "public_base_url_not_configured", env: "DC_ADMIN_ASSETS_PUBLIC_BASE_URL" }, { status: 503, headers: JSON_HEADERS });
+  }
+
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return json({ ok: false, error: "invalid_form_data" }, { status: 400, headers: JSON_HEADERS });
+  }
+
+  const file = form.get("file");
+  if (!(file instanceof File)) {
+    return json({ ok: false, error: "file_required" }, { status: 400, headers: JSON_HEADERS });
+  }
+
+  const originalName = cleanString(file.name, 180);
+  const extension = originalName.includes(".") ? originalName.split(".").pop().toLowerCase() : "";
+  if (!PRODUCT_IMAGE_MIME.has(file.type) || !PRODUCT_IMAGE_EXTENSIONS.has(extension)) {
+    return json({ ok: false, error: "unsupported_product_image_type" }, { status: 415, headers: JSON_HEADERS });
+  }
+  if (file.size > PRODUCT_IMAGE_MAX_BYTES) {
+    return json({ ok: false, error: "file_too_large", maxBytes: PRODUCT_IMAGE_MAX_BYTES }, { status: 413, headers: JSON_HEADERS });
+  }
+
+  const productId = slugify(form.get("printfulProductId") || form.get("productId") || form.get("slug") || "product");
+  const filename = safeFileName(originalName, PRODUCT_IMAGE_MIME.get(file.type));
+  const key = `products/${productId}/${Date.now()}-${crypto.randomUUID()}-${filename}`;
+  const publicUrl = `${publicBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
+
+  await bucket.put(key, file.stream(), {
+    httpMetadata: {
+      contentType: file.type,
+      cacheControl: "public, max-age=31536000, immutable"
+    },
+    customMetadata: {
+      originalName,
+      uploadedBy: cleanString(session?.email || session?.username || "admin", 160),
+      role: "preview-gallery"
+    }
+  });
+
+  const registered = await registerPrintfulFile(env, publicUrl);
+  const filePayload = registered.ok ? registered.payload?.data || registered.payload : null;
+  return json(
+    {
+      ok: true,
+      key,
+      url: publicUrl,
+      path: publicUrl,
+      relativePath: publicUrl,
+      mime: file.type,
+      size: file.size,
+      originalName,
+      printful: registered.ok
+        ? {
+            registered: true,
+            id: cleanString(filePayload?.id || filePayload?.file_id, 80),
+            status: cleanString(filePayload?.status, 80),
+            thumbnailUrl: cleanString(filePayload?.thumbnail_url || filePayload?.preview_url, 1200),
+            role: "preview-gallery"
+          }
+        : {
+            registered: false,
+            error: registered.error || "printful_file_registration_failed",
+            message: registered.message || registered.detail || "Printful file registration failed."
+          }
+    },
+    { status: registered.ok ? 200 : 207, headers: JSON_HEADERS }
+  );
+}
+
 async function readOverrides(env) {
   const storage = productStorage(env);
   if (!storage) return { configured: false, items: [] };
@@ -252,12 +340,38 @@ function normalizeOverride(raw = {}, session = null) {
     galleryOverride: Array.isArray(raw.galleryOverride || raw.gallery)
       ? (raw.galleryOverride || raw.gallery).map((item) => cleanString(item, 1200)).filter(Boolean)
       : [],
+    uploadedImages: Array.isArray(raw.uploadedImages)
+      ? raw.uploadedImages.map(normalizeUploadedImage).filter(Boolean)
+      : [],
     altText: cleanString(raw.altText || raw.displayLabel, 220),
     displayLabel: cleanString(raw.displayLabel || raw.altText, 220),
     sortOrder: Number.isFinite(Number(raw.sortOrder)) ? Number(raw.sortOrder) : 1000,
     updatedAt,
     updatedBy: actor(session || raw)
   };
+}
+
+function normalizeUploadedImage(raw = {}) {
+  const url = cleanString(raw.url || raw.publicUrl || raw.path, 1200);
+  if (!/^https:\/\//i.test(url)) return null;
+  return {
+    url,
+    role: cleanString(raw.role || "preview-gallery", 80),
+    label: cleanString(raw.label || raw.altText, 220),
+    uploadedAt: cleanString(raw.uploadedAt || new Date().toISOString(), 80),
+    printfulFileId: cleanString(raw.printfulFileId || raw.printful?.id, 80),
+    printfulStatus: cleanString(raw.printfulStatus || raw.printful?.status, 80),
+    printfulThumbnailUrl: cleanString(raw.printfulThumbnailUrl || raw.printful?.thumbnailUrl, 1200)
+  };
+}
+
+function safeFileName(value, extension) {
+  const cleaned = cleanString(value || "product-image", 160)
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const withoutExtension = cleaned.replace(/\.[a-z0-9]{2,5}$/i, "") || "product-image";
+  return `${withoutExtension}.${extension === "jpeg" ? "jpg" : extension}`;
 }
 
 function safeBulkPatch(patch) {

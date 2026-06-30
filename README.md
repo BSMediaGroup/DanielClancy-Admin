@@ -73,12 +73,12 @@ Optional StreamSuites live analytics read:
 Optional Cloudflare R2 asset binding:
 
 - `DC_ADMIN_ASSETS_R2` - required for persistent Projects image/document uploads, registry logo uploads, and account avatar uploads from the Admin dashboard
-- `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - optional public base URL used to return browser-ready URLs after R2 upload; without it the upload API returns a relative key-style path
+- `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` - public base URL used to return browser-ready URLs after R2 upload; product image upload requires it so Printful can ingest a public HTTPS URL. Confirmed production value: `https://cdn.danielclancy.net`
 
 Printful Products env:
 
 - `PRINTFUL_STORE_API` - server-only Printful token used by Admin Products Pages Functions; never expose it to browser code, Vite env, public JSON, or logs
-- Product image upload to Printful requires durable public media storage. The existing upload path needs `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` so the Admin can upload an image, obtain a public HTTPS URL, and register that URL with Printful `/v2/files`. If public media storage is not configured, the Products image upload UI remains disabled and existing Printful image selection still works.
+- Product image upload to Printful requires durable public media storage. The product upload path uses `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` so the Admin can upload an image, obtain a public HTTPS URL, and register that URL with Printful `/v2/files`. If public media storage is not configured, the Products image upload UI remains disabled and existing Printful image selection still works.
 
 Recommended shared-cookie env var:
 
@@ -262,10 +262,11 @@ Implemented admin endpoints:
 - `POST /api/admin/products/override`
 - `POST /api/admin/products/bulk`
 - `POST /api/admin/products/files`
+- `POST /api/admin/products/upload`
 
-The Products page (`#/products`) is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, and base thumbnails. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category, slug, hero image, gallery order, alt text/display label, and sort order.
+The Products page (`#/products`) is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, and base thumbnails. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category, slug, hero image, gallery order, alt text/display label, sort order, and product-management upload metadata.
 
-The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL.
+The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL, and the upload is treated as preview/gallery media unless a future Printful print-file update endpoint explicitly succeeds.
 
 If `PRINTFUL_STORE_API` is missing, Products renders a clear missing-token state and the API returns safe errors without leaking auth detail. If `DC_ADMIN_KV` is missing, write endpoints return `storage_not_configured` and the UI labels overrides as local/unpublished rather than pretending persistence worked.
 

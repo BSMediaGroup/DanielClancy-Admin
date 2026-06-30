@@ -1,5 +1,37 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Real R2 Product Image Upload Milestone
+
+### Technical Notes
+
+- Added a product-specific Admin upload path at `POST /api/admin/products/upload` that requires a signed admin session and uses the confirmed `DC_ADMIN_ASSETS_R2` binding.
+- Product uploads require `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` and return public HTTPS CDN URLs built from that base URL. The confirmed production base is `https://cdn.danielclancy.net`.
+- Product image validation now allows only PNG, JPG/JPEG, and WebP for the product upload path, rejects SVG/AI/PSD/TIF/TIFF/unknown binary formats by MIME/extension allowlist, and enforces a 10MB cap.
+- Product upload objects are written under `products/{product-id}/{timestamp-uuid-safe-filename}` with content type and immutable cache metadata.
+- Uploaded product CDN URLs are registered server-side with Printful `/v2/files` after upload. Registration resolves the Printful store and sends the store id header when available.
+- Upload metadata is attached to the product override model as preview/gallery metadata. The implementation does not claim uploaded images mutate Printful print files.
+- Updated the Products image modal to enable upload when `DC_ADMIN_ASSETS_R2` and `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` are present, name the actual binding in config-needed copy, restrict file input to JPG/PNG/WebP, and append uploaded thumbnails to the visible gallery.
+- Replaced the concrete `PRINTFUL_STORE_API` value in `.env.example` with a blank placeholder so server-only Printful secrets are not exposed in example config.
+
+### Human-Readable Notes
+
+- Admin product managers can now upload real product preview/gallery images to the confirmed R2 bucket binding and use the returned CDN image in the storefront override workflow.
+- Existing Printful thumbnails remain available, and uploaded preview images are not presented as printable production files unless a future Printful print-file update explicitly succeeds.
+
+### Cloudflare setup required
+
+- DanielClancy-Admin Pages project R2 binding: `DC_ADMIN_ASSETS_R2 -> danielclancy-admin-assets`
+- DanielClancy-Admin Pages env var: `DC_ADMIN_ASSETS_PUBLIC_BASE_URL=https://cdn.danielclancy.net`
+- `PRINTFUL_STORE_API` remains server-only and required for Printful file registration.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+- `assets/js/admin-app.js`
+- `functions/_shared/printful-products.js`
+- `functions/api/admin/products/[[path]].js`
+
 ## Printful Products Manager Foundation Milestone
 
 ### Technical Notes
