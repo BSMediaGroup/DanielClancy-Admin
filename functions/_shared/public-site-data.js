@@ -278,6 +278,8 @@ export function sanitizeProductOverride(raw = {}) {
     displayTitle: safeString(raw.displayTitle || raw.titleOverride),
     descriptionOverride: safeString(raw.descriptionOverride || raw.description),
     categoryOverride: safeString(raw.categoryOverride || raw.category || raw.collectionOverride),
+    categories: safeProductCategories(raw.categories || raw.categoryOverrides || raw.categoryOverride || raw.category),
+    primaryCategory: safeString(raw.primaryCategory || raw.primaryCategorySlug || raw.categoryOverride || raw.category),
     visibility,
     featured: Boolean(raw.featured),
     heroImageOverride: safeProductImageUrl(raw.heroImageOverride || raw.heroImage),
@@ -547,6 +549,20 @@ function safeProductImageUrl(value) {
   if (!text) return "";
   if (/^https:\/\//i.test(text)) return text;
   return safeAssetPath(text);
+}
+
+function safeProductCategories(value) {
+  const raw = Array.isArray(value) ? value : safeString(value).split(/[,;\n]/);
+  const categories = raw
+    .map((item) => {
+      const label = safeString(item?.label || item?.name || item);
+      const slug = safeProductSlug(item?.slug || label);
+      if (!label || !slug) return null;
+      return { label, slug, source: safeString(item?.source || (slug === "all" ? "system" : "admin")) };
+    })
+    .filter(Boolean);
+  if (!categories.some((item) => item.slug === "all")) categories.unshift({ label: "All", slug: "all", source: "system" });
+  return categories;
 }
 
 function safeProductSlug(value) {

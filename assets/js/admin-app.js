@@ -37,7 +37,9 @@ import {
     { id: "overview", label: "Overview", icon: "home.svg", path: "#/overview" },
     { id: "analytics", label: "Analytics", icon: "globe.svg", path: "#/analytics" },
     { id: "products", label: "Products", icon: "package.svg", path: "#/products" },
-    { id: "merch-orders", label: "Merch Orders", icon: "receipt.svg", path: "#/merch-orders" },
+    { id: "merch-orders", label: "Orders", icon: "receipt.svg", path: "#/merch-orders" },
+    { id: "shop-settings", label: "Shop Settings", icon: "cog.svg", path: "#/shop-settings" },
+    { id: "printful-status", label: "Printful Status", icon: "sync.svg", path: "#/printful-status" },
     { id: "accounts", label: "Accounts", icon: "identity.svg", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "cog.svg", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
@@ -145,6 +147,8 @@ import {
     loading: false,
     loaded: false,
     message: "Products load from server-side Printful endpoints. Storefront overrides save to Admin KV when configured.",
+    settings: { baseCurrency: "AUD", convertedCurrencyDefault: "USD", categories: [] },
+    status: null,
     health: {
       printful: { ok: false, configured: false },
       storage: { ok: false },
@@ -2190,6 +2194,7 @@ import {
       } else {
         productState.products = Array.isArray(listPayload.products) ? listPayload.products : [];
         productState.overrides = Array.isArray(listPayload.overrides) ? listPayload.overrides : [];
+        productState.settings = listPayload.settings || productState.settings;
         productState.message = productState.products.length ? "Printful product feed loaded." : "Printful returned no products for this store.";
       }
       productState.loaded = true;
@@ -2259,6 +2264,42 @@ import {
     }
   }
 
+  async function hydratePrintfulStatus(renderAfter = false) {
+    productState.loading = true;
+    productState.message = "Checking Printful product status...";
+    if (renderAfter && activePageIs("printful-status")) renderPrintfulStatus();
+    try {
+      const response = await fetch("/api/admin/products/status", { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      productState.status = payload;
+      productState.message = response.ok && payload?.ok ? "Printful status loaded." : (payload?.message || payload?.error || "Printful status unavailable.");
+    } catch {
+      productState.status = { ok: false, error: "status_api_unavailable", message: "Printful status API unavailable." };
+      productState.message = "Printful status API unavailable.";
+    } finally {
+      productState.loading = false;
+      if (renderAfter && activePageIs("printful-status")) renderPrintfulStatus();
+    }
+  }
+
+  async function hydrateProductSettings(renderAfter = false) {
+    productState.loading = true;
+    productState.message = "Loading storefront settings...";
+    if (renderAfter && activePageIs("shop-settings")) renderShopSettings();
+    try {
+      const response = await fetch("/api/admin/products/settings", { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      if (payload?.settings) productState.settings = payload.settings;
+      if (Array.isArray(payload?.categories)) productState.settings = { ...(productState.settings || {}), categories: payload.categories };
+      productState.message = payload?.message || (response.ok ? "Storefront settings loaded." : "Storefront settings unavailable.");
+    } catch {
+      productState.message = "Storefront settings API unavailable.";
+    } finally {
+      productState.loading = false;
+      if (renderAfter && activePageIs("shop-settings")) renderShopSettings();
+    }
+  }
+
   function filteredProductsManager() {
     const term = productState.search.trim().toLowerCase();
     return productState.products
@@ -2291,6 +2332,8 @@ import {
       displayTitle: existing?.displayTitle || "",
       descriptionOverride: existing?.descriptionOverride || "",
       categoryOverride: existing?.categoryOverride || "",
+      categories: Array.isArray(existing?.categories) ? existing.categories : (Array.isArray(product.categories) ? product.categories : []),
+      primaryCategory: existing?.primaryCategory || product.primaryCategory || product.category || "All",
       visibility: existing?.visibility || product.visibility || "public",
       featured: Boolean(existing?.featured ?? product.featured),
       heroImageOverride: existing?.heroImageOverride || "",
@@ -2300,6 +2343,72 @@ import {
       displayLabel: existing?.displayLabel || "",
       sortOrder: existing?.sortOrder || product.sortOrder || 1000
     };
+  }
+
+  function productCategoryLabel(product = {}) {
+    return product.primaryCategory || product.category || (Array.isArray(product.categories) ? product.categories.find((category) => category.slug !== "all")?.label : "") || "All";
+  }
+
+  function productCategoryList(product = {}) {
+    const categories = Array.isArray(product.categories) ? product.categories : [];
+    return categories.length ? categories.map((category) => category.label || category.slug).filter(Boolean).join(", ") : productCategoryLabel(product);
+  }
+
+  function productPriceText(product = {}) {
+    return product.priceRange?.text || "Price pending";
+  }
+
+  function formatOrderCents(amount, currency = "AUD") {
+    const value = Number(amount) || 0;
+    try {
+      return new Intl.NumberFormat("en-AU", { style: "currency", currency: String(currency || "AUD").toUpperCase() }).format(value / 100);
+    } catch {
+      return `${(value / 100).toFixed(2)} ${currency || "AUD"}`;
+    }
+  }
+
+  function productCategoryTextarea(product = {}, override = {}) {
+    const categories = Array.isArray(override.categories) && override.categories.length
+      ? override.categories
+      : Array.isArray(product.categories) ? product.categories : [];
+    return categories.map((category) => category.label || category.slug).filter(Boolean).join("\n") || "All";
+  }
+
+  function mergeProductCategoryAction(categories = [], label, action) {
+    const rows = Array.isArray(categories) ? categories : [];
+    const map = new Map();
+    map.set("all", { label: "All", slug: "all", source: "system" });
+    rows.forEach((category) => {
+      const categoryLabel = category.label || category.slug || "";
+      const slug = createSlug(category.slug || categoryLabel);
+      if (!slug) return;
+      map.set(slug, { label: categoryLabel || slug, slug, source: category.source || (slug === "all" ? "system" : "admin") });
+    });
+    const slug = createSlug(label);
+    if (slug && slug !== "all") {
+      if (action === "remove") map.delete(slug);
+      else map.set(slug, { label, slug, source: "admin" });
+    }
+    return Array.from(map.values());
+  }
+
+  function updateShopCategorySetting(target) {
+    const index = Number(target.getAttribute("data-shop-category-index"));
+    const fieldName = target.getAttribute("data-shop-category-field");
+    if (!Number.isInteger(index) || !fieldName) return;
+    const categories = Array.isArray(productState.settings?.categories) ? [...productState.settings.categories] : [];
+    const current = categories[index];
+    if (!current || current.slug === "all" && fieldName === "enabled") return;
+    const next = { ...current };
+    if (fieldName === "label") {
+      next.label = target.value;
+      if (next.slug !== "all") next.slug = createSlug(target.value);
+    }
+    if (fieldName === "sortOrder") next.sortOrder = Number(target.value) || index;
+    if (fieldName === "enabled") next.enabled = Boolean(target.checked);
+    categories[index] = next;
+    productState.settings = { ...(productState.settings || {}), categories };
+    productState.message = "Storefront settings edited locally. Save category settings to persist.";
   }
 
   async function saveProductFromForm(form) {
@@ -2312,6 +2421,8 @@ import {
       displayTitle: formValue(form, "displayTitle"),
       descriptionOverride: formValue(form, "descriptionOverride"),
       categoryOverride: formValue(form, "categoryOverride"),
+      categories: textareaArray(formValue(form, "categories")).map((label) => ({ label, slug: createSlug(label), source: createSlug(label) === "all" ? "system" : "admin" })),
+      primaryCategory: formValue(form, "primaryCategory"),
       visibility: formValue(form, "visibility"),
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
       heroImageOverride: formValue(form, "heroImageOverride"),
@@ -2342,7 +2453,7 @@ import {
       productState.overrides = Array.isArray(result.items) ? result.items : productState.overrides;
       productState.products = productState.products.map((product) =>
         (product.printfulProductId || product.id) === productId
-          ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, overrideUpdatedAt: new Date().toISOString() }
+          ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.primaryCategory || payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, overrideUpdatedAt: new Date().toISOString() }
           : product
       );
       productState.modal = null;
@@ -2379,6 +2490,34 @@ import {
       productState.message = "Bulk product override API unavailable.";
     }
     renderProductsManager();
+  }
+
+  async function saveProductSettings() {
+    const settings = {
+      ...(productState.settings || {}),
+      baseCurrency: "AUD",
+      convertedCurrencyDefault: productState.settings?.convertedCurrencyDefault || "USD",
+      categories: Array.isArray(productState.settings?.categories) ? productState.settings.categories : []
+    };
+    try {
+      const response = await fetch("/api/admin/products/settings", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ settings })
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        productState.message = result?.message || result?.error || "Storefront settings save failed.";
+      } else {
+        productState.settings = result.settings || settings;
+        productState.message = "Storefront category settings saved. Publish site data before expecting public overrides to refresh.";
+        hydratePublishStatus(activePageIs("shop-settings"));
+      }
+    } catch {
+      productState.message = "Storefront settings API unavailable.";
+    }
+    renderShopSettings();
   }
 
   async function uploadProductImage() {
@@ -4716,8 +4855,9 @@ import {
           <option value="true">featured</option>
           <option value="false">not featured</option>
         </select>
-        <input class="input input-compact" type="text" placeholder="Category override" data-product-bulk-category ${productState.selected.size ? "" : "disabled"} />
-        <button class="button button-secondary" type="button" data-product-action="bulk-category" ${productState.selected.size ? "" : "disabled"}>Apply category</button>
+        <input class="input input-compact" type="text" placeholder="Category label" data-product-bulk-category ${productState.selected.size ? "" : "disabled"} />
+        <button class="button button-secondary" type="button" data-product-action="bulk-category-add" ${productState.selected.size ? "" : "disabled"}>Add category</button>
+        <button class="button button-secondary" type="button" data-product-action="bulk-category-remove" ${productState.selected.size ? "" : "disabled"}>Remove category</button>
         <button class="button" type="button" data-product-action="bulk-save" ${productState.selected.size ? "" : "disabled"}>Bulk save</button>
       </div>
       <div class="project-message">${escapeHtml(productState.loading ? "Loading Printful products..." : productState.message)}</div>
@@ -4731,10 +4871,10 @@ import {
           <thead>
             <tr>
               <th><input type="checkbox" data-product-select-all ${products.length && products.every((product) => productState.selected.has(product.printfulProductId || product.id)) ? "checked" : ""} /></th>
-              <th>Product</th><th>Category</th><th>Slug</th><th>Printful ID</th><th>Visibility</th><th>Featured</th><th>Variants</th><th>Images</th><th>Updated</th><th>Status/API</th><th>Actions</th>
+              <th>Product</th><th>Categories</th><th>Price</th><th>Slug</th><th>Printful ID</th><th>Visibility</th><th>Featured</th><th>Variants</th><th>Images</th><th>Printful status</th><th>Updated</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody>${products.map(renderProductRow).join("") || `<tr><td colspan="12"><div class="empty-state">No Printful products match this view. ${escapeHtml(productState.message)}</div></td></tr>`}</tbody>
+          <tbody>${products.map(renderProductRow).join("") || `<tr><td colspan="13"><div class="empty-state">No Printful products match this view. ${escapeHtml(productState.message)}</div></td></tr>`}</tbody>
         </table>
       </div>
     `;
@@ -4745,16 +4885,17 @@ import {
     return `
       <tr>
         <td><input type="checkbox" data-product-select="${escapeHtml(id)}" ${productState.selected.has(id) ? "checked" : ""} /></td>
-        <td><div class="product-cell">${product.thumbnailUrl ? `<img src="${escapeHtml(product.thumbnailUrl)}" alt="" loading="lazy" />` : `<span class="product-thumb-empty">No image</span>`}<div><strong>${escapeHtml(product.title || "Untitled product")}</strong><br><span>${escapeHtml(product.priceRange?.text || "Price pending")}</span></div></div></td>
-        <td>${escapeHtml(product.category || "Category pending")}</td>
+        <td><div class="product-cell">${product.thumbnailUrl ? `<img src="${escapeHtml(product.thumbnailUrl)}" alt="" loading="lazy" />` : `<span class="product-thumb-empty">No image</span>`}<div><strong>${escapeHtml(product.title || "Untitled product")}</strong><br><span>${escapeHtml(product.printfulProductId || product.id || "")}</span></div></div></td>
+        <td>${escapeHtml(productCategoryList(product))}</td>
+        <td><strong>${escapeHtml(productPriceText(product))}</strong></td>
         <td><code>${escapeHtml(product.slug || "")}</code></td>
         <td><code>${escapeHtml(id)}</code></td>
         <td>${badge(product.visibility || "public", product.visibility && product.visibility !== "public" ? "warn" : "success")}</td>
         <td>${badge(product.featured ? "featured" : "standard", product.featured ? "success" : "")}</td>
         <td>${escapeHtml(String(product.variantCount || product.variants?.length || 0))}</td>
         <td>${escapeHtml(String(product.imageCount || product.images?.length || 0))}</td>
-        <td>${escapeHtml(formatTimestamp(product.overrideUpdatedAt || product.updatedAt))}</td>
         <td>${badge(product.health || product.status || "listed", product.health === "ignored" ? "warn" : "success")}</td>
+        <td>${escapeHtml(formatTimestamp(product.overrideUpdatedAt || product.updatedAt))}</td>
         <td><div class="row-actions">
           <button class="button button-secondary" type="button" data-product-action="edit" data-product-id="${escapeHtml(id)}">Edit</button>
           <button class="button button-secondary" type="button" data-product-action="images" data-product-id="${escapeHtml(id)}">Images</button>
@@ -4807,10 +4948,10 @@ import {
         <table class="table product-table">
           <thead>
             <tr>
-              <th>Order intent</th><th>Created</th><th>Updated</th><th>Customer</th><th>Stripe</th><th>Printful</th><th>Status</th><th>Items</th><th>Action</th><th>Error</th>
+              <th>Order intent</th><th>Created</th><th>Customer</th><th>Total</th><th>Currency</th><th>Stripe</th><th>Printful</th><th>Status</th><th>Items</th><th>Action</th><th>Error</th>
             </tr>
           </thead>
-          <tbody>${orders.map(renderMerchOrderRow).join("") || `<tr><td colspan="10"><div class="empty-state">${escapeHtml(merchOrderState.message || "No merch orders are available.")}</div></td></tr>`}</tbody>
+          <tbody>${orders.map(renderMerchOrderRow).join("") || `<tr><td colspan="11"><div class="empty-state">${escapeHtml(merchOrderState.message || "No merch orders are available.")}</div></td></tr>`}</tbody>
         </table>
       </div>
     `;
@@ -4829,8 +4970,9 @@ import {
       <tr>
         <td><code>${escapeHtml(order.id || "")}</code></td>
         <td>${escapeHtml(formatTimestamp(order.createdAt))}</td>
-        <td>${escapeHtml(formatTimestamp(order.updatedAt))}</td>
         <td>${escapeHtml(order.customerEmail || "n/a")}</td>
+        <td>${escapeHtml(formatOrderCents(order.totalAmount, order.currency || "AUD"))}</td>
+        <td>${escapeHtml(order.currency || "AUD")}</td>
         <td>${badge(order.stripePaymentStatus || "pending", order.stripePaymentStatus === "paid" ? "success" : "warn")}<br><code>${escapeHtml(order.stripeSessionId || "")}</code></td>
         <td>${escapeHtml(printfulText || "not created")}</td>
         <td>${badge(order.status || "unknown", order.status === "printful_confirmed" ? "success" : order.actionNeeded ? "warn" : "")}</td>
@@ -4838,6 +4980,90 @@ import {
         <td>${badge(order.actionNeeded ? "manual review" : "none", order.actionNeeded ? "warn" : "success")}</td>
         <td>${escapeHtml(order.errorSummary || "")}</td>
       </tr>
+    `;
+  }
+
+  function renderShopSettings() {
+    routeTitle.textContent = "Shop Settings";
+    const categories = Array.isArray(productState.settings?.categories) ? productState.settings.categories : [];
+    app.innerHTML = `
+      <div class="page products-page">
+        ${pageHeader(
+          "Storefront categories",
+          "Shop Settings",
+          "Manage public-safe storefront category metadata. Product and variant prices remain Printful-owned.",
+          `<button class="button" type="button" data-product-action="settings-refresh">Refresh settings</button>
+           <button class="button button-secondary" type="button" data-product-action="settings-save">Save category settings</button>`
+        )}
+        ${panel(
+          "Currency and publishing notes",
+          "DanielClancy.net merch uses AUD as the base store currency. Converted prices are informational only.",
+          metricCards([
+            { label: "Base currency", value: productState.settings?.baseCurrency || "AUD", note: "Storefront and checkout totals are server-validated in the store currency.", tone: "success" },
+            { label: "Converted default", value: productState.settings?.convertedCurrencyDefault || "USD", note: "Public display default for secondary converted estimates.", tone: "success" },
+            { label: "Storage", value: productState.health?.storage?.ok ? "Configured" : "Config needed", note: "DC_ADMIN_KV is required before settings can persist.", tone: productState.health?.storage?.ok ? "success" : "warn" },
+            { label: "Publish", value: publishState.revision ? "Snapshot ready" : "Local/API state", note: "Publish site data before expecting the public storefront to consume override snapshots.", tone: publishState.revision ? "success" : "warn" }
+          ])
+        )}
+        ${panel(
+          "Storefront categories",
+          "All is system-owned and cannot be removed. Other rows can be disabled, sorted, or labeled for storefront browsing.",
+          renderShopSettingsTable(categories)
+        )}
+      </div>
+    `;
+  }
+
+  function renderShopSettingsTable(categories) {
+    return `
+      <div class="project-message">${escapeHtml(productState.loading ? "Loading storefront settings..." : productState.message)}</div>
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead><tr><th>Label</th><th>Slug</th><th>Source</th><th>Enabled</th><th>Sort</th><th>Product count</th></tr></thead>
+          <tbody>${categories.map((category, index) => `
+            <tr>
+              <td><input class="input input-compact" data-shop-category-field="label" data-shop-category-index="${index}" value="${escapeHtml(category.label || "")}" ${category.slug === "all" ? "disabled" : ""} /></td>
+              <td><code>${escapeHtml(category.slug || "")}</code></td>
+              <td>${badge(category.source || "admin", category.source === "system" ? "success" : "")}</td>
+              <td><input type="checkbox" data-shop-category-field="enabled" data-shop-category-index="${index}" ${category.enabled !== false ? "checked" : ""} ${category.slug === "all" ? "disabled" : ""} /></td>
+              <td><input class="input input-compact" type="number" data-shop-category-field="sortOrder" data-shop-category-index="${index}" value="${escapeHtml(String(category.sortOrder || index))}" /></td>
+              <td>${escapeHtml(String(category.count || 0))}</td>
+            </tr>
+          `).join("") || `<tr><td colspan="6"><div class="empty-state">No categories are available until Printful products load.</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderPrintfulStatus() {
+    routeTitle.textContent = "Printful Status";
+    const status = productState.status || {};
+    app.innerHTML = `
+      <div class="page products-page">
+        ${pageHeader(
+          "Printful connection",
+          "Printful Status",
+          "Read-only diagnostics for the server-side Printful store connection and storefront product feed.",
+          `<button class="button" type="button" data-product-action="status-refresh">Refresh status</button>`
+        )}
+        ${panel(
+          "Store diagnostics",
+          "Raw upstream errors and secrets are not exposed here.",
+          metricCards([
+            { label: "API health", value: status.ok ? "Connected" : productState.loading ? "Checking" : "Unavailable", note: status.message || status.error || "Server-side Printful API check.", tone: status.ok ? "success" : "warn" },
+            { label: "Store", value: status.store?.name || "n/a", note: status.storeId ? `Store ID ${status.storeId}` : "Store id not resolved.", tone: status.storeId ? "success" : "warn" },
+            { label: "Products", value: String(status.productCount || 0), note: "Hydrated sync products returned by Printful.", tone: status.productCount ? "success" : "warn" },
+            { label: "Variants", value: String(status.variantCount || 0), note: "Variant count from hydrated product records.", tone: status.variantCount ? "success" : "warn" },
+            { label: "Missing prices", value: String(status.missingPriceCount || 0), note: "Rows still lacking usable Printful price fields.", tone: status.missingPriceCount ? "warn" : "success" },
+            { label: "Missing categories", value: String(status.missingCategoryCount || 0), note: "Rows with only the system All category.", tone: status.missingCategoryCount ? "warn" : "success" }
+          ])
+        )}
+        ${panel(
+          "Category diagnostics",
+          `Last checked ${escapeHtml(formatTimestamp(status.checkedAt || ""))}.`,
+          renderShopSettingsTable(Array.isArray(status.categories) ? status.categories : [])
+        )}
+      </div>
     `;
   }
 
@@ -4861,12 +5087,19 @@ import {
               ${field("Display title override", "displayTitle", override.displayTitle, "text", false, false)}
               ${field("Slug override", "slugOverride", override.slugOverride || product.slug, "text", false, false)}
               ${field("Category / collection override", "categoryOverride", override.categoryOverride || product.category, "text", false, false)}
+              <label class="field"><span>Primary category</span><select class="input" name="primaryCategory">
+                ${(Array.isArray(product.categories) ? product.categories : [{ label: "All", slug: "all" }]).map((category) => {
+                  const label = category.label || category.slug || "All";
+                  return `<option value="${escapeHtml(label)}"${(override.primaryCategory || product.primaryCategory || product.category || "All") === label ? " selected" : ""}>${escapeHtml(label)}</option>`;
+                }).join("")}
+              </select></label>
               <label class="field"><span>Visibility</span><select class="input" name="visibility">${["public", "hidden", "private", "draft"].map((item) => `<option value="${item}"${(override.visibility || "public") === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>
               <label class="checkbox-field"><input type="checkbox" name="featured" ${override.featured ? "checked" : ""} /><span>Featured storefront product</span></label>
               ${field("Hero image override", "heroImageOverride", override.heroImageOverride, "url", false, false)}
               ${field("Alt text / display label", "altText", override.altText || override.displayLabel, "text", false, false)}
               ${field("Sort order", "sortOrder", override.sortOrder, "number", false, false)}
               ${textareaField("Description override", "descriptionOverride", override.descriptionOverride, false)}
+              ${textareaField("Categories", "categories", productCategoryTextarea(product, override), false)}
               ${textareaField("Gallery override URLs", "galleryOverride", (override.galleryOverride || []).join("\n"), false)}
             </div>
             <aside class="asset-status-box">
@@ -4874,6 +5107,8 @@ import {
               <div class="description-list">
                 <div class="description-row"><dt>Printful ID</dt><dd>${escapeHtml(product.printfulProductId || product.id)}</dd></div>
                 <div class="description-row"><dt>External ID</dt><dd>${escapeHtml(product.externalId || "Not returned")}</dd></div>
+                <div class="description-row"><dt>Price</dt><dd>${escapeHtml(productPriceText(product))}</dd></div>
+                <div class="description-row"><dt>Categories</dt><dd>${escapeHtml(productCategoryList(product))}</dd></div>
                 <div class="description-row"><dt>Variants</dt><dd>${escapeHtml(String(product.variantCount || product.variants?.length || 0))}</dd></div>
                 <div class="description-row"><dt>Images</dt><dd>${escapeHtml(String(product.imageCount || product.images?.length || 0))}</dd></div>
               </div>
@@ -6478,6 +6713,10 @@ import {
       renderProductsManager();
     } else if (route.page === "merch-orders") {
       renderMerchOrders();
+    } else if (route.page === "shop-settings") {
+      renderShopSettings();
+    } else if (route.page === "printful-status") {
+      renderPrintfulStatus();
     } else if (route.page === "projects") {
       renderProjects();
     } else if (route.page === "media") {
@@ -6498,6 +6737,8 @@ import {
 
     if (route.page === "products" && !productState.loaded && !productState.loading) hydrateProductsManager();
     if (route.page === "merch-orders" && !merchOrderState.loaded && !merchOrderState.loading) hydrateMerchOrders();
+    if (route.page === "shop-settings" && !productState.loaded && !productState.loading) hydrateProductsManager(true).then(() => hydrateProductSettings(true));
+    if (route.page === "printful-status" && !productState.status && !productState.loading) hydratePrintfulStatus(true);
     if (route.page === "projects") initProjectTableResize();
     app.focus({ preventScroll: true });
     document.body.classList.remove("mobile-nav-open");
@@ -6606,6 +6847,10 @@ import {
       positionsState.search = target.value;
       renderPositions();
     }
+
+    if (target.matches("[data-shop-category-field='label'], [data-shop-category-field='sortOrder']")) {
+      updateShopCategorySetting(target);
+    }
   });
 
   app.addEventListener("change", (event) => {
@@ -6684,6 +6929,11 @@ import {
     if (target.matches("[data-product-filter='sort']")) {
       productState.sort = target.value;
       renderProductsManager();
+      return;
+    }
+
+    if (target.matches("[data-shop-category-field='enabled']")) {
+      updateShopCategorySetting(target);
       return;
     }
 
@@ -7082,6 +7332,15 @@ import {
     } else if (productAction === "health") {
       hydrateProductsManager(true);
       return;
+    } else if (productAction === "settings-refresh") {
+      hydrateProductSettings(true);
+      return;
+    } else if (productAction === "settings-save") {
+      saveProductSettings();
+      return;
+    } else if (productAction === "status-refresh") {
+      hydratePrintfulStatus(true);
+      return;
     } else if (productAction === "edit") {
       const product = productState.products.find((entry) => (entry.printfulProductId || entry.id) === productId);
       if (product) productState.modal = { product, dirty: false };
@@ -7108,16 +7367,24 @@ import {
       productState.bulkMode = !productState.bulkMode;
       renderProductsManager();
       return;
-    } else if (productAction === "bulk-category") {
+    } else if (productAction === "bulk-category-add" || productAction === "bulk-category-remove") {
       const input = app.querySelector("[data-product-bulk-category]");
-      const categoryOverride = String(input?.value || "").trim();
-      if (!categoryOverride) {
-        productState.message = "Enter a category override before applying it.";
+      const categoryLabel = String(input?.value || "").trim();
+      const categorySlug = createSlug(categoryLabel);
+      if (!categoryLabel || categorySlug === "all") {
+        productState.message = "Enter an additional category label before applying it. All cannot be removed or duplicated.";
       } else {
         productState.products = productState.products.map((product) =>
-          productState.selected.has(product.printfulProductId || product.id) ? { ...product, category: categoryOverride, categoryOverride, overrideUpdatedAt: new Date().toISOString() } : product
+          productState.selected.has(product.printfulProductId || product.id)
+            ? {
+                ...product,
+                categories: mergeProductCategoryAction(product.categories, categoryLabel, productAction === "bulk-category-add" ? "add" : "remove"),
+                primaryCategory: product.primaryCategory || product.category || "All",
+                overrideUpdatedAt: new Date().toISOString()
+              }
+            : product
         );
-        productState.message = `Prepared category override for ${productState.selected.size} selected product(s). Use Bulk save to persist.`;
+        productState.message = `Prepared category ${productAction === "bulk-category-add" ? "add" : "remove"} for ${productState.selected.size} selected product(s). Use Bulk save to persist.`;
       }
       renderProductsManager();
       return;
@@ -7129,7 +7396,9 @@ import {
       const patch = {
         visibility: first.visibility || "public",
         featured: Boolean(first.featured),
-        categoryOverride: first.categoryOverride || first.category || ""
+        categoryOverride: first.categoryOverride || first.primaryCategory || first.category || "",
+        categories: first.categories || [],
+        primaryCategory: first.primaryCategory || first.category || "All"
       };
       saveProductBulkPatch(patch);
       return;
@@ -8447,6 +8716,8 @@ import {
       hydrateOverviewStatus(activePageIs("overview"));
       hydrateAnalyticsStatus(activePageIs("analytics"));
       hydrateMerchOrders(activePageIs("merch-orders"));
+      hydrateProductSettings(activePageIs("shop-settings"));
+      hydratePrintfulStatus(activePageIs("printful-status"));
       hydratePublishStatus(activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage());
     }
   });
@@ -8468,6 +8739,8 @@ import {
   hydrateCmsCollections();
   hydrateProductsManager(activePageIs("products"));
   hydrateMerchOrders(activePageIs("merch-orders"));
+  hydrateProductSettings(activePageIs("shop-settings"));
+  hydratePrintfulStatus(activePageIs("printful-status"));
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));
   hydrateAnalyticsStatus(activePageIs("analytics"));

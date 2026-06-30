@@ -1,5 +1,43 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Merch Dashboard Depth / Products Category + Price Milestone
+
+### Technical Notes
+
+- Expanded merch Admin navigation into Products, Orders, Shop Settings, and Printful Status sections.
+- Products table now includes category/categories and read-only price/price-range columns from normalized Printful data.
+- Product edit modal now includes category list controls, primary category selection, slug override, existing visibility/featured/title/description/image controls, and read-only price/category/status panels.
+- Bulk product controls now support safe visibility, featured, and category add/remove preparation before Bulk save; no bulk price overwrite path was added.
+- Added signed-admin `GET /api/admin/products/status`, `GET /api/admin/products/settings`, and `POST /api/admin/products/settings`.
+- Product overrides saved to `cms:products` now support sanitized category arrays and primary category fields for the public export.
+- Printful product normalization now hydrates missing list prices/variants from detail endpoints with bounded concurrency, derives min/max price ranges, defaults missing currency to AUD, and exposes category arrays from Printful fields plus Admin overrides.
+- Merch Orders API/table now includes read-only total and currency summaries from `DC_MERCH_ORDERS_KV`.
+
+### Human-Readable Notes
+
+- Admin merch management is now a deeper dashboard rather than a single shallow Products page.
+- Admin can inspect product pricing health, category coverage, and Printful connection diagnostics without exposing secrets or mutating Printful product records.
+
+### Cloudflare / Stripe setup required
+
+- DanielClancy-Admin Pages project still requires `DC_ADMIN_KV`, `DC_MERCH_ORDERS_KV`, `DC_ADMIN_ASSETS_R2`, and `DC_ADMIN_ASSETS_PUBLIC_BASE_URL`.
+- Stripe webhook setup remains in the public DanielClancy Pages project at `https://danielclancy.net/api/merch/stripe/webhook` with `checkout.session.completed` and `checkout.session.expired`.
+
+### Known limitations
+
+- Orders remain read-only; manual review states are visible but not resolvable from Admin yet.
+- Product prices remain Printful-owned and cannot be edited from Admin.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/printful-products.js`
+- `functions/_shared/public-site-data.js`
+- `functions/api/admin/merch-orders.js`
+- `functions/api/admin/products/[[path]].js`
+
 ## Merch Orders Visibility Milestone
 
 ### Technical Notes

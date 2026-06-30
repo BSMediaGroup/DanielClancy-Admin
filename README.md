@@ -259,13 +259,18 @@ Implemented admin endpoints:
 
 - `GET /api/admin/products`
 - `GET /api/admin/products/health`
+- `GET /api/admin/products/status`
+- `GET /api/admin/products/settings`
 - `GET /api/admin/products/detail/*`
 - `POST /api/admin/products/override`
 - `POST /api/admin/products/bulk`
+- `POST /api/admin/products/settings`
 - `POST /api/admin/products/files`
 - `POST /api/admin/products/upload`
 
-The Products page (`#/products`) is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, and base thumbnails. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category, slug, hero image, gallery order, alt text/display label, sort order, and product-management upload metadata.
+The merch dashboard is split into Products (`#/products`), Orders (`#/merch-orders`), Shop Settings (`#/shop-settings`), and Printful Status (`#/printful-status`). Products is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, base thumbnails, and prices. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category/category list, primary category, slug, hero image, gallery order, alt text/display label, sort order, and product-management upload metadata.
+
+Every public product has the system `All` category. Additional categories come from Printful category/collection/tag/product-type fields when present, or from Admin category overrides when Printful does not expose enough data. Shop Settings can view/manage public-safe category labels, slugs, enabled state, and sort order; `All` is system-owned and cannot be removed. The public export preserves only sanitized category fields and strips admin-only metadata. Admin Products displays a read-only Printful price/price-range column. There is no Admin price overwrite path and bulk actions do not mutate price data.
 
 The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL, and the upload is treated as preview/gallery media unless a future Printful print-file update endpoint explicitly succeeds.
 
@@ -277,7 +282,7 @@ Implemented endpoint:
 
 - `GET /api/admin/merch-orders`
 
-The Merch Orders page (`#/merch-orders`) is an admin-session-protected, read-only visibility surface for public merch checkout state. It reads the dedicated `DC_MERCH_ORDERS_KV` namespace, lists recent `merch:index:recent:*` order intents, and summarizes order intent id, created/updated time, masked customer email, Stripe session/payment status, Printful draft/confirmed status, current status, action-needed/manual-review flags, product/variant summaries, and safe fulfillment error summaries.
+The Merch Orders page (`#/merch-orders`) is an admin-session-protected, read-only visibility surface for public merch checkout state. It reads the dedicated `DC_MERCH_ORDERS_KV` namespace, lists recent `merch:index:recent:*` order intents, and summarizes order intent id, created time, masked customer email, total, currency, Stripe session/payment status, Printful draft/confirmed status, current status, action-needed/manual-review flags, product/variant summaries, and safe fulfillment error summaries.
 
 This page does not mutate Stripe, Printful, payment, fulfillment, or public CMS state. If `DC_MERCH_ORDERS_KV` is missing locally or in Pages Functions, the API returns `storage_not_configured` naming `DC_MERCH_ORDERS_KV` and the UI shows a config-needed state instead of fake order rows.
 
@@ -479,8 +484,9 @@ DanielClancy-Admin/
 - Analytics page hydrates Cloudflare GraphQL and page-visit KV readiness from `/api/admin/analytics`; missing/failed Cloudflare config is reported clearly, API/KV/ingest/GraphQL status is separated, map precision is labelled per row, and the location section uses a real dark MapLibre GL map with an aggregated GeoJSON source, halo/dot circle layers, shared layer toggles, country fallback markers, flag-prefixed popups/sidebar details, local sourced raster cover images, and a collapsible fullscreen selected-location sidebar. Empty live analytics shows “No live page-visit location events captured yet.” over the real basemap and no fake sample markers.
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
-- Products manager with server-side Printful product hydration, table/CMS controls, search/filter/sort, bulk storefront override saves, product edit modal, image management modal, existing Printful image selection, and disabled/config-needed upload state unless durable public media storage is configured for Printful file ingestion.
-- Merch Orders page with signed-admin read-only summaries from `DC_MERCH_ORDERS_KV` and config-needed state when that binding is unavailable.
+- Products manager with server-side Printful product hydration, price/category columns, table/CMS controls, search/filter/sort, bulk storefront override saves, product edit modal with category/primary-category/read-only price panels, image management modal, existing Printful image selection, and disabled/config-needed upload state unless durable public media storage is configured for Printful file ingestion.
+- Orders page with signed-admin read-only summaries from `DC_MERCH_ORDERS_KV`, including total/currency, and config-needed state when that binding is unavailable.
+- Shop Settings and Printful Status sections for storefront category metadata, AUD base-currency notes, storage/binding status, Printful store health, product/variant counts, missing price counts, and missing category counts.
 - Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with registry overlay v3 reconciliation, client-only names excluded, source-required employers restored from baseline, source/provenance/override/custom classification shown, KV/local fallback, active/archive status, local registry cache repair/reset, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
 - Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
 - Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.

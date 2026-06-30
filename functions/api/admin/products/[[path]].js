@@ -53,6 +53,12 @@ async function handleAdminProducts(context, session, parts) {
   if (request.method === "GET" && action === "health") {
     return productsHealth(env);
   }
+  if (request.method === "GET" && action === "status") {
+    return printfulStatus(env);
+  }
+  if (request.method === "GET" && action === "settings") {
+    return productSettings(env);
+  }
   if (request.method === "GET" && action === "detail") {
     return productDetail(env, parts.slice(1).join("/"));
   }
@@ -64,6 +70,9 @@ async function handleAdminProducts(context, session, parts) {
   }
   if (request.method === "POST" && action === "bulk") {
     return bulkUpdateProducts(request, env, session);
+  }
+  if (request.method === "POST" && action === "settings") {
+    return saveProductSettings(request, env, session);
   }
   if (request.method === "POST" && action === "files") {
     return registerProductFile(request, env);
@@ -100,6 +109,56 @@ async function productsHealth(env) {
   );
 }
 
+async function printfulStatus(env) {
+  const [printful, overrides] = await Promise.all([fetchPrintfulProductList(env), readOverrides(env)]);
+  if (!printful.ok) {
+    return json(
+      {
+        ok: false,
+        configured: Boolean(printful.configured),
+        error: printful.error || "printful_unavailable",
+        message: printful.message || "Printful status is unavailable.",
+        checkedAt: new Date().toISOString()
+      },
+      { status: printful.status || 503, headers: JSON_HEADERS }
+    );
+  }
+  const products = printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items)));
+  const categories = categorySummary(products, overrides.settings?.categories || []);
+  return json(
+    {
+      ok: true,
+      configured: true,
+      checkedAt: new Date().toISOString(),
+      store: safeStore(printful.store),
+      storeId: printful.storeId,
+      productCount: products.length,
+      variantCount: products.reduce((total, product) => total + Number(product.variantCount || product.variants?.length || 0), 0),
+      missingPriceCount: products.filter((product) => !product.priceRange).length,
+      missingCategoryCount: products.filter((product) => !product.categories?.some((category) => category.slug !== "all")).length,
+      categories,
+      storageConfigured: overrides.configured
+    },
+    { headers: JSON_HEADERS }
+  );
+}
+
+async function productSettings(env) {
+  const [printful, overrides] = await Promise.all([fetchPrintfulProductList(env), readOverrides(env)]);
+  const products = printful.ok ? printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items))) : [];
+  return json(
+    {
+      ok: true,
+      configured: Boolean(printful.configured),
+      storageConfigured: overrides.configured,
+      settings: overrides.settings,
+      categories: categorySummary(products, overrides.settings?.categories || []),
+      message: overrides.configured ? "Storefront settings loaded from DC_ADMIN_KV." : "DC_ADMIN_KV is required before category settings can be saved."
+    },
+    { headers: JSON_HEADERS }
+  );
+}
+
 async function productList(env) {
   const [printful, overrides] = await Promise.all([fetchPrintfulProductList(env), readOverrides(env)]);
   if (!printful.ok) {
@@ -126,6 +185,7 @@ async function productList(env) {
       storeId: printful.storeId,
       products,
       overrides: overrides.items,
+      settings: overrides.settings,
       storageConfigured: overrides.configured
     },
     { headers: JSON_HEADERS }
@@ -151,6 +211,7 @@ async function productDetail(env, lookup) {
       configured: true,
       product: adminProductShape(mergeProductOverrides(detail.product, overrides.items)),
       store: safeStore(detail.store),
+      settings: overrides.settings,
       storageConfigured: overrides.configured
     },
     { headers: JSON_HEADERS }
@@ -203,6 +264,19 @@ async function bulkUpdateProducts(request, env, session) {
   const items = Array.from(byId.values());
   await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), items }, null, 2));
   return json({ ok: true, saved: true, count: ids.length, items, storageConfigured: true }, { headers: JSON_HEADERS });
+}
+
+async function saveProductSettings(request, env, session) {
+  const storage = productStorage(env);
+  if (!storage) {
+    return json({ ok: false, error: "storage_not_configured", message: "DC_ADMIN_KV is required for storefront category settings." }, { status: 503, headers: JSON_HEADERS });
+  }
+  const payload = await readJson(request);
+  const current = await readOverrides(env);
+  const settings = normalizeSettings(payload?.settings || payload, session);
+  const updatedAt = new Date().toISOString();
+  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), settings, items: current.items }, null, 2));
+  return json({ ok: true, saved: true, settings, items: current.items, storageConfigured: true }, { headers: JSON_HEADERS });
 }
 
 async function registerProductFile(request, env) {
@@ -300,14 +374,15 @@ async function readOverrides(env) {
   if (!storage) return { configured: false, items: [] };
   try {
     const raw = await storage.get(PRODUCTS_KEY);
-    if (!raw) return { configured: true, items: [] };
+    if (!raw) return { configured: true, items: [], settings: normalizeSettings({}) };
     const parsed = JSON.parse(raw);
     return {
       configured: true,
-      items: Array.isArray(parsed?.items) ? parsed.items.map((item) => normalizeOverride(item)).filter(Boolean) : []
+      items: Array.isArray(parsed?.items) ? parsed.items.map((item) => normalizeOverride(item)).filter(Boolean) : [],
+      settings: normalizeSettings(parsed?.settings || {})
     };
   } catch {
-    return { configured: true, items: [] };
+    return { configured: true, items: [], settings: normalizeSettings({}) };
   }
 }
 
@@ -334,6 +409,8 @@ function normalizeOverride(raw = {}, session = null) {
     displayTitle: cleanString(raw.displayTitle || raw.titleOverride, 220),
     descriptionOverride: cleanString(raw.descriptionOverride || raw.description, 4000),
     categoryOverride: cleanString(raw.categoryOverride || raw.category || raw.collectionOverride, 160),
+    categories: normalizeCategoryList(raw.categories || raw.categoryOverrides || raw.categoryOverride || raw.category),
+    primaryCategory: cleanString(raw.primaryCategory || raw.primaryCategorySlug || raw.categoryOverride || raw.category, 160),
     visibility,
     featured: Boolean(raw.featured),
     heroImageOverride: cleanString(raw.heroImageOverride || raw.heroImage, 1200),
@@ -379,7 +456,72 @@ function safeBulkPatch(patch) {
   if (patch.visibility) allowed.visibility = patch.visibility;
   if (Object.prototype.hasOwnProperty.call(patch, "featured")) allowed.featured = Boolean(patch.featured);
   if (patch.categoryOverride || patch.category) allowed.categoryOverride = patch.categoryOverride || patch.category;
+  if (patch.categories) allowed.categories = normalizeCategoryList(patch.categories);
+  if (patch.primaryCategory) allowed.primaryCategory = cleanString(patch.primaryCategory, 160);
   return allowed;
+}
+
+function normalizeSettings(raw = {}, session = null) {
+  return {
+    baseCurrency: cleanChoice(raw.baseCurrency, ["AUD"], "AUD"),
+    convertedCurrencyDefault: cleanChoice(raw.convertedCurrencyDefault, ["USD", "CAD", "NZD", "GBP", "EUR", "JPY", "CHF", "SGD", "HKD", "KRW"], "USD"),
+    categories: normalizeCategorySettings(raw.categories),
+    updatedAt: cleanString(raw.updatedAt || new Date().toISOString(), 80),
+    updatedBy: actor(session || raw)
+  };
+}
+
+function normalizeCategorySettings(value) {
+  const rows = Array.isArray(value) ? value : [];
+  return rows
+    .map((row, index) => {
+      const label = cleanString(row?.label || row?.name || row?.slug, 160);
+      const slug = slugify(row?.slug || label);
+      if (!slug) return null;
+      return {
+        label: label || slug,
+        slug,
+        enabled: row?.enabled !== false,
+        sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+        source: cleanString(row?.source || "admin", 80)
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeCategoryList(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(/[,;\n]/);
+  const labels = raw.map((item) => cleanString(item?.label || item?.name || item, 160)).filter(Boolean);
+  const merged = Array.from(new Set(["All", ...labels]));
+  return merged.map((label) => ({ label, slug: slugify(label) || "all", source: label.toLowerCase() === "all" ? "system" : "admin" }));
+}
+
+function categorySummary(products, settings = []) {
+  const map = new Map();
+  map.set("all", { label: "All", slug: "all", count: products.length, enabled: true, sortOrder: 0, source: "system" });
+  products.forEach((product) => {
+    (product.categories || []).forEach((category) => {
+      const slug = slugify(category.slug || category.label);
+      if (!slug) return;
+      const current = map.get(slug) || { label: category.label || slug, slug, count: 0, enabled: true, sortOrder: 1000, source: category.source || "printful" };
+      current.count += 1;
+      current.source = current.source || category.source || "printful";
+      map.set(slug, current);
+    });
+  });
+  settings.forEach((setting, index) => {
+    const slug = slugify(setting.slug || setting.label);
+    if (!slug) return;
+    const current = map.get(slug) || { label: setting.label || slug, slug, count: 0, source: "admin" };
+    map.set(slug, {
+      ...current,
+      label: setting.label || current.label,
+      enabled: setting.enabled !== false,
+      sortOrder: Number.isFinite(Number(setting.sortOrder)) ? Number(setting.sortOrder) : index + 1,
+      source: current.source === "system" ? "system" : setting.source || current.source || "admin"
+    });
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
 }
 
 function productStorage(env) {

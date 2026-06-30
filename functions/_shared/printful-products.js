@@ -1,6 +1,7 @@
 const PRINTFUL_V2_BASE = "https://api.printful.com/v2";
 const PRINTFUL_V1_BASE = "https://api.printful.com";
 const STORE_NAME = "Daniel Clancy";
+const BASE_STORE_CURRENCY = "AUD";
 
 export function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -124,7 +125,7 @@ export async function fetchPrintfulProductList(env) {
     configured: true,
     store: store.store,
     storeId: store.storeId,
-    products: rows.map((row) => normalizePrintfulProduct(row))
+    products: await hydrateListProductDetails(env, store.storeId, rows.map((row) => normalizePrintfulProduct(row)))
   };
 }
 
@@ -199,14 +200,16 @@ export function normalizePrintfulProduct(row, detail = null) {
     row?.image,
     ...variants.flatMap((variant) => variantImageCandidates(variant))
   ]).filter((url) => /^https:\/\//i.test(url));
-  const prices = variants
-    .map((variant) => Number.parseFloat(variant.retail_price || variant.price || ""))
-    .filter((value) => Number.isFinite(value));
-  const currency = cleanText(
-    variants.find((variant) => cleanText(variant.currency))?.currency ||
-      syncProduct.currency ||
-      row?.currency,
-    12
+  const variantShapes = variants.map(normalizeVariant).filter(Boolean);
+  const prices = [
+    ...variantShapes.map((variant) => Number.parseFloat(variant.retailPrice || "")),
+    ...priceCandidates(syncProduct),
+    ...priceCandidates(row)
+  ].filter((value) => Number.isFinite(value) && value > 0);
+  const currency = normalizeCurrency(
+    variantShapes.find((variant) => cleanText(variant.currency))?.currency ||
+      currencyCandidate(syncProduct) ||
+      currencyCandidate(row)
   );
   const priceRange = prices.length
     ? {
@@ -224,7 +227,9 @@ export function normalizePrintfulProduct(row, detail = null) {
     slug,
     title,
     description: cleanText(syncProduct.description || row?.description, 4000),
-    category: cleanText(row?.category || syncProduct.category, 160),
+    category: primaryCategoryLabel(categoryEntries(row, syncProduct, null)),
+    categorySlug: primaryCategorySlug(categoryEntries(row, syncProduct, null)),
+    categories: categoryEntries(row, syncProduct, null),
     thumbnailUrl: images[0] || "",
     images,
     status: normalizeStatus(syncProduct),
@@ -232,7 +237,7 @@ export function normalizePrintfulProduct(row, detail = null) {
     priceRange,
     variantCount: Number(syncProduct.variants || variants.length || 0),
     imageCount: images.length,
-    variants: variants.map(normalizeVariant).filter(Boolean),
+    variants: variantShapes,
     updatedAt: cleanText(syncProduct.updated_at || syncProduct.updatedAt || row?.updatedAt, 80),
     source: "printful_legacy_sync_product",
     raw: detail || row
@@ -245,11 +250,17 @@ export function mergeProductOverrides(product, overrides = []) {
   const heroImage = cleanText(override.heroImageOverride || override.heroImage, 1200);
   const gallery = Array.isArray(override.galleryOverride) ? override.galleryOverride.map((item) => cleanText(item, 1200)).filter(Boolean) : [];
   const imageSet = uniqueStrings([heroImage, ...gallery, ...product.images]).filter(Boolean);
+  const categories = categoryEntries(product.raw || {}, product, override);
+  const primary = primaryCategory(override?.primaryCategory || override?.primaryCategorySlug || override?.categoryOverride || override?.category, categories);
   return {
     ...product,
     title: cleanText(override.displayTitle || override.titleOverride, 220) || product.title,
     description: cleanText(override.descriptionOverride || override.description, 4000) || product.description,
-    category: cleanText(override.categoryOverride || override.category, 160) || product.category,
+    category: primary.label,
+    categorySlug: primary.slug,
+    categories,
+    primaryCategory: primary.label,
+    primaryCategorySlug: primary.slug,
     slug: slugify(override.slugOverride || override.slug || product.slug || product.id),
     featured: Boolean(override.featured),
     visibility: cleanText(override.visibility || "public", 80),
@@ -279,12 +290,14 @@ export function sanitizePublicProduct(product) {
 }
 
 export function productLookupKeys(product) {
+  const categorySlugs = productCategorySlugs(product);
   return uniqueStrings([
     product.slug,
     product.id,
     product.printfulProductId,
     product.externalId,
-    `${product.category}/${product.slug}`,
+    `all/${product.slug}`,
+    ...categorySlugs.map((category) => `${category}/${product.slug}`),
     slugify(product.title)
   ])
     .map(normalizeLookupKey)
@@ -292,7 +305,13 @@ export function productLookupKeys(product) {
 }
 
 export function normalizeLookupKey(value) {
-  return slugify(String(value || "").split("?")[0].split("#")[0]);
+  return String(value || "")
+    .split("?")[0]
+    .split("#")[0]
+    .split("/")
+    .map((part) => slugify(part))
+    .filter(Boolean)
+    .join("/");
 }
 
 function findOverride(product, overrides) {
@@ -317,8 +336,8 @@ function findOverride(product, overrides) {
 function normalizeVariant(variant) {
   const id = cleanText(variant.id || variant.variant_id || variant.sync_variant_id);
   if (!id) return null;
-  const retail = cleanText(variant.retail_price || variant.price, 40);
-  const currency = cleanText(variant.currency, 12);
+  const retail = cleanText(firstPriceValue(variant), 40);
+  const currency = normalizeCurrency(currencyCandidate(variant));
   return {
     id,
     variantId: cleanText(variant.variant_id, 80),
@@ -365,10 +384,155 @@ function variantImageCandidates(variant) {
 }
 
 function formatPriceRange(min, max, currency) {
-  const suffix = currency ? ` ${currency}` : "";
-  const left = trimPrice(min);
-  const right = trimPrice(max);
-  return min === max ? `${left}${suffix}` : `${left}-${right}${suffix}`;
+  const code = normalizeCurrency(currency);
+  const left = formatCurrencyAmount(min, code);
+  const right = formatCurrencyAmount(max, code);
+  return min === max ? `${left} ${code}` : `${left}-${right} ${code}`;
+}
+
+async function hydrateListProductDetails(env, storeId, products) {
+  const needsDetail = products.filter((product) => !product.priceRange || !product.variants.length).slice(0, 36);
+  if (!needsDetail.length) return products;
+  const byId = new Map(products.map((product) => [product.printfulProductId, product]));
+  const queue = [...needsDetail];
+  const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+    while (queue.length) {
+      const product = queue.shift();
+      const detail = await printfulFetch(env, `/store/products/${encodeURIComponent(product.printfulProductId)}`, {
+        version: "v1",
+        storeId
+      });
+      if (detail.ok) byId.set(product.printfulProductId, normalizePrintfulProduct(product.raw, detail.payload?.result));
+    }
+  });
+  await Promise.all(workers);
+  return products.map((product) => byId.get(product.printfulProductId) || product);
+}
+
+function priceCandidates(value = {}) {
+  return [
+    firstPriceValue(value),
+    value.retail_price,
+    value.price,
+    value.price_amount,
+    value.amount,
+    value.min_price,
+    value.max_price,
+    value.retail_price?.amount,
+    value.price?.amount,
+    value.pricing?.retail_price,
+    value.pricing?.price,
+    value.retailPrice
+  ]
+    .map((entry) => Number.parseFloat(cleanText(entry, 40)))
+    .filter((entry) => Number.isFinite(entry) && entry > 0);
+}
+
+function firstPriceValue(value = {}) {
+  const candidates = [
+    value.retail_price,
+    value.price,
+    value.price_amount,
+    value.amount,
+    value.retailPrice,
+    value.retail_price?.amount,
+    value.price?.amount,
+    value.pricing?.retail_price,
+    value.pricing?.price
+  ];
+  return candidates
+    .map((entry) => (entry && typeof entry === "object" ? entry.amount || entry.value : entry))
+    .find((entry) => cleanText(entry, 40));
+}
+
+function currencyCandidate(value = {}) {
+  return (
+    value.currency ||
+    value.currency_code ||
+    value.retail_currency ||
+    value.price_currency ||
+    value.retail_price?.currency ||
+    value.price?.currency ||
+    value.pricing?.currency
+  );
+}
+
+function normalizeCurrency(value) {
+  const code = cleanText(value, 12).toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : BASE_STORE_CURRENCY;
+}
+
+function formatCurrencyAmount(value, currency) {
+  try {
+    return new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(value);
+  } catch {
+    return `${Number(value).toFixed(2)}`;
+  }
+}
+
+function categoryEntries(row = {}, syncProduct = {}, override = null) {
+  const overrideCategories = [
+    override?.categoryOverride,
+    override?.category,
+    override?.primaryCategory,
+    ...(Array.isArray(override?.categories) ? override.categories : []),
+    ...(Array.isArray(override?.categoryOverrides) ? override.categoryOverrides : [])
+  ];
+  const printfulCategories = [
+    row?.category,
+    syncProduct?.category,
+    row?.collection,
+    syncProduct?.collection,
+    row?.product_type,
+    syncProduct?.product_type,
+    row?.type,
+    syncProduct?.type,
+    ...(Array.isArray(row?.categories) ? row.categories : []),
+    ...(Array.isArray(syncProduct?.categories) ? syncProduct.categories : []),
+    ...(Array.isArray(row?.collections) ? row.collections : []),
+    ...(Array.isArray(syncProduct?.collections) ? syncProduct.collections : []),
+    ...(Array.isArray(row?.tags) ? row.tags : []),
+    ...(Array.isArray(syncProduct?.tags) ? syncProduct.tags : [])
+  ];
+  const entries = [{ label: "All", slug: "all", source: "system" }];
+  [
+    ...overrideCategories.map((label) => ({ label, source: "admin" })),
+    ...printfulCategories.map((label) => ({ label, source: "printful" }))
+  ].forEach((entry) => {
+    const label = categoryLabel(entry.label);
+    const slug = slugify(label);
+    if (!label || !slug || slug === "all") return;
+    if (!entries.some((item) => item.slug === slug)) entries.push({ label, slug, source: entry.source });
+  });
+  return entries;
+}
+
+function categoryLabel(value) {
+  if (value && typeof value === "object") return cleanText(value.name || value.title || value.label || value.slug || value.id, 160);
+  return cleanText(value, 160);
+}
+
+function primaryCategoryLabel(categories) {
+  return primaryCategory("", categories).label;
+}
+
+function primaryCategorySlug(categories) {
+  return primaryCategory("", categories).slug;
+}
+
+function primaryCategory(preferred, categories) {
+  const preferredSlug = slugify(preferred);
+  return categories.find((entry) => entry.slug === preferredSlug && entry.slug !== "all") ||
+    categories.find((entry) => entry.slug !== "all") ||
+    categories[0] ||
+    { label: "All", slug: "all", source: "system" };
+}
+
+function productCategorySlugs(product) {
+  const slugs = Array.isArray(product.categories)
+    ? product.categories.map((entry) => entry.slug || slugify(entry.label)).filter(Boolean)
+    : [];
+  return uniqueStrings(["all", product.categorySlug, slugify(product.category), ...slugs]);
 }
 
 function trimPrice(value) {

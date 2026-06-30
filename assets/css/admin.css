@@ -177,8 +177,8 @@ a {
 .nav-link.is-active {
   outline: none;
   color: var(--text);
-  border-color: rgba(219, 201, 166, 0.34);
-  background: rgba(219, 201, 166, 0.08);
+  border-color: rgba(166, 108, 255, 0.42);
+  background: linear-gradient(90deg, rgba(166, 108, 255, 0.16), rgba(219, 201, 166, 0.06));
 }
 
 .nav-link.is-disabled {
@@ -1602,7 +1602,7 @@ body.col-resizing-active {
 }
 
 .product-table {
-  min-width: 1460px;
+  min-width: 1660px;
 }
 
 .product-cell {
@@ -1676,6 +1676,27 @@ body.col-resizing-active {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
+}
+
+.products-page .metric-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(166, 108, 255, 0.12), transparent 0 42%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.products-page .panel {
+  border-color: rgba(166, 108, 255, 0.16);
+}
+
+.products-page .panel-header {
+  background:
+    linear-gradient(90deg, rgba(166, 108, 255, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0));
+}
+
+.products-page .bulk-panel.is-open {
+  border-color: rgba(166, 108, 255, 0.34);
+  background: rgba(166, 108, 255, 0.07);
 }
 
 .modal-backdrop {
