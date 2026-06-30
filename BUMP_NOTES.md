@@ -1,5 +1,39 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Merch Orders Visibility Milestone
+
+### Technical Notes
+
+- Added a signed-admin read-only Merch Orders route at `#/merch-orders`.
+- Added `GET /api/admin/merch-orders`, protected by the existing `requireAdmin` session pattern.
+- The endpoint reads only from `DC_MERCH_ORDERS_KV`, lists recent `merch:index:recent:*` entries, loads matching `merch:orders:*` records, and returns safe summaries for the Admin table.
+- Main-table order summaries include order intent id, created/updated dates, masked customer email, Stripe session/payment status, Printful draft/confirmed status, current status, manual-review/action-needed flag, product/variant summaries, and safe error summary.
+- No Admin mutation path was added for payment or fulfillment state. `DC_ADMIN_KV` remains CMS/public-site management storage only and is not reused for merch orders.
+- If `DC_MERCH_ORDERS_KV` is missing, the API returns `storage_not_configured` naming the binding and the UI shows a config-needed state rather than fake order rows.
+
+### Human-Readable Notes
+
+- Admin can now inspect merch checkout/payment/fulfillment status without exposing full shipping details in the main table.
+- Product management and R2 product image upload remain separate from order visibility.
+
+### Cloudflare / Stripe setup required
+
+- DanielClancy-Admin Pages project: `DC_MERCH_ORDERS_KV -> danielclancy-merch-orders`.
+- Existing Admin bindings remain separate: `DC_ADMIN_KV -> danielclancy-admin-cms`, `DC_ADMIN_ASSETS_R2 -> danielclancy-admin-assets`, and `DC_ADMIN_ASSETS_PUBLIC_BASE_URL=https://cdn.danielclancy.net`.
+- Stripe webhook setup remains in the public DanielClancy Pages project at `https://danielclancy.net/api/merch/stripe/webhook`.
+
+### Known limitations
+
+- This milestone is visibility-only. Manual review flags can be inspected but not resolved from Admin yet.
+- Local static Admin mode cannot read KV and will show the config-needed/unavailable state until Pages Functions and the binding are available.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+- `assets/js/admin-app.js`
+- `functions/api/admin/merch-orders.js`
+
 ## Real R2 Product Image Upload Milestone
 
 ### Technical Notes

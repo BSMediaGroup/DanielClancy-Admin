@@ -19,7 +19,7 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, Merch Orders endpoint under `functions/api/admin/merch-orders.js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -60,6 +60,7 @@ Required Cloudflare KV binding:
 
 - `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, Positions, disabled Alerts compatibility, and account/profile overlays
 - `DC_ADMIN_KV` also stores the public published site-data snapshot at `public:site-data:published` and metadata at `public:site-data:publish-meta`.
+- `DC_MERCH_ORDERS_KV` - dedicated read-only merch order visibility binding for Stripe/Printful order intent state; do not reuse `DC_ADMIN_KV` for public merch order state.
 
 Required shared analytics ingest secret:
 
@@ -270,6 +271,16 @@ The Printful helper resolves the `Daniel Clancy` store through Printful v2 store
 
 If `PRINTFUL_STORE_API` is missing, Products renders a clear missing-token state and the API returns safe errors without leaking auth detail. If `DC_ADMIN_KV` is missing, write endpoints return `storage_not_configured` and the UI labels overrides as local/unpublished rather than pretending persistence worked.
 
+## Merch Orders Visibility
+
+Implemented endpoint:
+
+- `GET /api/admin/merch-orders`
+
+The Merch Orders page (`#/merch-orders`) is an admin-session-protected, read-only visibility surface for public merch checkout state. It reads the dedicated `DC_MERCH_ORDERS_KV` namespace, lists recent `merch:index:recent:*` order intents, and summarizes order intent id, created/updated time, masked customer email, Stripe session/payment status, Printful draft/confirmed status, current status, action-needed/manual-review flags, product/variant summaries, and safe fulfillment error summaries.
+
+This page does not mutate Stripe, Printful, payment, fulfillment, or public CMS state. If `DC_MERCH_ORDERS_KV` is missing locally or in Pages Functions, the API returns `storage_not_configured` naming `DC_MERCH_ORDERS_KV` and the UI shows a config-needed state instead of fake order rows.
+
 ## Public Site-Data Export
 
 Implemented endpoint:
@@ -413,6 +424,7 @@ DanielClancy-Admin/
 │       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
+│       │   ├── merch-orders.js
 │       │   ├── products/
 │       │   │   └── [[path]].js
 │       │   ├── publish/
@@ -458,7 +470,7 @@ DanielClancy-Admin/
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, Projects, Products, Media, Companies, Platforms, Positions, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Projects, Products, Merch Orders, Media, Companies, Platforms, Positions, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
@@ -468,6 +480,7 @@ DanielClancy-Admin/
 - Clearly marked local scaffold data for layout and workflow shape only.
 - Projects CMS with protected public-site baseline hydration, admin API/KV overlay reconciliation when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, clickable rows that open the editor, resizable/stored table columns, create/edit/detail modal, existing asset dropdowns/previews for thumbnail/gallery/hero/document paths, R2-backed image/PDF upload controls when `DC_ADMIN_ASSETS_R2` is configured, registry-only company/platform selectors, multiple software/platform selection with icon chips, bulk actions, reset, and safe JSON copy/import controls.
 - Products manager with server-side Printful product hydration, table/CMS controls, search/filter/sort, bulk storefront override saves, product edit modal, image management modal, existing Printful image selection, and disabled/config-needed upload state unless durable public media storage is configured for Printful file ingestion.
+- Merch Orders page with signed-admin read-only summaries from `DC_MERCH_ORDERS_KV` and config-needed state when that binding is unavailable.
 - Companies page for predefined company/studio options used by Projects, seeded from public employer/studio source data only, with registry overlay v3 reconciliation, client-only names excluded, source-required employers restored from baseline, source/provenance/override/custom classification shown, KV/local fallback, active/archive status, local registry cache repair/reset, `company-*` monochrome SVG logos rendered in current UI color, logo path selection, and optional logo upload.
 - Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
 - Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.

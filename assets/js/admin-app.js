@@ -37,6 +37,7 @@ import {
     { id: "overview", label: "Overview", icon: "home.svg", path: "#/overview" },
     { id: "analytics", label: "Analytics", icon: "globe.svg", path: "#/analytics" },
     { id: "products", label: "Products", icon: "package.svg", path: "#/products" },
+    { id: "merch-orders", label: "Merch Orders", icon: "receipt.svg", path: "#/merch-orders" },
     { id: "accounts", label: "Accounts", icon: "identity.svg", path: "#/accounts" },
     { id: "settings", label: "Settings", icon: "cog.svg", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
@@ -149,6 +150,14 @@ import {
       storage: { ok: false },
       upload: { durableStorage: false, publicBaseUrl: false, printfulFileRegistration: false }
     }
+  };
+  const merchOrderState = {
+    orders: [],
+    loading: false,
+    loaded: false,
+    configured: false,
+    message: "Merch order visibility reads from DC_MERCH_ORDERS_KV when the binding is configured.",
+    checkedAt: ""
   };
   const publicAssetCatalogState = {
     status: "checking",
@@ -2190,6 +2199,31 @@ import {
     } finally {
       productState.loading = false;
       if (renderAfter && activePageIs("products")) renderProductsManager();
+    }
+  }
+
+  async function hydrateMerchOrders(renderAfter = false) {
+    merchOrderState.loading = true;
+    merchOrderState.message = "Loading merch orders from DC_MERCH_ORDERS_KV...";
+    if (renderAfter && activePageIs("merch-orders")) renderMerchOrders();
+    try {
+      const response = await fetch("/api/admin/merch-orders", { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      merchOrderState.loaded = true;
+      merchOrderState.configured = Boolean(payload?.configured);
+      merchOrderState.orders = Array.isArray(payload?.orders) ? payload.orders : [];
+      merchOrderState.checkedAt = payload?.checkedAt || new Date().toISOString();
+      merchOrderState.message = response.ok && payload?.ok
+        ? (merchOrderState.orders.length ? "Merch orders loaded from DC_MERCH_ORDERS_KV." : "No merch orders are stored yet.")
+        : (payload?.message || payload?.error || "Merch order API unavailable.");
+    } catch {
+      merchOrderState.loaded = true;
+      merchOrderState.configured = false;
+      merchOrderState.orders = [];
+      merchOrderState.message = "Merch Orders API unavailable. Local static mode cannot read DC_MERCH_ORDERS_KV.";
+    } finally {
+      merchOrderState.loading = false;
+      if (renderAfter && activePageIs("merch-orders")) renderMerchOrders();
     }
   }
 
@@ -4730,6 +4764,83 @@ import {
     `;
   }
 
+  function renderMerchOrders() {
+    routeTitle.textContent = "Merch Orders";
+    const orders = merchOrderState.orders;
+    const actionNeeded = orders.filter((order) => order.actionNeeded).length;
+    const confirmed = orders.filter((order) => order.status === "printful_confirmed").length;
+    const failed = orders.filter((order) => ["printful_confirmation_failed", "manual_review_required"].includes(order.status)).length;
+
+    app.innerHTML = `
+      <div class="page products-page">
+        ${pageHeader(
+          "Merch orders",
+          "Merch Orders",
+          "Read-only Stripe and Printful fulfillment visibility from the dedicated merch order KV namespace.",
+          `<button class="button" type="button" data-merch-orders-action="refresh">Refresh orders</button>`
+        )}
+
+        ${panel(
+          "Order storage status",
+          "Order intent, payment, and fulfillment state reads from DC_MERCH_ORDERS_KV. This page does not mutate payment or fulfillment state.",
+          metricCards([
+            { label: "Storage", value: merchOrderState.configured ? "Configured" : merchOrderState.loading ? "Checking" : "Config needed", note: merchOrderState.message, tone: merchOrderState.configured ? "success" : "warn" },
+            { label: "Orders", value: String(orders.length), note: "Recent order intents visible from the merch KV index.", tone: orders.length ? "success" : "" },
+            { label: "Confirmed", value: String(confirmed), note: "Printful confirmations recorded after paid Stripe webhooks.", tone: confirmed ? "success" : "" },
+            { label: "Action needed", value: String(actionNeeded + failed), note: "Manual review or failed fulfillment confirmation rows.", tone: actionNeeded || failed ? "warn" : "" }
+          ])
+        )}
+
+        ${panel(
+          "Recent merch orders",
+          "Main table intentionally avoids full shipping details and shows only operational payment/fulfillment summaries.",
+          renderMerchOrdersTable(orders)
+        )}
+      </div>
+    `;
+  }
+
+  function renderMerchOrdersTable(orders) {
+    return `
+      <div class="project-message">${escapeHtml(merchOrderState.loading ? "Loading merch orders..." : merchOrderState.message)}</div>
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead>
+            <tr>
+              <th>Order intent</th><th>Created</th><th>Updated</th><th>Customer</th><th>Stripe</th><th>Printful</th><th>Status</th><th>Items</th><th>Action</th><th>Error</th>
+            </tr>
+          </thead>
+          <tbody>${orders.map(renderMerchOrderRow).join("") || `<tr><td colspan="10"><div class="empty-state">${escapeHtml(merchOrderState.message || "No merch orders are available.")}</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderMerchOrderRow(order) {
+    const itemSummary = Array.isArray(order.itemSummary)
+      ? order.itemSummary.map((item) => `${item.quantity}x ${item.title}${item.variantName ? ` / ${item.variantName}` : ""}`).join("; ")
+      : "";
+    const printfulText = [
+      order.printfulStatus,
+      order.printfulDraftOrderId ? `draft ${order.printfulDraftOrderId}` : "",
+      order.printfulConfirmedOrderId ? `confirmed ${order.printfulConfirmedOrderId}` : ""
+    ].filter(Boolean).join(" / ");
+    return `
+      <tr>
+        <td><code>${escapeHtml(order.id || "")}</code></td>
+        <td>${escapeHtml(formatTimestamp(order.createdAt))}</td>
+        <td>${escapeHtml(formatTimestamp(order.updatedAt))}</td>
+        <td>${escapeHtml(order.customerEmail || "n/a")}</td>
+        <td>${badge(order.stripePaymentStatus || "pending", order.stripePaymentStatus === "paid" ? "success" : "warn")}<br><code>${escapeHtml(order.stripeSessionId || "")}</code></td>
+        <td>${escapeHtml(printfulText || "not created")}</td>
+        <td>${badge(order.status || "unknown", order.status === "printful_confirmed" ? "success" : order.actionNeeded ? "warn" : "")}</td>
+        <td>${escapeHtml(itemSummary || "No item summary")}</td>
+        <td>${badge(order.actionNeeded ? "manual review" : "none", order.actionNeeded ? "warn" : "success")}</td>
+        <td>${escapeHtml(order.errorSummary || "")}</td>
+      </tr>
+    `;
+  }
+
   function renderProductEditModal(modal) {
     const product = modal.product;
     const override = productOverrideFromProduct(product);
@@ -6365,6 +6476,8 @@ import {
       renderAccounts();
     } else if (route.page === "products") {
       renderProductsManager();
+    } else if (route.page === "merch-orders") {
+      renderMerchOrders();
     } else if (route.page === "projects") {
       renderProjects();
     } else if (route.page === "media") {
@@ -6384,6 +6497,7 @@ import {
     }
 
     if (route.page === "products" && !productState.loaded && !productState.loading) hydrateProductsManager();
+    if (route.page === "merch-orders" && !merchOrderState.loaded && !merchOrderState.loading) hydrateMerchOrders();
     if (route.page === "projects") initProjectTableResize();
     app.focus({ preventScroll: true });
     document.body.classList.remove("mobile-nav-open");
@@ -6851,7 +6965,7 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-merch-orders-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
@@ -6859,6 +6973,7 @@ import {
     const clearField = target.getAttribute("data-project-clear");
     const mediaAction = target.getAttribute("data-media-action");
     const productAction = target.getAttribute("data-product-action");
+    const merchOrdersAction = target.getAttribute("data-merch-orders-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
@@ -6952,7 +7067,12 @@ import {
       return;
     }
 
-    if (!action && !mediaAction && !productAction && !alertAction && !positionAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-product-modal-backdrop]") || target.matches("[data-product-image-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]") || target.matches("[data-position-modal-backdrop]"))) {
+    if (!action && !mediaAction && !productAction && !merchOrdersAction && !alertAction && !positionAction && (target.matches("[data-project-modal-backdrop]") || target.matches("[data-product-modal-backdrop]") || target.matches("[data-product-image-modal-backdrop]") || target.matches("[data-media-modal-backdrop]") || target.matches("[data-alert-modal-backdrop]") || target.matches("[data-position-modal-backdrop]"))) {
+      return;
+    }
+
+    if (merchOrdersAction === "refresh") {
+      hydrateMerchOrders(true);
       return;
     }
 
@@ -8326,6 +8446,7 @@ import {
       hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
       hydrateOverviewStatus(activePageIs("overview"));
       hydrateAnalyticsStatus(activePageIs("analytics"));
+      hydrateMerchOrders(activePageIs("merch-orders"));
       hydratePublishStatus(activePageIs("overview") || activePageIs("settings") || isPublishCollectionPage());
     }
   });
@@ -8346,6 +8467,7 @@ import {
   hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();
   hydrateProductsManager(activePageIs("products"));
+  hydrateMerchOrders(activePageIs("merch-orders"));
   hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
   hydrateOverviewStatus(activePageIs("overview"));
   hydrateAnalyticsStatus(activePageIs("analytics"));
