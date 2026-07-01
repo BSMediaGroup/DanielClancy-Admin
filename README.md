@@ -80,6 +80,7 @@ Printful Products env:
 
 - `PRINTFUL_STORE_API` - server-only Printful token used by Admin Products Pages Functions; never expose it to browser code, Vite env, public JSON, or logs
 - Product image upload to Printful requires durable public media storage. The product upload path uses `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` so the Admin can upload an image, obtain a public HTTPS URL, and register that URL with Printful `/v2/files`. If public media storage is not configured, the Products image upload UI remains disabled and existing Printful image selection still works.
+- Merch Stripe webhook setup remains in the public DanielClancy Pages project. The Admin project does not need `STRIPE_MERCH_WEBHOOK_SECRET` or `STRIPE_WEBHOOK_SECRET` for read-only merch order visibility.
 
 Recommended shared-cookie env var:
 

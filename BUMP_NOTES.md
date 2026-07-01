@@ -1,5 +1,22 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Merch Webhook Secret / Currency Config Documentation Milestone
+
+### Technical Notes
+
+- Clarified that merch Stripe webhook configuration belongs to the public DanielClancy Pages project, not the Admin Pages project.
+- Removed public-only `CURRENCY_RATES_API_URL` and `STRIPE_MERCH_WEBHOOK_SECRET` entries from the Admin `.env.example`; Admin merch order visibility only needs the confirmed Admin bindings, including `DC_MERCH_ORDERS_KV`.
+- Documented that Admin does not need either the merch-specific `STRIPE_MERCH_WEBHOOK_SECRET` or existing donation/payment `STRIPE_WEBHOOK_SECRET`.
+
+### Human-Readable Notes
+
+- Admin remains a read-only merch order visibility surface and does not own Stripe webhook signing config.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+
 ## Merch Dashboard Depth / Products Category + Price Milestone
 
 ### Technical Notes
