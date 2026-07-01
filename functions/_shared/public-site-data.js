@@ -24,7 +24,7 @@ const PROJECTS_BASELINE_VERSION = "public-projects-baseline-2026-06-14";
 export const PUBLISHED_SITE_DATA_KEY = "public:site-data:published";
 export const PUBLISHED_SITE_DATA_META_KEY = "public:site-data:publish-meta";
 
-const SAFE_ASSET_PREFIXES = ["/media/portfolio/thumbs/", "/media/portfolio/", "/docs/"];
+const SAFE_ASSET_PREFIXES = ["/media/portfolio/thumbs/", "/media/portfolio/", "/docs/", "/assets/backgrounds/shopheroslides/"];
 const INTERNAL_KEYS = new Set([
   "overlay",
   "overlaySummary",
@@ -101,6 +101,7 @@ export async function buildPublicSiteData(context, options = {}) {
     collections: {
       projects: projectsResult.items.map((item) => sanitizeProject(item)).filter(Boolean),
       products: productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean),
+      productSettings: sanitizeProductSettings(productsStored.wrapper?.settings || {}),
       companies: companiesResult.items.map((item) => sanitizeCompany(item)).filter(Boolean),
       platforms: platformsResult.items.map((item) => sanitizePlatform(item)).filter(Boolean),
       positions: positionsResult.items.map((item) => sanitizePosition(item, companiesResult.items)).filter(Boolean)
@@ -280,6 +281,7 @@ export function sanitizeProductOverride(raw = {}) {
     categoryOverride: safeString(raw.categoryOverride || raw.category || raw.collectionOverride),
     categories: safeProductCategories(raw.categories || raw.categoryOverrides || raw.categoryOverride || raw.category),
     primaryCategory: safeString(raw.primaryCategory || raw.primaryCategorySlug || raw.categoryOverride || raw.category),
+    banners: safeProductBanners(raw.banners || raw.bannerOverrides || raw.promos),
     visibility,
     featured: Boolean(raw.featured),
     heroImageOverride: safeProductImageUrl(raw.heroImageOverride || raw.heroImage),
@@ -287,6 +289,22 @@ export function sanitizeProductOverride(raw = {}) {
     altText: safeString(raw.altText || raw.displayLabel),
     displayLabel: safeString(raw.displayLabel || raw.altText),
     sortOrder: safeNumber(raw.sortOrder, 1000),
+    updatedAt: safeString(raw.updatedAt)
+  });
+}
+
+export function sanitizeProductSettings(raw = {}) {
+  return removeInternalFields({
+    baseCurrency: "AUD",
+    convertedCurrencyDefault: safeCurrency(raw.convertedCurrencyDefault || "USD"),
+    categories: safeProductCategorySettings(raw.categories),
+    banners: safeProductBannerSettings(raw.banners),
+    hero: {
+      activeSet: safeSlug(raw.hero?.activeSet || raw.heroSlideSet || "default") || "default",
+      crossfadeIntervalSeconds: safeClampedNumber(raw.hero?.crossfadeIntervalSeconds || raw.intervalSeconds || raw.crossfadeSpeed, 5, 2, 30),
+      crossfadeDurationSeconds: safeClampedNumber(raw.hero?.crossfadeDurationSeconds || raw.durationSeconds, 1.2, 0.2, 5)
+    },
+    heroSlides: safeHeroSlides(raw.heroSlides || raw.slides || raw.hero?.slides),
     updatedAt: safeString(raw.updatedAt)
   });
 }
@@ -556,13 +574,102 @@ function safeProductCategories(value) {
   const categories = raw
     .map((item) => {
       const label = safeString(item?.label || item?.name || item);
-      const slug = safeProductSlug(item?.slug || label);
+      const normalizedSlug = safeProductSlug(item?.slug || label);
+      const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
       if (!label || !slug) return null;
-      return { label, slug, source: safeString(item?.source || (slug === "all" ? "system" : "admin")) };
+      return { label: slug === "all" ? "All Products" : label, slug, source: safeString(item?.source || (slug === "all" ? "system" : "admin")) };
     })
     .filter(Boolean);
-  if (!categories.some((item) => item.slug === "all")) categories.unshift({ label: "All", slug: "all", source: "system" });
+  if (!categories.some((item) => item.slug === "all")) categories.unshift({ label: "All Products", slug: "all", source: "system", enabled: true, locked: true });
   return categories;
+}
+
+function safeProductCategorySettings(value) {
+  const raw = Array.isArray(value) ? value : [];
+  const map = new Map();
+  map.set("all", { label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
+  raw.forEach((item, index) => {
+    const label = safeString(item?.label || item?.name || item?.slug);
+    const normalizedSlug = safeProductSlug(item?.slug || label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
+    if (!slug) return;
+    if (slug === "all") {
+      map.set("all", { label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
+      return;
+    }
+    if (!map.has(slug)) {
+      map.set(slug, {
+        label: label || slug,
+        slug,
+        source: ["system", "printful", "admin"].includes(safeString(item?.source)) ? safeString(item.source) : "admin",
+        enabled: item?.enabled !== false,
+        sortOrder: safeNumber(item?.sortOrder, index + 1),
+        description: safeString(item?.description)
+      });
+    }
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function safeProductBanners(value) {
+  const raw = Array.isArray(value) ? value : safeString(value).split(/[,;\n]/);
+  return raw.map((item, index) => safeBannerRecord(item, index)).filter(Boolean);
+}
+
+function safeProductBannerSettings(value) {
+  const raw = Array.isArray(value) ? value : [];
+  const map = new Map();
+  raw.forEach((item, index) => {
+    const banner = safeBannerRecord(item, index);
+    if (banner && !map.has(banner.slug)) map.set(banner.slug, banner);
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function safeBannerRecord(item, index = 0) {
+  const label = safeString(item?.label || item?.name || item).toUpperCase();
+  const slug = safeProductSlug(item?.slug || label);
+  if (!label || !slug) return null;
+  const theme = safeString(item?.theme || item?.style || "purple-orange");
+  return {
+    label,
+    slug,
+    enabled: item?.enabled !== false,
+    sortOrder: safeNumber(item?.sortOrder, index + 1),
+    theme: ["purple-orange", "red", "gold", "silver", "green", "neutral"].includes(theme) ? theme : "purple-orange"
+  };
+}
+
+function safeHeroSlides(value) {
+  const raw = Array.isArray(value) ? value : [];
+  return raw
+    .map((item, index) => {
+      const id = safeSlug(item?.id || item?.filename || item?.label || item?.src || `shophero-${index}`);
+      const src = safeProductImageUrl(item?.src || item?.url || item?.path);
+      if (!id && !src) return null;
+      const source = safeString(item?.source || (src.startsWith("https://") ? "r2" : "static"));
+      return {
+        id,
+        label: safeString(item?.label || item?.name || item?.filename || id),
+        src,
+        enabled: item?.enabled !== false,
+        sortOrder: safeNumber(item?.sortOrder, index + 1),
+        source: ["static", "r2", "admin"].includes(source) ? source : "static",
+        set: safeSlug(item?.set || item?.activeSet || "default") || "default"
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function safeCurrency(value) {
+  const code = safeString(value).toUpperCase();
+  return ["USD", "CAD", "NZD", "GBP", "EUR", "JPY", "CHF", "SGD", "HKD", "KRW"].includes(code) ? code : "USD";
+}
+
+function safeClampedNumber(value, fallback, min, max) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
 function safeProductSlug(value) {
@@ -571,6 +678,10 @@ function safeProductSlug(value) {
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function safeSlug(value) {
+  return safeProductSlug(value);
 }
 
 export function collectionCounts(payload = {}) {

@@ -1,5 +1,42 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Merch Category / Banner / Hero Settings UX Repair Milestone
+
+### Technical Notes
+
+- Renamed the locked system category from `All` to `All Products` while preserving the canonical slug `all`.
+- Added managed product settings for categories, promo banners, and shop hero slides under the existing `cms:products` persistence/public publish model.
+- Replaced the product editor's plain category management with selectable managed category chips, a locked `All Products` chip, primary-category selection, and quick category creation.
+- Added managed promo banner registry support, product-level banner assignment, quick banner creation, and public-safe banner export.
+- Added Shop Settings editors for category rows, banner rows, and hero slide configuration including enabled state, order, active set, interval, and crossfade duration.
+- Added Products table banner output and row-click editing while preserving checkboxes, dropdowns, action controls, and the existing Edit button behavior.
+- Reworded Printful Status diagnostics from missing-category language to products with only `All Products`, and added category, banner, and hero slide counts.
+- Kept Orders read-only and kept R2 product uploads on the existing `DC_ADMIN_ASSETS_R2` path.
+
+### Human-Readable Notes
+
+- Admin can now create merch categories and banners once, then select them like managed items in the product editor.
+- Products listed only under `All Products` are visible at `/products/all`; they are setup/action-needed rows rather than broken Printful rows.
+- Shop hero slide management is configuration only for static repo assets or public CDN/R2 URLs; Admin does not pretend it can create files in the deployed git repo.
+
+### Follow-up
+
+- Full customer account management remains the next major phase. It needs a real public auth/session model, customer profile storage, order history integration, delivery addresses/contact preferences, Stripe Customer Portal or equivalent saved-payment handling, and an Admin Customers page.
+
+### Known Limitations
+
+- Static hero images still require a repository asset plus public-site manifest update before Admin can configure them as static slides.
+- No fake customer login, payment method, purchase history, or address-management UI was added.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/printful-products.js`
+- `functions/_shared/public-site-data.js`
+- `functions/api/admin/products/[[path]].js`
+
 ## Merch Webhook Secret / Currency Config Documentation Milestone
 
 ### Technical Notes

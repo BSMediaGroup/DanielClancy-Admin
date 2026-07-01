@@ -269,9 +269,17 @@ Implemented admin endpoints:
 - `POST /api/admin/products/files`
 - `POST /api/admin/products/upload`
 
-The merch dashboard is split into Products (`#/products`), Orders (`#/merch-orders`), Shop Settings (`#/shop-settings`), and Printful Status (`#/printful-status`). Products is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, base thumbnails, and prices. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category/category list, primary category, slug, hero image, gallery order, alt text/display label, sort order, and product-management upload metadata.
+The merch dashboard is split into Products (`#/products`), Orders (`#/merch-orders`), Shop Settings (`#/shop-settings`), and Printful Status (`#/printful-status`). Products is an admin-session-protected CMS-style manager for Printful storefront display overrides. Printful remains the source of truth for product IDs, variants, sync status, base thumbnails, and prices. The Admin page can save safe storefront overrides to `DC_ADMIN_KV` key `cms:products`, including visibility, featured flag, display title, description, category/category list, primary category, slug, hero image, gallery order, alt text/display label, sort order, banners, and product-management upload metadata.
 
-Every public product has the system `All` category. Additional categories come from Printful category/collection/tag/product-type fields when present, or from Admin category overrides when Printful does not expose enough data. Shop Settings can view/manage public-safe category labels, slugs, enabled state, and sort order; `All` is system-owned and cannot be removed. The public export preserves only sanitized category fields and strips admin-only metadata. Admin Products displays a read-only Printful price/price-range column. There is no Admin price overwrite path and bulk actions do not mutate price data.
+Every public product has the locked system `All Products` category with slug `all`. Additional categories come from Printful category/collection/tag/product-type fields when present, or from Admin category overrides when Printful does not expose enough data. Shop Settings manages public-safe category labels, slugs, enabled state, source, descriptions, and sort order; `All Products` is system-owned and cannot be removed or disabled. Product editors use selectable managed category chips with `All Products` locked and selected, plus quick category creation and primary-category selection from assigned categories. The public export preserves only sanitized category fields and strips admin-only metadata. Admin Products displays a read-only Printful price/price-range column. There is no Admin price overwrite path and bulk actions do not mutate price data.
+
+Promo banners are managed separately from categories. Shop Settings manages banner labels, slugs, enabled state, theme, and sort order; product editors assign enabled banners as selectable chips and can quick-create new banner rows. Published banners render publicly only when enabled and explicitly assigned to products.
+
+Shop hero slides are managed through Product Settings, not by writing runtime files into the deployed repository. Static repo-backed slides must exist in the public site under `assets/backgrounds/shopheroslides/` and be listed by the public manifest before Admin can configure them as static records. Runtime/uploaded slide records must use public R2/CDN URLs. Shop Settings controls enabled slides, order, active set, crossfade interval, and crossfade duration, then publishing site data exposes the sanitized configuration to `danielclancy.net`.
+
+Printful Status labels products with only `All Products` as a setup/action-needed state instead of a missing-category API failure. Those products remain browseable at `/products/all`. The status page also reports managed category, banner, and hero slide counts.
+
+Customer account management is intentionally future work. A real account phase needs a public auth/session model, customer profile storage, order history integration, delivery addresses/contact preferences, Stripe Customer Portal or equivalent saved-payment handling, and an Admin Customers page. This Admin surface must not add fake customer login, payment method, purchase history, or address-management UI.
 
 The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL, and the upload is treated as preview/gallery media unless a future Printful print-file update endpoint explicitly succeeds.
 
@@ -308,6 +316,7 @@ The response contract is stable JSON:
 - `publishedAt`
 - `collections.projects`
 - `collections.products`
+- `collections.productSettings`
 - `collections.companies`
 - `collections.platforms`
 - `collections.positions`

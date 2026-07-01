@@ -2,6 +2,8 @@ const PRINTFUL_V2_BASE = "https://api.printful.com/v2";
 const PRINTFUL_V1_BASE = "https://api.printful.com";
 const STORE_NAME = "Daniel Clancy";
 const BASE_STORE_CURRENCY = "AUD";
+const SYSTEM_CATEGORY = Object.freeze({ label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
+const BANNER_THEMES = new Set(["purple-orange", "red", "gold", "silver", "green", "neutral"]);
 
 export function json(payload, init = {}) {
   return new Response(JSON.stringify(payload), {
@@ -244,13 +246,14 @@ export function normalizePrintfulProduct(row, detail = null) {
   };
 }
 
-export function mergeProductOverrides(product, overrides = []) {
-  const override = findOverride(product, overrides);
+export function mergeProductOverrides(product, overrides = [], settings = {}) {
+  const { items, settings: resolvedSettings } = productOverrideBundle(overrides, settings);
+  const override = findOverride(product, items);
   if (!override) return product;
   const heroImage = cleanText(override.heroImageOverride || override.heroImage, 1200);
   const gallery = Array.isArray(override.galleryOverride) ? override.galleryOverride.map((item) => cleanText(item, 1200)).filter(Boolean) : [];
   const imageSet = uniqueStrings([heroImage, ...gallery, ...product.images]).filter(Boolean);
-  const categories = categoryEntries(product.raw || {}, product, override);
+  const categories = applyCategorySettings(categoryEntries(product.raw || {}, product, override), resolvedSettings);
   const primary = primaryCategory(override?.primaryCategory || override?.primaryCategorySlug || override?.categoryOverride || override?.category, categories);
   return {
     ...product,
@@ -268,14 +271,19 @@ export function mergeProductOverrides(product, overrides = []) {
     thumbnailUrl: heroImage || product.thumbnailUrl,
     images: imageSet,
     imageCount: imageSet.length,
+    banners: resolveProductBanners(override, resolvedSettings),
     altText: cleanText(override.altText || override.displayLabel, 220),
     overrideUpdatedAt: cleanText(override.updatedAt, 80)
   };
 }
 
-export function publicProducts(products, overrides = []) {
+export function publicProducts(products, overrides = [], settings = {}) {
+  const bundle = productOverrideBundle(overrides, settings);
   return products
-    .map((product) => mergeProductOverrides(product, overrides))
+    .map((product) => {
+      const merged = mergeProductOverrides(product, bundle.items, bundle.settings);
+      return { ...merged, categories: applyCategorySettings(merged.categories, bundle.settings) };
+    })
     .filter((product) => !["hidden", "private", "draft", "archived"].includes(cleanText(product.visibility || "public").toLowerCase()))
     .sort((left, right) => {
       if (Boolean(right.featured) !== Boolean(left.featured)) return Number(Boolean(right.featured)) - Number(Boolean(left.featured));
@@ -494,13 +502,14 @@ function categoryEntries(row = {}, syncProduct = {}, override = null) {
     ...(Array.isArray(row?.tags) ? row.tags : []),
     ...(Array.isArray(syncProduct?.tags) ? syncProduct.tags : [])
   ];
-  const entries = [{ label: "All", slug: "all", source: "system" }];
+  const entries = [{ ...SYSTEM_CATEGORY }];
   [
     ...overrideCategories.map((label) => ({ label, source: "admin" })),
     ...printfulCategories.map((label) => ({ label, source: "printful" }))
   ].forEach((entry) => {
     const label = categoryLabel(entry.label);
-    const slug = slugify(label);
+    const normalizedSlug = slugify(label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
     if (!label || !slug || slug === "all") return;
     if (!entries.some((item) => item.slug === slug)) entries.push({ label, slug, source: entry.source });
   });
@@ -525,7 +534,7 @@ function primaryCategory(preferred, categories) {
   return categories.find((entry) => entry.slug === preferredSlug && entry.slug !== "all") ||
     categories.find((entry) => entry.slug !== "all") ||
     categories[0] ||
-    { label: "All", slug: "all", source: "system" };
+    { ...SYSTEM_CATEGORY };
 }
 
 function productCategorySlugs(product) {
@@ -533,6 +542,151 @@ function productCategorySlugs(product) {
     ? product.categories.map((entry) => entry.slug || slugify(entry.label)).filter(Boolean)
     : [];
   return uniqueStrings(["all", product.categorySlug, slugify(product.category), ...slugs]);
+}
+
+function productOverrideBundle(overrides = [], settings = {}) {
+  if (Array.isArray(overrides)) return { items: overrides, settings: normalizeSettings(settings) };
+  const items = Array.isArray(overrides?.items) ? overrides.items : Array.isArray(overrides?.products) ? overrides.products : [];
+  return { items, settings: normalizeSettings(overrides?.settings || settings) };
+}
+
+export function normalizeSettings(raw = {}) {
+  return {
+    baseCurrency: cleanChoice(raw.baseCurrency, ["AUD"], "AUD"),
+    convertedCurrencyDefault: cleanChoice(raw.convertedCurrencyDefault, ["USD", "CAD", "NZD", "GBP", "EUR", "JPY", "CHF", "SGD", "HKD", "KRW"], "USD"),
+    categories: normalizeCategorySettings(raw.categories),
+    banners: normalizeBannerSettings(raw.banners),
+    hero: normalizeHeroSettings(raw.hero || raw.shopHero || raw),
+    heroSlides: normalizeHeroSlides(raw.heroSlides || raw.slides || raw.hero?.slides),
+    updatedAt: cleanText(raw.updatedAt, 80),
+    updatedBy: cleanText(raw.updatedBy, 160)
+  };
+}
+
+function normalizeCategorySettings(value) {
+  const rows = Array.isArray(value) ? value : [];
+  const map = new Map();
+  map.set("all", { ...SYSTEM_CATEGORY });
+  rows.forEach((row, index) => {
+    const label = cleanText(row?.label || row?.name || row?.slug, 160);
+    const normalizedSlug = slugify(row?.slug || label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
+    if (!slug) return;
+    if (slug === "all") {
+      map.set("all", { ...SYSTEM_CATEGORY, label: "All Products" });
+      return;
+    }
+    if (!map.has(slug)) {
+      map.set(slug, {
+        label: label || slug,
+        slug,
+        enabled: row?.enabled !== false,
+        sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+        source: cleanChoice(row?.source, ["system", "printful", "admin"], "admin"),
+        description: cleanText(row?.description, 500)
+      });
+    }
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function normalizeBannerSettings(value) {
+  const rows = Array.isArray(value) ? value : [];
+  const map = new Map();
+  rows.forEach((row, index) => {
+    const label = cleanText(row?.label || row?.name || row?.slug, 80).toUpperCase();
+    const slug = slugify(row?.slug || label);
+    if (!label || !slug || map.has(slug)) return;
+    map.set(slug, {
+      label,
+      slug,
+      enabled: row?.enabled !== false,
+      sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+      theme: BANNER_THEMES.has(cleanText(row?.theme || row?.style, 40)) ? cleanText(row?.theme || row?.style, 40) : "purple-orange"
+    });
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function normalizeHeroSettings(raw = {}) {
+  return {
+    activeSet: cleanText(raw.activeSet || raw.heroSlideSet || "default", 80) || "default",
+    crossfadeIntervalSeconds: clampNumber(raw.crossfadeIntervalSeconds || raw.intervalSeconds || raw.crossfadeSpeed, 5, 2, 30),
+    crossfadeDurationSeconds: clampNumber(raw.crossfadeDurationSeconds || raw.durationSeconds, 1.2, 0.2, 5)
+  };
+}
+
+function normalizeHeroSlides(value) {
+  const rows = Array.isArray(value) ? value : [];
+  return rows
+    .map((row, index) => {
+      const id = slugify(row?.id || row?.filename || row?.label || row?.src || `shophero-${index}`);
+      const src = cleanText(row?.src || row?.url || row?.path, 1200);
+      if (!id && !src) return null;
+      return {
+        id,
+        label: cleanText(row?.label || row?.name || row?.filename || id, 120),
+        src,
+        enabled: row?.enabled !== false,
+        sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+        source: cleanChoice(row?.source, ["static", "r2", "admin"], src.startsWith("https://") ? "r2" : "static"),
+        set: cleanText(row?.set || row?.activeSet || "default", 80) || "default"
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function applyCategorySettings(categories = [], settings = {}) {
+  const registry = normalizeSettings(settings).categories;
+  const bySlug = new Map(registry.map((entry) => [entry.slug, entry]));
+  const map = new Map();
+  map.set("all", { ...SYSTEM_CATEGORY });
+  (Array.isArray(categories) ? categories : []).forEach((category) => {
+    const normalizedSlug = slugify(category?.slug || category?.label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
+    if (!slug || slug === "all") return;
+    const setting = bySlug.get(slug);
+    if (setting && setting.enabled === false) return;
+    map.set(slug, {
+      label: setting?.label || category.label || slug,
+      slug,
+      source: category.source || setting?.source || "admin",
+      enabled: true,
+      sortOrder: Number.isFinite(Number(setting?.sortOrder)) ? Number(setting.sortOrder) : Number(category.sortOrder) || 1000,
+      description: setting?.description || category.description || ""
+    });
+  });
+  registry.forEach((setting) => {
+    if (setting.slug === "all" || setting.enabled === false || map.has(setting.slug)) return;
+    map.set(setting.slug, { ...setting, count: 0 });
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function resolveProductBanners(override = {}, settings = {}) {
+  const assigned = normalizeBannerSettings(override.banners || override.bannerOverrides || override.promos || []);
+  if (!assigned.length) return [];
+  const registry = normalizeSettings(settings).banners;
+  const bySlug = new Map(registry.map((entry) => [entry.slug, entry]));
+  return assigned
+    .map((banner) => {
+      const configured = bySlug.get(banner.slug);
+      if (configured && configured.enabled === false) return null;
+      return { ...banner, ...(configured || {}), enabled: true };
+    })
+    .filter(Boolean)
+    .sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function cleanChoice(value, choices, fallback) {
+  const text = cleanText(value, 80).toLowerCase();
+  return choices.find((choice) => String(choice).toLowerCase() === text) || fallback;
+}
+
+function clampNumber(value, fallback, min, max) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
 function trimPrice(value) {

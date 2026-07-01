@@ -82,6 +82,12 @@ import {
     "manual_test"
   ];
   const ALERT_CHANNEL_TARGETS = ["windows_client", "pushover", "both", "muted"];
+  const PRODUCT_BANNER_THEMES = ["purple-orange", "red", "gold", "silver", "green", "neutral"];
+  const DEFAULT_SHOP_HERO_SLIDES = [
+    { id: "shophero-00", label: "Shop hero 00", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-00.webp", enabled: true, sortOrder: 1, source: "static", set: "default" },
+    { id: "shophero-01", label: "Shop hero 01", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-01.webp", enabled: true, sortOrder: 2, source: "static", set: "default" },
+    { id: "shophero-02", label: "Shop hero 02", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-02.webp", enabled: true, sortOrder: 3, source: "static", set: "default" }
+  ];
   const cmsStorageState = {
     projects: {
       status: "checking",
@@ -147,7 +153,14 @@ import {
     loading: false,
     loaded: false,
     message: "Products load from server-side Printful endpoints. Storefront overrides save to Admin KV when configured.",
-    settings: { baseCurrency: "AUD", convertedCurrencyDefault: "USD", categories: [] },
+    settings: {
+      baseCurrency: "AUD",
+      convertedCurrencyDefault: "USD",
+      categories: [{ label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 }],
+      banners: [],
+      hero: { activeSet: "default", crossfadeIntervalSeconds: 5, crossfadeDurationSeconds: 1.2 },
+      heroSlides: DEFAULT_SHOP_HERO_SLIDES
+    },
     status: null,
     health: {
       printful: { ok: false, configured: false },
@@ -2291,6 +2304,8 @@ import {
       const payload = await response.json().catch(() => null);
       if (payload?.settings) productState.settings = payload.settings;
       if (Array.isArray(payload?.categories)) productState.settings = { ...(productState.settings || {}), categories: payload.categories };
+      if (Array.isArray(payload?.banners)) productState.settings = { ...(productState.settings || {}), banners: payload.banners };
+      if (Array.isArray(payload?.heroSlides)) productState.settings = { ...(productState.settings || {}), heroSlides: payload.heroSlides };
       productState.message = payload?.message || (response.ok ? "Storefront settings loaded." : "Storefront settings unavailable.");
     } catch {
       productState.message = "Storefront settings API unavailable.";
@@ -2333,7 +2348,8 @@ import {
       descriptionOverride: existing?.descriptionOverride || "",
       categoryOverride: existing?.categoryOverride || "",
       categories: Array.isArray(existing?.categories) ? existing.categories : (Array.isArray(product.categories) ? product.categories : []),
-      primaryCategory: existing?.primaryCategory || product.primaryCategory || product.category || "All",
+      primaryCategory: existing?.primaryCategory || product.primaryCategory || product.category || "All Products",
+      banners: Array.isArray(existing?.banners) ? existing.banners : (Array.isArray(product.banners) ? product.banners : []),
       visibility: existing?.visibility || product.visibility || "public",
       featured: Boolean(existing?.featured ?? product.featured),
       heroImageOverride: existing?.heroImageOverride || "",
@@ -2346,7 +2362,7 @@ import {
   }
 
   function productCategoryLabel(product = {}) {
-    return product.primaryCategory || product.category || (Array.isArray(product.categories) ? product.categories.find((category) => category.slug !== "all")?.label : "") || "All";
+    return product.primaryCategory || product.category || (Array.isArray(product.categories) ? product.categories.find((category) => category.slug !== "all")?.label : "") || "All Products";
   }
 
   function productCategoryList(product = {}) {
@@ -2371,23 +2387,187 @@ import {
     const categories = Array.isArray(override.categories) && override.categories.length
       ? override.categories
       : Array.isArray(product.categories) ? product.categories : [];
-    return categories.map((category) => category.label || category.slug).filter(Boolean).join("\n") || "All";
+    return categories.map((category) => category.label || category.slug).filter(Boolean).join("\n") || "All Products";
+  }
+
+  function managedCategoryRegistry(product = {}) {
+    const map = new Map();
+    map.set("all", { label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
+    [
+      ...(Array.isArray(productState.settings?.categories) ? productState.settings.categories : []),
+      ...(Array.isArray(product.categories) ? product.categories : [])
+    ].forEach((category, index) => {
+      const slug = createSlug(category.slug || category.label);
+      if (!slug) return;
+      if (slug === "all" || slug === "all-products") {
+        map.set("all", { label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
+        return;
+      }
+      if (!map.has(slug)) {
+        map.set(slug, {
+          label: category.label || category.name || slug,
+          slug,
+          source: category.source || "admin",
+          enabled: category.enabled !== false,
+          locked: false,
+          sortOrder: Number(category.sortOrder) || index + 1,
+          description: category.description || ""
+        });
+      }
+    });
+    return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+  }
+
+  function managedBannerRegistry(product = {}) {
+    const map = new Map();
+    [
+      ...(Array.isArray(productState.settings?.banners) ? productState.settings.banners : []),
+      ...(Array.isArray(product.banners) ? product.banners : [])
+    ].forEach((banner, index) => {
+      const label = String(banner.label || banner.name || banner.slug || "").trim().toUpperCase();
+      const slug = createSlug(banner.slug || label);
+      if (!label || !slug || map.has(slug)) return;
+      map.set(slug, {
+        label,
+        slug,
+        enabled: banner.enabled !== false,
+        sortOrder: Number(banner.sortOrder) || index + 1,
+        theme: PRODUCT_BANNER_THEMES.includes(banner.theme || banner.style) ? (banner.theme || banner.style) : "purple-orange"
+      });
+    });
+    return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+  }
+
+  function selectedCategorySlugs(product = {}, override = {}) {
+    const selected = new Set(["all"]);
+    const rows = Array.isArray(override.categories) && override.categories.length ? override.categories : Array.isArray(product.categories) ? product.categories : [];
+    rows.forEach((category) => {
+      const slug = createSlug(category.slug || category.label);
+      if (slug && slug !== "all-products") selected.add(slug === "all-products" ? "all" : slug);
+    });
+    return selected;
+  }
+
+  function selectedBannerSlugs(product = {}, override = {}) {
+    const selected = new Set();
+    const rows = Array.isArray(override.banners) && override.banners.length ? override.banners : Array.isArray(product.banners) ? product.banners : [];
+    rows.forEach((banner) => {
+      const slug = createSlug(banner.slug || banner.label);
+      if (slug) selected.add(slug);
+    });
+    return selected;
+  }
+
+  function renderProductCategorySelector(product = {}, override = {}) {
+    const categories = managedCategoryRegistry(product);
+    const selected = selectedCategorySlugs(product, override);
+    const primary = createSlug(override.primaryCategory || product.primaryCategory || product.category || "");
+    const primaryFallback = primary && selected.has(primary) ? primary : categories.find((category) => category.slug !== "all" && selected.has(category.slug))?.slug || "all";
+    return `
+      <div class="managed-selector managed-selector--categories">
+        <div class="managed-selector__head">
+          <div>
+            <strong>Managed categories</strong>
+            <p>All Products is locked. Additional category chips come from Printful suggestions or Admin-created registry items.</p>
+          </div>
+          <div class="input-with-action">
+            <input class="input input-compact" type="text" placeholder="New category label" data-product-new-category />
+            <button class="button button-secondary" type="button" data-product-action="add-product-category">Add</button>
+          </div>
+        </div>
+        <div class="managed-chip-list">
+          ${categories.map((category) => `
+            <label class="managed-chip ${category.slug === "all" ? "is-locked" : ""} ${category.enabled === false ? "is-disabled" : ""}">
+              <input type="checkbox" name="categorySlugs" value="${escapeHtml(category.slug)}" ${selected.has(category.slug) || category.slug === "all" ? "checked" : ""} ${category.slug === "all" || category.enabled === false ? "disabled" : ""} />
+              <span>${escapeHtml(category.label || category.slug)}</span>
+              <small>${escapeHtml(category.source || "admin")}</small>
+            </label>
+          `).join("")}
+        </div>
+        <label class="field"><span>Primary category</span><select class="input" name="primaryCategory">
+          ${categories.filter((category) => category.enabled !== false || category.slug === "all").map((category) => `<option value="${escapeHtml(category.label)}"${category.slug === primaryFallback ? " selected" : ""}>${escapeHtml(category.label)}</option>`).join("")}
+        </select></label>
+      </div>
+    `;
+  }
+
+  function renderProductBannerSelector(product = {}, override = {}) {
+    const banners = managedBannerRegistry(product);
+    const selected = selectedBannerSlugs(product, override);
+    return `
+      <div class="managed-selector managed-selector--banners">
+        <div class="managed-selector__head">
+          <div>
+            <strong>Product promo banners</strong>
+            <p>Banners are promotional chips, not categories. Disabled banners do not render publicly.</p>
+          </div>
+          <div class="input-with-action">
+            <input class="input input-compact" type="text" placeholder="NEW, SALE, LIMITED" data-product-new-banner />
+            <select class="input input-compact" data-product-new-banner-theme>
+              ${PRODUCT_BANNER_THEMES.map((theme) => `<option value="${theme}">${theme}</option>`).join("")}
+            </select>
+            <button class="button button-secondary" type="button" data-product-action="add-product-banner">Add</button>
+          </div>
+        </div>
+        <div class="managed-chip-list">
+          ${banners.map((banner) => `
+            <label class="managed-chip managed-chip--banner managed-chip--${escapeHtml(banner.theme || "purple-orange")} ${banner.enabled === false ? "is-disabled" : ""}">
+              <input type="checkbox" name="bannerSlugs" value="${escapeHtml(banner.slug)}" ${selected.has(banner.slug) ? "checked" : ""} ${banner.enabled === false ? "disabled" : ""} />
+              <span>${escapeHtml(banner.label || banner.slug)}</span>
+            </label>
+          `).join("") || `<div class="empty-state">No banners exist yet. Create one here or in Shop Settings.</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  function categoriesFromProductForm(form, product = {}) {
+    const registry = managedCategoryRegistry(product);
+    const selected = new Set(["all"]);
+    form.querySelectorAll("[name='categorySlugs']:checked").forEach((input) => {
+      const slug = input.value === "all-products" ? "all" : createSlug(input.value);
+      if (slug) selected.add(slug);
+    });
+    return registry.filter((category) => selected.has(category.slug)).map((category) => ({
+      label: category.slug === "all" ? "All Products" : category.label,
+      slug: category.slug,
+      source: category.slug === "all" ? "system" : category.source || "admin",
+      enabled: category.slug === "all" ? true : category.enabled !== false,
+      locked: category.slug === "all",
+      sortOrder: category.sortOrder || 1000
+    }));
+  }
+
+  function bannersFromProductForm(form, product = {}) {
+    const registry = managedBannerRegistry(product);
+    const selected = new Set();
+    form.querySelectorAll("[name='bannerSlugs']:checked").forEach((input) => {
+      const slug = createSlug(input.value);
+      if (slug) selected.add(slug);
+    });
+    return registry.filter((banner) => selected.has(banner.slug)).map((banner) => ({
+      label: banner.label,
+      slug: banner.slug,
+      enabled: banner.enabled !== false,
+      sortOrder: banner.sortOrder || 1000,
+      theme: PRODUCT_BANNER_THEMES.includes(banner.theme) ? banner.theme : "purple-orange"
+    }));
   }
 
   function mergeProductCategoryAction(categories = [], label, action) {
     const rows = Array.isArray(categories) ? categories : [];
     const map = new Map();
-    map.set("all", { label: "All", slug: "all", source: "system" });
+    map.set("all", { label: "All Products", slug: "all", source: "system", enabled: true, locked: true, sortOrder: 0 });
     rows.forEach((category) => {
       const categoryLabel = category.label || category.slug || "";
       const slug = createSlug(category.slug || categoryLabel);
       if (!slug) return;
-      map.set(slug, { label: categoryLabel || slug, slug, source: category.source || (slug === "all" ? "system" : "admin") });
+      map.set(slug, { label: slug === "all" ? "All Products" : categoryLabel || slug, slug, source: category.source || (slug === "all" ? "system" : "admin"), enabled: category.enabled !== false, locked: slug === "all", sortOrder: category.sortOrder || 1000 });
     });
     const slug = createSlug(label);
     if (slug && slug !== "all") {
       if (action === "remove") map.delete(slug);
-      else map.set(slug, { label, slug, source: "admin" });
+      else map.set(slug, { label, slug, source: "admin", enabled: true, sortOrder: 1000 });
     }
     return Array.from(map.values());
   }
@@ -2403,26 +2583,86 @@ import {
     if (fieldName === "label") {
       next.label = target.value;
       if (next.slug !== "all") next.slug = createSlug(target.value);
+      if (next.slug === "all-products") next.slug = "all";
     }
     if (fieldName === "sortOrder") next.sortOrder = Number(target.value) || index;
     if (fieldName === "enabled") next.enabled = Boolean(target.checked);
+    if (next.slug === "all") {
+      next.label = "All Products";
+      next.enabled = true;
+      next.locked = true;
+      next.source = "system";
+      next.sortOrder = 0;
+    }
     categories[index] = next;
     productState.settings = { ...(productState.settings || {}), categories };
     productState.message = "Storefront settings edited locally. Save category settings to persist.";
   }
 
+  function updateShopBannerSetting(target) {
+    const index = Number(target.getAttribute("data-shop-banner-index"));
+    const fieldName = target.getAttribute("data-shop-banner-field");
+    if (!Number.isInteger(index) || !fieldName) return;
+    const banners = Array.isArray(productState.settings?.banners) ? [...productState.settings.banners] : [];
+    const current = banners[index];
+    if (!current) return;
+    const next = { ...current };
+    if (fieldName === "label") {
+      next.label = String(target.value || "").trim().toUpperCase();
+      next.slug = createSlug(next.label);
+    }
+    if (fieldName === "theme") next.theme = PRODUCT_BANNER_THEMES.includes(target.value) ? target.value : "purple-orange";
+    if (fieldName === "sortOrder") next.sortOrder = Number(target.value) || index + 1;
+    if (fieldName === "enabled") next.enabled = Boolean(target.checked);
+    banners[index] = next;
+    productState.settings = { ...(productState.settings || {}), banners };
+    productState.message = "Banner settings edited locally. Save shop settings to persist.";
+  }
+
+  function updateShopHeroSetting(target) {
+    const hero = { ...(productState.settings?.hero || {}) };
+    const fieldName = target.getAttribute("data-shop-hero-field");
+    if (fieldName === "activeSet") hero.activeSet = target.value || "default";
+    if (fieldName === "crossfadeIntervalSeconds") hero.crossfadeIntervalSeconds = Number(target.value) || 5;
+    if (fieldName === "crossfadeDurationSeconds") hero.crossfadeDurationSeconds = Number(target.value) || 1.2;
+    productState.settings = { ...(productState.settings || {}), hero };
+    productState.message = "Hero slide settings edited locally. Save shop settings to persist.";
+  }
+
+  function updateShopHeroSlideSetting(target) {
+    const index = Number(target.getAttribute("data-shop-hero-slide-index"));
+    const fieldName = target.getAttribute("data-shop-hero-slide-field");
+    if (!Number.isInteger(index) || !fieldName) return;
+    const slides = Array.isArray(productState.settings?.heroSlides) ? [...productState.settings.heroSlides] : [...DEFAULT_SHOP_HERO_SLIDES];
+    const current = slides[index];
+    if (!current) return;
+    const next = { ...current };
+    if (fieldName === "label") next.label = target.value;
+    if (fieldName === "src") next.src = target.value;
+    if (fieldName === "set") next.set = target.value || "default";
+    if (fieldName === "sortOrder") next.sortOrder = Number(target.value) || index + 1;
+    if (fieldName === "enabled") next.enabled = Boolean(target.checked);
+    slides[index] = next;
+    productState.settings = { ...(productState.settings || {}), heroSlides: slides };
+    productState.message = "Hero slide settings edited locally. Save shop settings to persist.";
+  }
+
   async function saveProductFromForm(form) {
     const productId = formValue(form, "productId");
     const existing = productState.products.find((product) => (product.printfulProductId || product.id) === productId) || {};
+    const selectedCategories = categoriesFromProductForm(form, existing);
+    const selectedBanners = bannersFromProductForm(form, existing);
+    const primaryCategory = formValue(form, "primaryCategory") || selectedCategories.find((category) => category.slug !== "all")?.label || "All Products";
     const payload = {
       productId,
       printfulProductId: productId,
       slugOverride: formValue(form, "slugOverride"),
       displayTitle: formValue(form, "displayTitle"),
       descriptionOverride: formValue(form, "descriptionOverride"),
-      categoryOverride: formValue(form, "categoryOverride"),
-      categories: textareaArray(formValue(form, "categories")).map((label) => ({ label, slug: createSlug(label), source: createSlug(label) === "all" ? "system" : "admin" })),
-      primaryCategory: formValue(form, "primaryCategory"),
+      categoryOverride: primaryCategory === "All Products" ? "" : primaryCategory,
+      categories: selectedCategories,
+      primaryCategory,
+      banners: selectedBanners,
       visibility: formValue(form, "visibility"),
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
       heroImageOverride: formValue(form, "heroImageOverride"),
@@ -2453,7 +2693,7 @@ import {
       productState.overrides = Array.isArray(result.items) ? result.items : productState.overrides;
       productState.products = productState.products.map((product) =>
         (product.printfulProductId || product.id) === productId
-          ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.primaryCategory || payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, overrideUpdatedAt: new Date().toISOString() }
+          ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.primaryCategory || payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, banners: payload.banners, overrideUpdatedAt: new Date().toISOString() }
           : product
       );
       productState.modal = null;
@@ -2497,7 +2737,10 @@ import {
       ...(productState.settings || {}),
       baseCurrency: "AUD",
       convertedCurrencyDefault: productState.settings?.convertedCurrencyDefault || "USD",
-      categories: Array.isArray(productState.settings?.categories) ? productState.settings.categories : []
+      categories: Array.isArray(productState.settings?.categories) ? productState.settings.categories : [],
+      banners: Array.isArray(productState.settings?.banners) ? productState.settings.banners : [],
+      hero: productState.settings?.hero || { activeSet: "default", crossfadeIntervalSeconds: 5, crossfadeDurationSeconds: 1.2 },
+      heroSlides: Array.isArray(productState.settings?.heroSlides) ? productState.settings.heroSlides : DEFAULT_SHOP_HERO_SLIDES
     };
     try {
       const response = await fetch("/api/admin/products/settings", {
@@ -2511,7 +2754,7 @@ import {
         productState.message = result?.message || result?.error || "Storefront settings save failed.";
       } else {
         productState.settings = result.settings || settings;
-        productState.message = "Storefront category settings saved. Publish site data before expecting public overrides to refresh.";
+        productState.message = "Storefront shop settings saved. Publish site data before expecting public overrides to refresh.";
         hydratePublishStatus(activePageIs("shop-settings"));
       }
     } catch {
@@ -4871,10 +5114,10 @@ import {
           <thead>
             <tr>
               <th><input type="checkbox" data-product-select-all ${products.length && products.every((product) => productState.selected.has(product.printfulProductId || product.id)) ? "checked" : ""} /></th>
-              <th>Product</th><th>Categories</th><th>Price</th><th>Slug</th><th>Printful ID</th><th>Visibility</th><th>Featured</th><th>Variants</th><th>Images</th><th>Printful status</th><th>Updated</th><th>Actions</th>
+              <th>Product</th><th>Categories</th><th>Banners</th><th>Price</th><th>Slug</th><th>Printful ID</th><th>Visibility</th><th>Featured</th><th>Variants</th><th>Images</th><th>Printful status</th><th>Updated</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody>${products.map(renderProductRow).join("") || `<tr><td colspan="13"><div class="empty-state">No Printful products match this view. ${escapeHtml(productState.message)}</div></td></tr>`}</tbody>
+          <tbody>${products.map(renderProductRow).join("") || `<tr><td colspan="14"><div class="empty-state">No Printful products match this view. ${escapeHtml(productState.message)}</div></td></tr>`}</tbody>
         </table>
       </div>
     `;
@@ -4883,10 +5126,11 @@ import {
   function renderProductRow(product) {
     const id = product.printfulProductId || product.id;
     return `
-      <tr>
+      <tr class="product-click-row" data-product-row-id="${escapeHtml(id)}" tabindex="0">
         <td><input type="checkbox" data-product-select="${escapeHtml(id)}" ${productState.selected.has(id) ? "checked" : ""} /></td>
         <td><div class="product-cell">${product.thumbnailUrl ? `<img src="${escapeHtml(product.thumbnailUrl)}" alt="" loading="lazy" />` : `<span class="product-thumb-empty">No image</span>`}<div><strong>${escapeHtml(product.title || "Untitled product")}</strong><br><span>${escapeHtml(product.printfulProductId || product.id || "")}</span></div></div></td>
         <td>${escapeHtml(productCategoryList(product))}</td>
+        <td>${renderProductBannerChips(product)}</td>
         <td><strong>${escapeHtml(productPriceText(product))}</strong></td>
         <td><code>${escapeHtml(product.slug || "")}</code></td>
         <td><code>${escapeHtml(id)}</code></td>
@@ -4903,6 +5147,12 @@ import {
         </div></td>
       </tr>
     `;
+  }
+
+  function renderProductBannerChips(product = {}) {
+    const banners = Array.isArray(product.banners) ? product.banners.filter((banner) => banner.enabled !== false) : [];
+    if (!banners.length) return `<span class="muted">None</span>`;
+    return `<div class="managed-chip-list managed-chip-list--table">${banners.map((banner) => `<span class="managed-chip managed-chip--banner managed-chip--${escapeHtml(banner.theme || "purple-orange")}"><span>${escapeHtml(banner.label || banner.slug)}</span></span>`).join("")}</div>`;
   }
 
   function renderMerchOrders() {
@@ -4986,14 +5236,16 @@ import {
   function renderShopSettings() {
     routeTitle.textContent = "Shop Settings";
     const categories = Array.isArray(productState.settings?.categories) ? productState.settings.categories : [];
+    const banners = Array.isArray(productState.settings?.banners) ? productState.settings.banners : [];
+    const heroSlides = Array.isArray(productState.settings?.heroSlides) ? productState.settings.heroSlides : DEFAULT_SHOP_HERO_SLIDES;
     app.innerHTML = `
       <div class="page products-page">
         ${pageHeader(
-          "Storefront categories",
+          "Storefront shop settings",
           "Shop Settings",
-          "Manage public-safe storefront category metadata. Product and variant prices remain Printful-owned.",
+          "Manage public-safe category, banner, hero slide, and currency display settings. Product and variant prices remain Printful-owned.",
           `<button class="button" type="button" data-product-action="settings-refresh">Refresh settings</button>
-           <button class="button button-secondary" type="button" data-product-action="settings-save">Save category settings</button>`
+           <button class="button button-secondary" type="button" data-product-action="settings-save">Save shop settings</button>`
         )}
         ${panel(
           "Currency and publishing notes",
@@ -5006,9 +5258,21 @@ import {
           ])
         )}
         ${panel(
-          "Storefront categories",
-          "All is system-owned and cannot be removed. Other rows can be disabled, sorted, or labeled for storefront browsing.",
+          "Managed categories",
+          "All Products is system-owned and cannot be removed. Other rows can be disabled, sorted, or labeled for storefront browsing.",
           renderShopSettingsTable(categories)
+        )}
+        ${panel(
+          "Promo banners",
+          "Banners are promotional product chips. They are managed separately from categories and only render when assigned to a product.",
+          renderShopBannerSettingsTable(banners),
+          `<button class="button button-secondary" type="button" data-product-action="settings-add-banner">Create banner</button>`
+        )}
+        ${panel(
+          "Shop hero slides",
+          "Static slide records point at repo assets or public R2/CDN URLs. Admin remove/disable only changes config; it does not delete repo files.",
+          renderShopHeroSettings(heroSlides),
+          `<button class="button button-secondary" type="button" data-product-action="settings-add-hero-slide">Add slide record</button>`
         )}
       </div>
     `;
@@ -5035,9 +5299,57 @@ import {
     `;
   }
 
+  function renderShopBannerSettingsTable(banners) {
+    return `
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead><tr><th>Label</th><th>Slug</th><th>Theme</th><th>Enabled</th><th>Sort</th></tr></thead>
+          <tbody>${banners.map((banner, index) => `
+            <tr>
+              <td><input class="input input-compact" data-shop-banner-field="label" data-shop-banner-index="${index}" value="${escapeHtml(banner.label || "")}" /></td>
+              <td><code>${escapeHtml(banner.slug || "")}</code></td>
+              <td><select class="input input-compact" data-shop-banner-field="theme" data-shop-banner-index="${index}">
+                ${PRODUCT_BANNER_THEMES.map((theme) => `<option value="${theme}"${(banner.theme || "purple-orange") === theme ? " selected" : ""}>${theme}</option>`).join("")}
+              </select></td>
+              <td><input type="checkbox" data-shop-banner-field="enabled" data-shop-banner-index="${index}" ${banner.enabled !== false ? "checked" : ""} /></td>
+              <td><input class="input input-compact" type="number" data-shop-banner-field="sortOrder" data-shop-banner-index="${index}" value="${escapeHtml(String(banner.sortOrder || index + 1))}" /></td>
+            </tr>
+          `).join("") || `<tr><td colspan="5"><div class="empty-state">No promo banners are configured yet.</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderShopHeroSettings(heroSlides) {
+    const hero = productState.settings?.hero || { activeSet: "default", crossfadeIntervalSeconds: 5, crossfadeDurationSeconds: 1.2 };
+    return `
+      <div class="cms-toolbar">
+        <label class="field"><span>Active set</span><input class="input" data-shop-hero-field="activeSet" value="${escapeHtml(hero.activeSet || "default")}" /></label>
+        <label class="field"><span>Interval seconds</span><input class="input" type="number" min="2" max="30" step="0.5" data-shop-hero-field="crossfadeIntervalSeconds" value="${escapeHtml(String(hero.crossfadeIntervalSeconds || 5))}" /></label>
+        <label class="field"><span>Fade duration seconds</span><input class="input" type="number" min="0.2" max="5" step="0.1" data-shop-hero-field="crossfadeDurationSeconds" value="${escapeHtml(String(hero.crossfadeDurationSeconds || 1.2))}" /></label>
+      </div>
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead><tr><th>Enabled</th><th>Label</th><th>Source URL/path</th><th>Set</th><th>Source</th><th>Sort</th></tr></thead>
+          <tbody>${heroSlides.map((slide, index) => `
+            <tr>
+              <td><input type="checkbox" data-shop-hero-slide-field="enabled" data-shop-hero-slide-index="${index}" ${slide.enabled !== false ? "checked" : ""} /></td>
+              <td><input class="input input-compact" data-shop-hero-slide-field="label" data-shop-hero-slide-index="${index}" value="${escapeHtml(slide.label || "")}" /></td>
+              <td><input class="input input-compact" data-shop-hero-slide-field="src" data-shop-hero-slide-index="${index}" value="${escapeHtml(slide.src || "")}" /></td>
+              <td><input class="input input-compact" data-shop-hero-slide-field="set" data-shop-hero-slide-index="${index}" value="${escapeHtml(slide.set || "default")}" /></td>
+              <td>${badge(slide.source || "static", slide.source === "static" ? "success" : "")}</td>
+              <td><input class="input input-compact" type="number" data-shop-hero-slide-field="sortOrder" data-shop-hero-slide-index="${index}" value="${escapeHtml(String(slide.sortOrder || index + 1))}" /></td>
+            </tr>
+          `).join("") || `<tr><td colspan="6"><div class="empty-state">No hero slide records are configured. The public storefront falls back to the static hero treatment.</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function renderPrintfulStatus() {
     routeTitle.textContent = "Printful Status";
     const status = productState.status || {};
+    const onlyAllCount = status.productsOnlyAllCategoryCount ?? status.missingCategoryCount ?? 0;
     app.innerHTML = `
       <div class="page products-page">
         ${pageHeader(
@@ -5055,13 +5367,21 @@ import {
             { label: "Products", value: String(status.productCount || 0), note: "Hydrated sync products returned by Printful.", tone: status.productCount ? "success" : "warn" },
             { label: "Variants", value: String(status.variantCount || 0), note: "Variant count from hydrated product records.", tone: status.variantCount ? "success" : "warn" },
             { label: "Missing prices", value: String(status.missingPriceCount || 0), note: "Rows still lacking usable Printful price fields.", tone: status.missingPriceCount ? "warn" : "success" },
-            { label: "Missing categories", value: String(status.missingCategoryCount || 0), note: "Rows with only the system All category.", tone: status.missingCategoryCount ? "warn" : "success" }
+            { label: "Products with only All Products", value: String(onlyAllCount), note: "Still visible under All Products; assign an additional category when merchandising is ready.", tone: onlyAllCount ? "warn" : "success" },
+            { label: "Categories", value: String(Array.isArray(status.categories) ? status.categories.length : 0), note: "Managed category records including locked All Products.", tone: "success" },
+            { label: "Banners", value: String(status.bannerCount || 0), note: "Enabled promotional banner chips.", tone: status.bannerCount ? "success" : "" },
+            { label: "Hero slides", value: String(status.enabledHeroSlideCount || 0), note: "Enabled slides in the active/public hero configuration.", tone: status.enabledHeroSlideCount ? "success" : "warn" }
           ])
         )}
         ${panel(
           "Category diagnostics",
-          `Last checked ${escapeHtml(formatTimestamp(status.checkedAt || ""))}.`,
+          `Last checked ${escapeHtml(formatTimestamp(status.checkedAt || ""))}. Products listed only under All Products are browsable at /products/all and are not broken Printful rows.`,
           renderShopSettingsTable(Array.isArray(status.categories) ? status.categories : [])
+        )}
+        ${panel(
+          "Banner and hero diagnostics",
+          "Banners are configured separately from categories. Hero slide records affect the public /shop crossfade after publish.",
+          `${renderShopBannerSettingsTable(Array.isArray(status.banners) ? status.banners : [])}${renderShopHeroSettings(Array.isArray(status.heroSlides) ? status.heroSlides : [])}`
         )}
       </div>
     `;
@@ -5086,22 +5406,16 @@ import {
             <div class="form-grid">
               ${field("Display title override", "displayTitle", override.displayTitle, "text", false, false)}
               ${field("Slug override", "slugOverride", override.slugOverride || product.slug, "text", false, false)}
-              ${field("Category / collection override", "categoryOverride", override.categoryOverride || product.category, "text", false, false)}
-              <label class="field"><span>Primary category</span><select class="input" name="primaryCategory">
-                ${(Array.isArray(product.categories) ? product.categories : [{ label: "All", slug: "all" }]).map((category) => {
-                  const label = category.label || category.slug || "All";
-                  return `<option value="${escapeHtml(label)}"${(override.primaryCategory || product.primaryCategory || product.category || "All") === label ? " selected" : ""}>${escapeHtml(label)}</option>`;
-                }).join("")}
-              </select></label>
               <label class="field"><span>Visibility</span><select class="input" name="visibility">${["public", "hidden", "private", "draft"].map((item) => `<option value="${item}"${(override.visibility || "public") === item ? " selected" : ""}>${item}</option>`).join("")}</select></label>
               <label class="checkbox-field"><input type="checkbox" name="featured" ${override.featured ? "checked" : ""} /><span>Featured storefront product</span></label>
               ${field("Hero image override", "heroImageOverride", override.heroImageOverride, "url", false, false)}
               ${field("Alt text / display label", "altText", override.altText || override.displayLabel, "text", false, false)}
               ${field("Sort order", "sortOrder", override.sortOrder, "number", false, false)}
               ${textareaField("Description override", "descriptionOverride", override.descriptionOverride, false)}
-              ${textareaField("Categories", "categories", productCategoryTextarea(product, override), false)}
               ${textareaField("Gallery override URLs", "galleryOverride", (override.galleryOverride || []).join("\n"), false)}
             </div>
+            ${renderProductCategorySelector(product, override)}
+            ${renderProductBannerSelector(product, override)}
             <aside class="asset-status-box">
               <h3>Product metadata</h3>
               <div class="description-list">
@@ -5344,6 +5658,99 @@ import {
     if (!project) return;
     projectState.modal = { mode: "edit", project };
     renderProjects();
+  }
+
+  function isInteractiveProductRowTarget(target) {
+    return Boolean(
+      target.closest(
+        "a, button, input, select, textarea, label, summary, details, [data-product-select], [data-product-action], [data-merch-orders-action], [data-resize-disabled='true']"
+      )
+    );
+  }
+
+  function openProductRow(row) {
+    const id = row?.getAttribute("data-product-row-id");
+    const product = id ? productState.products.find((item) => (item.printfulProductId || item.id) === id) : null;
+    if (!product) return;
+    productState.modal = { product, dirty: false };
+    renderProductsManager();
+  }
+
+  function addProductModalCategory(target) {
+    const form = target.closest("[data-product-form]");
+    const input = form?.querySelector("[data-product-new-category]");
+    const label = String(input?.value || "").trim();
+    const slug = createSlug(label);
+    if (!form || !label || !slug || slug === "all" || slug === "all-products") {
+      productState.message = "Enter a non-system category label before adding it.";
+      renderProductsManager();
+      return;
+    }
+    const categories = managedCategoryRegistry(productState.modal?.product || {});
+    if (categories.some((category) => category.slug === slug)) {
+      productState.message = "That category slug already exists.";
+      renderProductsManager();
+      return;
+    }
+    const nextCategory = { label, slug, source: "admin", enabled: true, sortOrder: categories.length + 1 };
+    productState.settings = {
+      ...(productState.settings || {}),
+      categories: [...(Array.isArray(productState.settings?.categories) ? productState.settings.categories : []), nextCategory]
+    };
+    if (productState.modal?.product) {
+      productState.modal = {
+        ...productState.modal,
+        dirty: true,
+        product: {
+          ...productState.modal.product,
+          categories: mergeProductCategoryAction(productState.modal.product.categories, label, "add")
+        }
+      };
+    }
+    productState.message = "Category created locally and selected for this product. Save product override and shop settings to persist both.";
+    renderProductsManager();
+  }
+
+  function addProductModalBanner(target) {
+    const form = target.closest("[data-product-form]");
+    const input = form?.querySelector("[data-product-new-banner]");
+    const themeInput = form?.querySelector("[data-product-new-banner-theme]");
+    const label = String(input?.value || "").trim().toUpperCase();
+    const slug = createSlug(label);
+    if (!form || !label || !slug) {
+      productState.message = "Enter a banner label before adding it.";
+      renderProductsManager();
+      return;
+    }
+    const banners = managedBannerRegistry(productState.modal?.product || {});
+    if (banners.some((banner) => banner.slug === slug)) {
+      productState.message = "That banner slug already exists.";
+      renderProductsManager();
+      return;
+    }
+    const nextBanner = {
+      label,
+      slug,
+      enabled: true,
+      sortOrder: banners.length + 1,
+      theme: PRODUCT_BANNER_THEMES.includes(themeInput?.value) ? themeInput.value : "purple-orange"
+    };
+    productState.settings = {
+      ...(productState.settings || {}),
+      banners: [...(Array.isArray(productState.settings?.banners) ? productState.settings.banners : []), nextBanner]
+    };
+    if (productState.modal?.product) {
+      productState.modal = {
+        ...productState.modal,
+        dirty: true,
+        product: {
+          ...productState.modal.product,
+          banners: [...(Array.isArray(productState.modal.product.banners) ? productState.modal.product.banners : []), nextBanner]
+        }
+      };
+    }
+    productState.message = "Banner created locally and selected for this product. Save product override and shop settings to persist both.";
+    renderProductsManager();
   }
 
   function renderPositionModal(modal) {
@@ -6851,6 +7258,12 @@ import {
     if (target.matches("[data-shop-category-field='label'], [data-shop-category-field='sortOrder']")) {
       updateShopCategorySetting(target);
     }
+
+    if (target.matches("[data-shop-banner-field='label'], [data-shop-banner-field='sortOrder'], [data-shop-hero-field], [data-shop-hero-slide-field='label'], [data-shop-hero-slide-field='src'], [data-shop-hero-slide-field='set'], [data-shop-hero-slide-field='sortOrder']")) {
+      if (target.matches("[data-shop-banner-field]")) updateShopBannerSetting(target);
+      if (target.matches("[data-shop-hero-field]")) updateShopHeroSetting(target);
+      if (target.matches("[data-shop-hero-slide-field]")) updateShopHeroSlideSetting(target);
+    }
   });
 
   app.addEventListener("change", (event) => {
@@ -6934,6 +7347,16 @@ import {
 
     if (target.matches("[data-shop-category-field='enabled']")) {
       updateShopCategorySetting(target);
+      return;
+    }
+
+    if (target.matches("[data-shop-banner-field='enabled'], [data-shop-banner-field='theme']")) {
+      updateShopBannerSetting(target);
+      return;
+    }
+
+    if (target.matches("[data-shop-hero-slide-field='enabled']")) {
+      updateShopHeroSlideSetting(target);
       return;
     }
 
@@ -7209,6 +7632,12 @@ import {
       return;
     }
 
+    const productRow = event.target instanceof HTMLElement ? event.target.closest("[data-product-row-id]") : null;
+    if (productRow && event.target instanceof HTMLElement && !isInteractiveProductRowTarget(event.target)) {
+      openProductRow(productRow);
+      return;
+    }
+
     if (event.target instanceof HTMLElement && event.target.matches("[data-analytics-map-modal-backdrop]")) {
       analyticsStatusState.mapFullscreenOpen = false;
       renderAnalytics();
@@ -7338,6 +7767,26 @@ import {
     } else if (productAction === "settings-save") {
       saveProductSettings();
       return;
+    } else if (productAction === "settings-add-banner") {
+      const banners = Array.isArray(productState.settings?.banners) ? [...productState.settings.banners] : [];
+      const label = window.prompt("Banner label (example: NEW, LIMITED, SALE).");
+      const slug = createSlug(label || "");
+      if (label && slug && !banners.some((banner) => banner.slug === slug)) {
+        banners.push({ label: label.trim().toUpperCase(), slug, enabled: true, theme: "purple-orange", sortOrder: banners.length + 1 });
+        productState.settings = { ...(productState.settings || {}), banners };
+        productState.message = "Banner created locally. Save shop settings to persist.";
+      } else if (label) {
+        productState.message = "Banner slug already exists or label is invalid.";
+      }
+      renderShopSettings();
+      return;
+    } else if (productAction === "settings-add-hero-slide") {
+      const slides = Array.isArray(productState.settings?.heroSlides) ? [...productState.settings.heroSlides] : [...DEFAULT_SHOP_HERO_SLIDES];
+      slides.push({ id: `hero-slide-${Date.now()}`, label: "New hero slide", src: "", enabled: false, sortOrder: slides.length + 1, source: "r2", set: productState.settings?.hero?.activeSet || "default" });
+      productState.settings = { ...(productState.settings || {}), heroSlides: slides };
+      productState.message = "Hero slide record added locally. Add a public HTTPS/R2 URL or static path, then save shop settings.";
+      renderShopSettings();
+      return;
     } else if (productAction === "status-refresh") {
       hydratePrintfulStatus(true);
       return;
@@ -7367,19 +7816,25 @@ import {
       productState.bulkMode = !productState.bulkMode;
       renderProductsManager();
       return;
+    } else if (productAction === "add-product-category") {
+      addProductModalCategory(target);
+      return;
+    } else if (productAction === "add-product-banner") {
+      addProductModalBanner(target);
+      return;
     } else if (productAction === "bulk-category-add" || productAction === "bulk-category-remove") {
       const input = app.querySelector("[data-product-bulk-category]");
       const categoryLabel = String(input?.value || "").trim();
       const categorySlug = createSlug(categoryLabel);
-      if (!categoryLabel || categorySlug === "all") {
-        productState.message = "Enter an additional category label before applying it. All cannot be removed or duplicated.";
+      if (!categoryLabel || categorySlug === "all" || categorySlug === "all-products") {
+        productState.message = "Enter an additional category label before applying it. All Products cannot be removed or duplicated.";
       } else {
         productState.products = productState.products.map((product) =>
           productState.selected.has(product.printfulProductId || product.id)
             ? {
                 ...product,
                 categories: mergeProductCategoryAction(product.categories, categoryLabel, productAction === "bulk-category-add" ? "add" : "remove"),
-                primaryCategory: product.primaryCategory || product.category || "All",
+                primaryCategory: product.primaryCategory || product.category || "All Products",
                 overrideUpdatedAt: new Date().toISOString()
               }
             : product
@@ -7398,7 +7853,7 @@ import {
         featured: Boolean(first.featured),
         categoryOverride: first.categoryOverride || first.primaryCategory || first.category || "",
         categories: first.categories || [],
-        primaryCategory: first.primaryCategory || first.category || "All"
+        primaryCategory: first.primaryCategory || first.category || "All Products"
       };
       saveProductBulkPatch(patch);
       return;
@@ -7605,13 +8060,20 @@ import {
   });
 
   app.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+    if (event.key !== "Enter" && event.key !== " ") return;
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
     const row = target.closest("[data-project-row-id]");
-    if (!row || isInteractiveProjectRowTarget(target)) return;
-    event.preventDefault();
-    openProjectRow(row);
+    if (row && !isInteractiveProjectRowTarget(target)) {
+      event.preventDefault();
+      openProjectRow(row);
+      return;
+    }
+    const productRow = target.closest("[data-product-row-id]");
+    if (productRow && !isInteractiveProductRowTarget(target)) {
+      event.preventDefault();
+      openProductRow(productRow);
+    }
   });
 
   window.addEventListener("keydown", (event) => {

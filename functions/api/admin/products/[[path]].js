@@ -22,6 +22,12 @@ const PRODUCT_IMAGE_MIME = new Map([
   ["image/webp", "webp"]
 ]);
 const PRODUCT_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp"]);
+const DEFAULT_HERO_SLIDES = [
+  { id: "shophero-00", label: "Shop hero 00", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-00.webp", enabled: true, sortOrder: 1, source: "static", set: "default" },
+  { id: "shophero-01", label: "Shop hero 01", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-01.webp", enabled: true, sortOrder: 2, source: "static", set: "default" },
+  { id: "shophero-02", label: "Shop hero 02", src: "https://danielclancy.net/assets/backgrounds/shopheroslides/shophero-02.webp", enabled: true, sortOrder: 3, source: "static", set: "default" }
+];
+const BANNER_THEMES = new Set(["purple-orange", "red", "gold", "silver", "green", "neutral"]);
 
 export async function onRequest(context) {
   const { request, env, params } = context;
@@ -123,8 +129,9 @@ async function printfulStatus(env) {
       { status: printful.status || 503, headers: JSON_HEADERS }
     );
   }
-  const products = printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items)));
+  const products = printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items, overrides.settings)));
   const categories = categorySummary(products, overrides.settings?.categories || []);
+  const heroSlides = heroSlideSummary(overrides.settings);
   return json(
     {
       ok: true,
@@ -135,8 +142,13 @@ async function printfulStatus(env) {
       productCount: products.length,
       variantCount: products.reduce((total, product) => total + Number(product.variantCount || product.variants?.length || 0), 0),
       missingPriceCount: products.filter((product) => !product.priceRange).length,
-      missingCategoryCount: products.filter((product) => !product.categories?.some((category) => category.slug !== "all")).length,
+      productsOnlyAllCategoryCount: products.filter((product) => !product.categories?.some((category) => category.slug !== "all")).length,
       categories,
+      banners: normalizeBannerSettings(overrides.settings?.banners || []),
+      bannerCount: normalizeBannerSettings(overrides.settings?.banners || []).filter((banner) => banner.enabled !== false).length,
+      hero: overrides.settings?.hero,
+      heroSlides,
+      enabledHeroSlideCount: heroSlides.filter((slide) => slide.enabled !== false).length,
       storageConfigured: overrides.configured
     },
     { headers: JSON_HEADERS }
@@ -145,7 +157,7 @@ async function printfulStatus(env) {
 
 async function productSettings(env) {
   const [printful, overrides] = await Promise.all([fetchPrintfulProductList(env), readOverrides(env)]);
-  const products = printful.ok ? printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items))) : [];
+  const products = printful.ok ? printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items, overrides.settings))) : [];
   return json(
     {
       ok: true,
@@ -153,7 +165,9 @@ async function productSettings(env) {
       storageConfigured: overrides.configured,
       settings: overrides.settings,
       categories: categorySummary(products, overrides.settings?.categories || []),
-      message: overrides.configured ? "Storefront settings loaded from DC_ADMIN_KV." : "DC_ADMIN_KV is required before category settings can be saved."
+      banners: normalizeBannerSettings(overrides.settings?.banners || []),
+      heroSlides: heroSlideSummary(overrides.settings),
+      message: overrides.configured ? "Storefront settings loaded from DC_ADMIN_KV." : "DC_ADMIN_KV is required before shop settings can be saved."
     },
     { headers: JSON_HEADERS }
   );
@@ -175,7 +189,7 @@ async function productList(env) {
       { status: printful.status || 503, headers: JSON_HEADERS }
     );
   }
-  const products = printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items)));
+  const products = printful.products.map((product) => adminProductShape(mergeProductOverrides(product, overrides.items, overrides.settings)));
   return json(
     {
       ok: true,
@@ -209,7 +223,7 @@ async function productDetail(env, lookup) {
     {
       ok: true,
       configured: true,
-      product: adminProductShape(mergeProductOverrides(detail.product, overrides.items)),
+      product: adminProductShape(mergeProductOverrides(detail.product, overrides.items, overrides.settings)),
       store: safeStore(detail.store),
       settings: overrides.settings,
       storageConfigured: overrides.configured
@@ -240,7 +254,7 @@ async function saveProductOverride(request, env, session) {
   const keys = overrideKeys(override);
   const items = current.items.filter((item) => !overrideKeys(item).some((key) => keys.includes(key)));
   items.push(override);
-  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt: override.updatedAt, updatedBy: actor(session), items }, null, 2));
+  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt: override.updatedAt, updatedBy: actor(session), settings: current.settings, items }, null, 2));
   return json({ ok: true, saved: true, item: override, items, storageConfigured: true }, { headers: JSON_HEADERS });
 }
 
@@ -262,7 +276,7 @@ async function bulkUpdateProducts(request, env, session) {
     byId.set(key, normalizeOverride({ ...existing, ...safeBulkPatch(patch), updatedAt }, session));
   });
   const items = Array.from(byId.values());
-  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), items }, null, 2));
+  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), settings: current.settings, items }, null, 2));
   return json({ ok: true, saved: true, count: ids.length, items, storageConfigured: true }, { headers: JSON_HEADERS });
 }
 
@@ -371,7 +385,7 @@ async function uploadProductImage(request, env, session) {
 
 async function readOverrides(env) {
   const storage = productStorage(env);
-  if (!storage) return { configured: false, items: [] };
+  if (!storage) return { configured: false, items: [], settings: normalizeSettings({}) };
   try {
     const raw = await storage.get(PRODUCTS_KEY);
     if (!raw) return { configured: true, items: [], settings: normalizeSettings({}) };
@@ -411,6 +425,7 @@ function normalizeOverride(raw = {}, session = null) {
     categoryOverride: cleanString(raw.categoryOverride || raw.category || raw.collectionOverride, 160),
     categories: normalizeCategoryList(raw.categories || raw.categoryOverrides || raw.categoryOverride || raw.category),
     primaryCategory: cleanString(raw.primaryCategory || raw.primaryCategorySlug || raw.categoryOverride || raw.category, 160),
+    banners: normalizeBannerList(raw.banners || raw.bannerOverrides || raw.promos),
     visibility,
     featured: Boolean(raw.featured),
     heroImageOverride: cleanString(raw.heroImageOverride || raw.heroImage, 1200),
@@ -458,6 +473,7 @@ function safeBulkPatch(patch) {
   if (patch.categoryOverride || patch.category) allowed.categoryOverride = patch.categoryOverride || patch.category;
   if (patch.categories) allowed.categories = normalizeCategoryList(patch.categories);
   if (patch.primaryCategory) allowed.primaryCategory = cleanString(patch.primaryCategory, 160);
+  if (patch.banners) allowed.banners = normalizeBannerList(patch.banners);
   return allowed;
 }
 
@@ -466,6 +482,9 @@ function normalizeSettings(raw = {}, session = null) {
     baseCurrency: cleanChoice(raw.baseCurrency, ["AUD"], "AUD"),
     convertedCurrencyDefault: cleanChoice(raw.convertedCurrencyDefault, ["USD", "CAD", "NZD", "GBP", "EUR", "JPY", "CHF", "SGD", "HKD", "KRW"], "USD"),
     categories: normalizeCategorySettings(raw.categories),
+    banners: normalizeBannerSettings(raw.banners),
+    hero: normalizeHeroSettings(raw.hero || raw.shopHero || raw),
+    heroSlides: normalizeHeroSlides(raw.heroSlides || raw.slides || raw.hero?.slides),
     updatedAt: cleanString(raw.updatedAt || new Date().toISOString(), 80),
     updatedBy: actor(session || raw)
   };
@@ -473,35 +492,114 @@ function normalizeSettings(raw = {}, session = null) {
 
 function normalizeCategorySettings(value) {
   const rows = Array.isArray(value) ? value : [];
-  return rows
-    .map((row, index) => {
-      const label = cleanString(row?.label || row?.name || row?.slug, 160);
-      const slug = slugify(row?.slug || label);
-      if (!slug) return null;
-      return {
+  const map = new Map();
+  map.set("all", { label: "All Products", slug: "all", enabled: true, sortOrder: 0, source: "system", locked: true, description: "" });
+  rows.forEach((row, index) => {
+    const label = cleanString(row?.label || row?.name || row?.slug, 160);
+    const normalizedSlug = slugify(row?.slug || label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
+    if (!slug) return;
+    if (slug === "all") {
+      map.set("all", { label: "All Products", slug: "all", enabled: true, sortOrder: 0, source: "system", locked: true, description: cleanString(row?.description, 500) });
+      return;
+    }
+    if (!map.has(slug)) {
+      map.set(slug, {
         label: label || slug,
         slug,
         enabled: row?.enabled !== false,
         sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
-        source: cleanString(row?.source || "admin", 80)
+        source: cleanChoice(row?.source, ["system", "printful", "admin"], "admin"),
+        locked: false,
+        description: cleanString(row?.description, 500)
+      });
+    }
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function normalizeBannerSettings(value) {
+  const rows = Array.isArray(value) ? value : [];
+  const map = new Map();
+  rows.forEach((row, index) => {
+    const label = cleanString(row?.label || row?.name || row?.slug, 80).toUpperCase();
+    const slug = slugify(row?.slug || label);
+    if (!label || !slug || map.has(slug)) return;
+    map.set(slug, {
+      label,
+      slug,
+      enabled: row?.enabled !== false,
+      sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+      theme: BANNER_THEMES.has(cleanString(row?.theme || row?.style, 40)) ? cleanString(row?.theme || row?.style, 40) : "purple-orange"
+    });
+  });
+  return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function normalizeHeroSettings(raw = {}) {
+  return {
+    activeSet: cleanString(raw.activeSet || raw.heroSlideSet || "default", 80) || "default",
+    crossfadeIntervalSeconds: clampNumber(raw.crossfadeIntervalSeconds || raw.intervalSeconds || raw.crossfadeSpeed, 5, 2, 30),
+    crossfadeDurationSeconds: clampNumber(raw.crossfadeDurationSeconds || raw.durationSeconds, 1.2, 0.2, 5)
+  };
+}
+
+function normalizeHeroSlides(value) {
+  const rows = Array.isArray(value) && value.length ? value : DEFAULT_HERO_SLIDES;
+  return rows
+    .map((row, index) => {
+      const id = slugify(row?.id || row?.filename || row?.label || row?.src || `shophero-${index}`);
+      const src = cleanString(row?.src || row?.url || row?.path, 1200);
+      if (!id && !src) return null;
+      return {
+        id,
+        label: cleanString(row?.label || row?.name || row?.filename || id, 120),
+        src,
+        enabled: row?.enabled !== false,
+        sortOrder: Number.isFinite(Number(row?.sortOrder)) ? Number(row.sortOrder) : index + 1,
+        source: cleanChoice(row?.source, ["static", "r2", "admin"], src.startsWith("https://") ? "r2" : "static"),
+        set: cleanString(row?.set || row?.activeSet || "default", 80) || "default"
       };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
 }
 
 function normalizeCategoryList(value) {
   const raw = Array.isArray(value) ? value : String(value || "").split(/[,;\n]/);
   const labels = raw.map((item) => cleanString(item?.label || item?.name || item, 160)).filter(Boolean);
-  const merged = Array.from(new Set(["All", ...labels]));
-  return merged.map((label) => ({ label, slug: slugify(label) || "all", source: label.toLowerCase() === "all" ? "system" : "admin" }));
+  const merged = Array.from(new Set(["All Products", ...labels]));
+  return merged.map((label) => {
+    const slug = slugify(label) === "all-products" ? "all" : slugify(label) || "all";
+    return { label: slug === "all" ? "All Products" : label, slug, source: slug === "all" ? "system" : "admin", locked: slug === "all", enabled: true };
+  });
+}
+
+function normalizeBannerList(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(/[,;\n]/);
+  return raw
+    .map((item, index) => {
+      const label = cleanString(item?.label || item?.name || item, 80).toUpperCase();
+      const slug = slugify(item?.slug || label);
+      if (!label || !slug) return null;
+      return {
+        label,
+        slug,
+        enabled: item?.enabled !== false,
+        sortOrder: Number.isFinite(Number(item?.sortOrder)) ? Number(item.sortOrder) : index + 1,
+        theme: BANNER_THEMES.has(cleanString(item?.theme || item?.style, 40)) ? cleanString(item?.theme || item?.style, 40) : "purple-orange"
+      };
+    })
+    .filter(Boolean);
 }
 
 function categorySummary(products, settings = []) {
   const map = new Map();
-  map.set("all", { label: "All", slug: "all", count: products.length, enabled: true, sortOrder: 0, source: "system" });
+  map.set("all", { label: "All Products", slug: "all", count: products.length, enabled: true, sortOrder: 0, source: "system", locked: true });
   products.forEach((product) => {
     (product.categories || []).forEach((category) => {
-      const slug = slugify(category.slug || category.label);
+      const normalizedSlug = slugify(category.slug || category.label);
+      const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
       if (!slug) return;
       const current = map.get(slug) || { label: category.label || slug, slug, count: 0, enabled: true, sortOrder: 1000, source: category.source || "printful" };
       current.count += 1;
@@ -510,18 +608,29 @@ function categorySummary(products, settings = []) {
     });
   });
   settings.forEach((setting, index) => {
-    const slug = slugify(setting.slug || setting.label);
+    const normalizedSlug = slugify(setting.slug || setting.label);
+    const slug = normalizedSlug === "all-products" ? "all" : normalizedSlug;
     if (!slug) return;
     const current = map.get(slug) || { label: setting.label || slug, slug, count: 0, source: "admin" };
     map.set(slug, {
       ...current,
-      label: setting.label || current.label,
-      enabled: setting.enabled !== false,
+      label: slug === "all" ? "All Products" : setting.label || current.label,
+      enabled: slug === "all" ? true : setting.enabled !== false,
       sortOrder: Number.isFinite(Number(setting.sortOrder)) ? Number(setting.sortOrder) : index + 1,
-      source: current.source === "system" ? "system" : setting.source || current.source || "admin"
+      source: current.source === "system" ? "system" : setting.source || current.source || "admin",
+      locked: slug === "all",
+      description: setting.description || current.description || ""
     });
   });
   return Array.from(map.values()).sort((left, right) => (left.sortOrder || 1000) - (right.sortOrder || 1000) || left.label.localeCompare(right.label));
+}
+
+function heroSlideSummary(settings = {}) {
+  const activeSet = settings?.hero?.activeSet || "default";
+  return normalizeHeroSlides(settings?.heroSlides || []).map((slide) => ({
+    ...slide,
+    active: slide.set === activeSet && slide.enabled !== false
+  }));
 }
 
 function productStorage(env) {
@@ -581,7 +690,12 @@ function actor(session) {
 
 function cleanChoice(value, choices, fallback) {
   const text = cleanString(value, 80).toLowerCase();
-  return choices.includes(text) ? text : fallback;
+  return choices.find((choice) => String(choice).toLowerCase() === text) || fallback;
+}
+
+function clampNumber(value, fallback, min, max) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
 function cleanString(value, maxLength = 500) {
