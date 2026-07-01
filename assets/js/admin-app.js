@@ -37,6 +37,7 @@ import {
     { id: "overview", label: "Overview", icon: "home.svg", path: "#/overview" },
     { id: "analytics", label: "Analytics", icon: "globe.svg", path: "#/analytics" },
     { id: "products", label: "Products", icon: "package.svg", path: "#/products" },
+    { id: "customers", label: "Customers", icon: "profilecard.svg", path: "#/customers" },
     { id: "merch-orders", label: "Orders", icon: "receipt.svg", path: "#/merch-orders" },
     { id: "shop-settings", label: "Shop Settings", icon: "cog.svg", path: "#/shop-settings" },
     { id: "printful-status", label: "Printful Status", icon: "sync.svg", path: "#/printful-status" },
@@ -174,6 +175,15 @@ import {
     loaded: false,
     configured: false,
     message: "Merch order visibility reads from DC_MERCH_ORDERS_KV when the binding is configured.",
+    checkedAt: ""
+  };
+  const customerManagementState = {
+    customers: [],
+    detail: null,
+    loading: false,
+    loaded: false,
+    configured: false,
+    message: "Customer management reads customer profiles from DC_CUSTOMERS_KV and related order summaries from DC_MERCH_ORDERS_KV.",
     checkedAt: ""
   };
   const publicAssetCatalogState = {
@@ -2243,6 +2253,51 @@ import {
       merchOrderState.loading = false;
       if (renderAfter && activePageIs("merch-orders")) renderMerchOrders();
     }
+  }
+
+  async function hydrateCustomers(renderAfter = false) {
+    customerManagementState.loading = true;
+    customerManagementState.message = "Loading customers from DC_CUSTOMERS_KV...";
+    if (renderAfter && activePageIs("customers")) renderCustomers();
+    try {
+      const response = await fetch("/api/admin/customers", { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      customerManagementState.loaded = true;
+      customerManagementState.configured = Boolean(payload?.configured);
+      customerManagementState.customers = Array.isArray(payload?.customers) ? payload.customers : [];
+      customerManagementState.checkedAt = payload?.checkedAt || new Date().toISOString();
+      customerManagementState.message = response.ok && payload?.ok
+        ? (customerManagementState.customers.length ? "Customers loaded from DC_CUSTOMERS_KV." : "No customer profiles are stored yet.")
+        : (payload?.message || payload?.error || "Customers API unavailable.");
+    } catch {
+      customerManagementState.loaded = true;
+      customerManagementState.configured = false;
+      customerManagementState.customers = [];
+      customerManagementState.message = "Customers API unavailable. Local static mode cannot read DC_CUSTOMERS_KV.";
+    } finally {
+      customerManagementState.loading = false;
+      if (renderAfter && activePageIs("customers")) renderCustomers();
+    }
+  }
+
+  async function hydrateCustomerDetail(id) {
+    customerManagementState.message = `Loading customer ${id}...`;
+    renderCustomers();
+    try {
+      const response = await fetch(`/api/admin/customers/${encodeURIComponent(id)}`, { credentials: "include", headers: { accept: "application/json" } });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        customerManagementState.message = payload?.message || payload?.error || "Customer detail unavailable.";
+        customerManagementState.detail = null;
+      } else {
+        customerManagementState.detail = payload.customer;
+        customerManagementState.message = "Customer detail loaded.";
+      }
+    } catch {
+      customerManagementState.detail = null;
+      customerManagementState.message = "Customer detail API unavailable.";
+    }
+    renderCustomers();
   }
 
   async function hydrateProductDetail(id, openMode = "edit") {
@@ -5155,6 +5210,137 @@ import {
     return `<div class="managed-chip-list managed-chip-list--table">${banners.map((banner) => `<span class="managed-chip managed-chip--banner managed-chip--${escapeHtml(banner.theme || "purple-orange")}"><span>${escapeHtml(banner.label || banner.slug)}</span></span>`).join("")}</div>`;
   }
 
+  function renderCustomers() {
+    routeTitle.textContent = "Customers";
+    const customers = customerManagementState.customers;
+    const mapped = customers.filter((customer) => customer.stripeCustomerMapped).length;
+    const disabled = customers.filter((customer) => customer.status === "disabled").length;
+    app.innerHTML = `
+      <div class="page products-page">
+        ${pageHeader(
+          "Customer management",
+          "Customers",
+          "Customer profiles, account preferences, delivery address summaries, and linked merch order visibility from dedicated customer storage.",
+          `<button class="button" type="button" data-customer-action="refresh">Refresh customers</button>`
+        )}
+
+        ${panel(
+          "Customer storage status",
+          "Profiles and customer sessions are stored in DC_CUSTOMERS_KV. Order summaries are read from DC_MERCH_ORDERS_KV without exposing raw payment method data.",
+          metricCards([
+            { label: "Storage", value: customerManagementState.configured ? "Configured" : customerManagementState.loading ? "Checking" : "Config needed", note: customerManagementState.message, tone: customerManagementState.configured ? "success" : "warn" },
+            { label: "Customers", value: String(customers.length), note: "Recent customer profiles visible from the customer KV index.", tone: customers.length ? "success" : "" },
+            { label: "Stripe mapped", value: String(mapped), note: "Stripe customer id presence only; card details stay in Stripe.", tone: mapped ? "success" : "" },
+            { label: "Disabled", value: String(disabled), note: "Admin status field only.", tone: disabled ? "warn" : "" }
+          ])
+        )}
+
+        ${panel(
+          "Customer registry",
+          "Table view avoids full address details. Open a customer for profile, preferences, address summaries, and linked order history.",
+          renderCustomersTable(customers)
+        )}
+        ${customerManagementState.detail ? renderCustomerDetailModal(customerManagementState.detail) : ""}
+      </div>
+    `;
+  }
+
+  function renderCustomersTable(customers) {
+    return `
+      <div class="project-message">${escapeHtml(customerManagementState.loading ? "Loading customers..." : customerManagementState.message)}</div>
+      <div class="table-wrap">
+        <table class="table product-table">
+          <thead>
+            <tr>
+              <th>Customer id</th><th>Name</th><th>Email</th><th>Created</th><th>Updated/login</th><th>Orders</th><th>Total spend</th><th>Country</th><th>Preferences</th><th>Stripe</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${customers.map(renderCustomerRow).join("") || `<tr><td colspan="12"><div class="empty-state">${escapeHtml(customerManagementState.message || "No customers are available.")}</div></td></tr>`}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderCustomerRow(customer) {
+    return `
+      <tr>
+        <td><code>${escapeHtml(customer.id || "")}</code></td>
+        <td>${escapeHtml(customer.displayName || "Customer")}</td>
+        <td>${escapeHtml(customer.email || customer.emailMasked || "")}</td>
+        <td>${escapeHtml(formatTimestamp(customer.createdAt))}</td>
+        <td>${escapeHtml(formatTimestamp(customer.lastLoginAt || customer.updatedAt))}</td>
+        <td>${escapeHtml(String(customer.orderCount || 0))}</td>
+        <td>${escapeHtml(formatOrderCents(customer.totalSpend || 0, customer.currency || "AUD"))}</td>
+        <td>${escapeHtml(customer.defaultCountry || "n/a")}</td>
+        <td>${escapeHtml(customer.preferenceSummary || "none")}</td>
+        <td>${badge(customer.stripeCustomerMapped ? "yes" : "no", customer.stripeCustomerMapped ? "success" : "warn")}</td>
+        <td>${badge(customer.status || "active", customer.status === "disabled" ? "warn" : "success")}</td>
+        <td><button class="button button-secondary" type="button" data-customer-action="detail" data-customer-id="${escapeHtml(customer.id || "")}">Open</button></td>
+      </tr>
+    `;
+  }
+
+  function renderCustomerDetailModal(customer) {
+    const addresses = Array.isArray(customer.addresses) ? customer.addresses : [];
+    const orders = Array.isArray(customer.orderHistory) ? customer.orderHistory : [];
+    return `
+      <div class="modal-backdrop" data-customer-modal-backdrop>
+        <section class="modal media-modal" role="dialog" aria-modal="true" aria-labelledby="customer-modal-title">
+          <header class="modal-header">
+            <div>
+              <p class="eyebrow">Customer detail</p>
+              <h2 id="customer-modal-title">${escapeHtml(customer.displayName || customer.email || customer.id || "Customer")}</h2>
+              <p>${escapeHtml(customer.email || "")}</p>
+            </div>
+            <button class="icon-close" type="button" aria-label="Close customer detail" data-customer-action="close-detail">x</button>
+          </header>
+          <div class="modal-body">
+            ${descriptionRows([
+              ["Customer id", customer.id || ""],
+              ["Status", customer.status || "active"],
+              ["Created", formatTimestamp(customer.createdAt)],
+              ["Updated", formatTimestamp(customer.updatedAt)],
+              ["Last login", formatTimestamp(customer.lastLoginAt)],
+              ["Stripe customer", customer.stripeCustomerMapped ? "Mapped" : "Not mapped"],
+              ["Marketing", customer.marketingOptIn ? "Opted in" : "Off"],
+              ["Preferences", customer.preferenceSummary || "none"],
+              ["Admin notes", customer.adminNotes || "None"]
+            ])}
+            <h3>Addresses</h3>
+            <div class="project-message">${addresses.length ? addresses.map(renderCustomerAddressSummary).join("<br>") : "No delivery addresses saved."}</div>
+            <h3>Order history</h3>
+            <div class="table-wrap">
+              <table class="table product-table">
+                <thead><tr><th>Order</th><th>Created</th><th>Status</th><th>Total</th><th>Items</th></tr></thead>
+                <tbody>${orders.map(renderCustomerOrderSummary).join("") || `<tr><td colspan="5"><div class="empty-state">No linked merch orders.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button class="button button-secondary" type="button" data-customer-action="close-detail">Close</button>
+          </footer>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderCustomerAddressSummary(address) {
+    return `${escapeHtml(address.label || address.name || "Address")}: ${escapeHtml(address.address1 || "")}, ${escapeHtml(address.city || "")}, ${escapeHtml(address.region || "")} ${escapeHtml(address.postalCode || "")} ${escapeHtml(address.countryCode || "")}${address.isDefault ? " (default)" : ""}`;
+  }
+
+  function renderCustomerOrderSummary(order) {
+    const items = Array.isArray(order.itemSummary) ? order.itemSummary.map((item) => `${item.quantity}x ${item.title}`).join("; ") : "";
+    return `
+      <tr>
+        <td><code>${escapeHtml(order.id || "")}</code></td>
+        <td>${escapeHtml(formatTimestamp(order.createdAt))}</td>
+        <td>${badge(order.status || "unknown", order.status === "printful_confirmed" ? "success" : "")}</td>
+        <td>${escapeHtml(formatOrderCents(order.totalAmount || 0, order.currency || "AUD"))}</td>
+        <td>${escapeHtml(items || "No item summary")}</td>
+      </tr>
+    `;
+  }
+
   function renderMerchOrders() {
     routeTitle.textContent = "Merch Orders";
     const orders = merchOrderState.orders;
@@ -7116,6 +7302,8 @@ import {
       renderAccountDetail(decodeURIComponent(route.id));
     } else if (route.page === "accounts") {
       renderAccounts();
+    } else if (route.page === "customers") {
+      renderCustomers();
     } else if (route.page === "products") {
       renderProductsManager();
     } else if (route.page === "merch-orders") {
@@ -7143,6 +7331,7 @@ import {
     }
 
     if (route.page === "products" && !productState.loaded && !productState.loading) hydrateProductsManager();
+    if (route.page === "customers" && !customerManagementState.loaded && !customerManagementState.loading) hydrateCustomers();
     if (route.page === "merch-orders" && !merchOrderState.loaded && !merchOrderState.loading) hydrateMerchOrders();
     if (route.page === "shop-settings" && !productState.loaded && !productState.loading) hydrateProductsManager(true).then(() => hydrateProductSettings(true));
     if (route.page === "printful-status" && !productState.status && !productState.loading) hydratePrintfulStatus(true);
@@ -7644,7 +7833,7 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-merch-orders-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-merch-orders-action], [data-customer-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-customer-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
@@ -7653,6 +7842,7 @@ import {
     const mediaAction = target.getAttribute("data-media-action");
     const productAction = target.getAttribute("data-product-action");
     const merchOrdersAction = target.getAttribute("data-merch-orders-action");
+    const customerAction = target.getAttribute("data-customer-action");
     const alertAction = target.getAttribute("data-alert-action");
     const accountAccessAction = target.getAttribute("data-account-access-action");
     const accountAction = target.getAttribute("data-account-action");
@@ -7666,12 +7856,26 @@ import {
     const id = target.getAttribute("data-project-id");
     const mediaId = target.getAttribute("data-media-id");
     const productId = target.getAttribute("data-product-id");
+    const customerId = target.getAttribute("data-customer-id");
     const alertId = target.getAttribute("data-alert-id");
     const accountAccessId = target.getAttribute("data-account-access-id");
     const accountId = target.getAttribute("data-account-id");
 
     if (accountAction === "refresh") {
       hydrateAccountRegistry(true);
+      return;
+    }
+    if (customerAction === "refresh") {
+      hydrateCustomers(true);
+      return;
+    }
+    if (customerAction === "detail" && customerId) {
+      hydrateCustomerDetail(customerId);
+      return;
+    }
+    if (customerAction === "close-detail" || target.matches("[data-customer-modal-backdrop]")) {
+      customerManagementState.detail = null;
+      renderCustomers();
       return;
     }
 
@@ -9177,6 +9381,7 @@ import {
       hydrateAccountRegistry(activePageIs("accounts") || activePageIs("settings"));
       hydrateOverviewStatus(activePageIs("overview"));
       hydrateAnalyticsStatus(activePageIs("analytics"));
+      hydrateCustomers(activePageIs("customers"));
       hydrateMerchOrders(activePageIs("merch-orders"));
       hydrateProductSettings(activePageIs("shop-settings"));
       hydratePrintfulStatus(activePageIs("printful-status"));
@@ -9200,6 +9405,7 @@ import {
   hydratePublicAssetCatalog(activePageIs("projects"));
   hydrateCmsCollections();
   hydrateProductsManager(activePageIs("products"));
+  hydrateCustomers(activePageIs("customers"));
   hydrateMerchOrders(activePageIs("merch-orders"));
   hydrateProductSettings(activePageIs("shop-settings"));
   hydratePrintfulStatus(activePageIs("printful-status"));

@@ -1,5 +1,40 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Admin Customers Management Milestone
+
+### Technical Notes
+
+- Added a distinct Customers nav/page at `#/customers` using the existing Admin dark dashboard shell and signed-admin session boundary.
+- Added `GET /api/admin/customers`, `GET /api/admin/customers/:id`, and `PATCH /api/admin/customers/:id`, protected by `requireAdmin`.
+- Added `functions/_shared/customer-records.js` with centralized `DC_CUSTOMERS_KV` customer key prefixes and read/summarize helpers.
+- Customers read from `DC_CUSTOMERS_KV -> danielclancy-customers`; the page does not reuse `DC_ADMIN_KV` for public customer profiles/sessions and does not reuse `DC_MERCH_ORDERS_KV` except for linked order summaries.
+- Customer table shows customer id, display name, email, created/updated/login dates, order count, safely derived spend, default country, preferences, Stripe mapped yes/no, status, and actions.
+- Customer detail modal shows profile summary, addresses summary, preferences, linked order history summary, safe admin notes/status fields, and Stripe customer id presence only.
+- Missing `DC_CUSTOMERS_KV` returns and renders a clear config-needed state instead of fake rows.
+
+### Human-Readable Notes
+
+- Admin can inspect real customer account records and linked merch order summaries without exposing raw payment method data.
+- Existing Admin Accounts remains the separate admin-role/session registry on `DC_ADMIN_KV`.
+
+### Cloudflare setup required
+
+- DanielClancy-Admin Pages project: `DC_CUSTOMERS_KV -> danielclancy-customers`.
+- Existing `DC_MERCH_ORDERS_KV -> danielclancy-merch-orders` is still needed for customer order-history summaries.
+
+### Known Limitations
+
+- Admin customer mutation is limited to safe status/admin notes fields.
+- Local static mode cannot read KV and shows config-needed/API-unavailable states until Pages Functions and bindings are available.
+
+### Files / Areas Changed
+
+- `.env.example`
+- `README.md`
+- `assets/js/admin-app.js`
+- `functions/_shared/customer-records.js`
+- `functions/api/admin/customers/[[id]].js`
+
 ## Merch Category / Banner / Hero Settings UX Repair Milestone
 
 ### Technical Notes

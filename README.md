@@ -19,7 +19,7 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 ## Cloudflare Pages Compatibility
 
-`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, Merch Orders endpoint under `functions/api/admin/merch-orders.js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
+`_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, Customers endpoints under `functions/api/admin/customers/[[id]].js`, Merch Orders endpoint under `functions/api/admin/merch-orders.js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
 ## Auth Foundation
 
@@ -61,6 +61,7 @@ Required Cloudflare KV binding:
 - `DC_ADMIN_KV` - production CMS persistence for Projects, Media, Companies, Platforms, Positions, disabled Alerts compatibility, and account/profile overlays
 - `DC_ADMIN_KV` also stores the public published site-data snapshot at `public:site-data:published` and metadata at `public:site-data:publish-meta`.
 - `DC_MERCH_ORDERS_KV` - dedicated read-only merch order visibility binding for Stripe/Printful order intent state; do not reuse `DC_ADMIN_KV` for public merch order state.
+- `DC_CUSTOMERS_KV` - dedicated public customer account profile/session binding, configured as `danielclancy-customers`; do not reuse `DC_ADMIN_KV` for public customer account state.
 
 Required shared analytics ingest secret:
 
@@ -279,7 +280,19 @@ Shop hero slides are managed through Product Settings, not by writing runtime fi
 
 Printful Status labels products with only `All Products` as a setup/action-needed state instead of a missing-category API failure. Those products remain browseable at `/products/all`. The status page also reports managed category, banner, and hero slide counts.
 
-Customer account management is intentionally future work. A real account phase needs a public auth/session model, customer profile storage, order history integration, delivery addresses/contact preferences, Stripe Customer Portal or equivalent saved-payment handling, and an Admin Customers page. This Admin surface must not add fake customer login, payment method, purchase history, or address-management UI.
+## Customer Management
+
+Implemented endpoints:
+
+- `GET /api/admin/customers`
+- `GET /api/admin/customers/:id`
+- `PATCH /api/admin/customers/:id`
+
+The Customers page (`#/customers`) is an admin-session-protected customer management surface backed by `DC_CUSTOMERS_KV -> danielclancy-customers`. It reads public customer profiles, status/admin-note fields, address summaries, contact preferences, Stripe customer id presence, and linked merch order summaries. It uses `DC_MERCH_ORDERS_KV` only for order-history summaries and does not store customer profiles/sessions in the merch order namespace.
+
+The Customers table shows customer id, display name, email, created/updated/login dates, order count, total spend where safely derivable from linked orders, default country, preference summary, Stripe mapped yes/no, status, and actions. Full detail opens in a modal with profile summary, address summaries, preferences, order history summary, and Stripe customer mapping presence only. Raw card details, CVCs, bank details, and raw Stripe payment method payloads are never stored or displayed by Admin.
+
+If `DC_CUSTOMERS_KV` is missing locally or in Pages Functions, the API returns `storage_not_configured` naming `DC_CUSTOMERS_KV` and the UI shows a config-needed state instead of fake customer rows. Existing Admin Accounts remain a separate `DC_ADMIN_KV` role/session registry and are not reused for public customer account state.
 
 The Printful helper resolves the `Daniel Clancy` store through Printful v2 stores where available, then uses legacy sync product endpoints for list/detail records because sync product/store-product management is not available through Printful v2 yet. Admin write endpoints never mutate Printful product records. Product file registration uses Printful `/v2/files` only after an uploaded image has a public HTTPS URL, and the upload is treated as preview/gallery media unless a future Printful print-file update endpoint explicitly succeeds.
 
@@ -423,6 +436,7 @@ DanielClancy-Admin/
 │   │   ├── admin-accounts.js
 │   │   ├── analytics-store.js
 │   │   ├── alert-sender.js
+│   │   ├── customer-records.js
 │   │   ├── printful-products.js
 │   │   ├── public-site-data.js
 │   │   ├── registry-reconciliation.js
@@ -439,6 +453,8 @@ DanielClancy-Admin/
 │       │   ├── analytics.js
 │       │   ├── cms/
 │       │   │   └── [[collection]].js
+│       │   ├── customers/
+│       │   │   └── [[id]].js
 │       │   ├── merch-orders.js
 │       │   ├── products/
 │       │   │   └── [[path]].js
@@ -485,9 +501,10 @@ DanielClancy-Admin/
 ## Current Scope
 
 - Dashboard shell with topbar, sidebar navigation, footer/status area, and responsive behavior.
-- Overview, Analytics, Accounts, Account Detail, Projects, Products, Merch Orders, Media, Companies, Platforms, Positions, and Settings pages.
+- Overview, Analytics, Accounts, Account Detail, Customers, Projects, Products, Merch Orders, Media, Companies, Platforms, Positions, and Settings pages.
 - Admin session gate backed by Cloudflare Pages Functions, with local scaffold unlock only for local/static UI smoke testing.
 - Accounts page hydrates from the `accounts:registry` KV role store when `DC_ADMIN_KV` is configured, with locked env-backed master admins, master-only role/status/note actions, and current-user display-name/avatar profile editing.
+- Customers page hydrates from `DC_CUSTOMERS_KV` when configured, with customer profile summaries, address/preference summaries, Stripe customer mapping presence, linked merch order summaries from `DC_MERCH_ORDERS_KV`, and config-needed states when customer storage is missing.
 - Settings account-access section reflects the same durable account registry, current session role source, Turnstile posture, and secret-safety notes.
 - Overview page hydrates operational status from `/api/admin/status` without inventing analytics or exposing secrets.
 - Overview, Settings, Projects, Products, Companies, Platforms, and Positions show public site-data publish status, source, revision, counts, and warnings. `Publish site data` writes only a sanitized snapshot when live Admin KV is available.
