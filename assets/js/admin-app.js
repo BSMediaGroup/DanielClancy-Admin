@@ -2432,6 +2432,25 @@ import {
       });
   }
 
+  function mergeProductBannerRows(...lists) {
+    const map = new Map();
+    lists.forEach((list) => {
+      if (!Array.isArray(list)) return;
+      list.forEach((banner) => {
+        const slug = createSlug(banner?.slug || banner?.label);
+        if (!slug) return;
+        const current = map.get(slug) || {};
+        map.set(slug, {
+          ...current,
+          ...banner,
+          slug,
+          label: String(banner?.label || current.label || slug).trim().toUpperCase()
+        });
+      });
+    });
+    return Array.from(map.values());
+  }
+
   function productOverrideFromProduct(product = {}) {
     const keys = [product.printfulProductId, product.id, product.externalId, product.slug].map(createSlug).filter(Boolean);
     const existing = productState.overrides.find((override) => [override.productId, override.printfulProductId, override.externalId, override.slug, override.slugOverride].map(createSlug).some((key) => keys.includes(key)));
@@ -2444,7 +2463,7 @@ import {
       categoryOverride: existing?.categoryOverride || "",
       categories: Array.isArray(existing?.categories) ? existing.categories : (Array.isArray(product.categories) ? product.categories : []),
       primaryCategory: existing?.primaryCategory || product.primaryCategory || product.category || "All Products",
-      banners: Array.isArray(existing?.banners) ? existing.banners : (Array.isArray(product.banners) ? product.banners : []),
+      banners: mergeProductBannerRows(existing?.banners, product.banners),
       visibility: existing?.visibility || product.visibility || "public",
       featured: Boolean(existing?.featured ?? product.featured),
       heroImageOverride: existing?.heroImageOverride || "",
@@ -2649,6 +2668,19 @@ import {
     }));
   }
 
+  function bannerSettingsForProductSave(selectedBanners = []) {
+    const map = new Map();
+    (Array.isArray(productState.settings?.banners) ? productState.settings.banners : []).forEach((banner) => {
+      const slug = createSlug(banner.slug || banner.label);
+      if (slug) map.set(slug, banner);
+    });
+    selectedBanners.forEach((banner) => {
+      const slug = createSlug(banner.slug || banner.label);
+      if (slug && !map.has(slug)) map.set(slug, banner);
+    });
+    return Array.from(map.values());
+  }
+
   function mergeProductCategoryAction(categories = [], label, action) {
     const rows = Array.isArray(categories) ? categories : [];
     const map = new Map();
@@ -2770,6 +2802,9 @@ import {
       categories: selectedCategories,
       primaryCategory,
       banners: selectedBanners,
+      settingsPatch: {
+        banners: bannerSettingsForProductSave(selectedBanners)
+      },
       visibility: formValue(form, "visibility"),
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
       heroImageOverride: formValue(form, "heroImageOverride"),
@@ -2798,6 +2833,7 @@ import {
         return;
       }
       productState.overrides = Array.isArray(result.items) ? result.items : productState.overrides;
+      if (result.settings) productState.settings = result.settings;
       productState.products = productState.products.map((product) =>
         (product.printfulProductId || product.id) === productId
           ? { ...product, ...existing, ...payload, title: payload.displayTitle || product.title, category: payload.primaryCategory || payload.categoryOverride || product.category, visibility: payload.visibility, featured: payload.featured, banners: payload.banners, overrideUpdatedAt: new Date().toISOString() }

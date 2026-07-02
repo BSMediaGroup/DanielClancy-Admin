@@ -208,6 +208,9 @@ test("public site-data export includes sanitized product overrides only", async 
   });
 
   assert.equal(payload.collections.products.length, 1);
+  assert.ok(payload.updatedAt);
+  assert.equal(payload.meta.productOverrideCount, 1);
+  assert.equal(payload.meta.bannerRegistryCount, 2);
   assert.equal(payload.collections.products[0].slugOverride, "signature-tee");
   assert.deepEqual(payload.collections.products[0].banners, [{ label: "LIMITED DROP", slug: "limited-drop", enabled: true, theme: "gold", sortOrder: 2 }]);
   assert.deepEqual(payload.collections.productSettings.banners, [

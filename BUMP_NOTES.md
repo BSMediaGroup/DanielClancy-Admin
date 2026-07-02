@@ -1,5 +1,36 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Product Banner Public Sync Diagnostics And User Dropdown Escape Repair
+
+### Technical Notes
+
+- Product override saves now accept a narrow banner-registry patch from the Products modal so quick-created or selected banner rows are persisted with `cms:products` and included in the same auto-published public site-data snapshot.
+- Public site-data export payloads now include `updatedAt`; export `meta` includes `productOverrideCount` and `bannerRegistryCount`; publish response counts include product override and banner totals.
+- Product banner normalization now filters disabled product-level banner assignments as well as disabled registry banners, keeping Admin preview behavior aligned with public rendering.
+- Added export-contract assertions for the new product override/banner metadata.
+- Added outside-click and Escape close behavior to the topbar user dropdown rendered by `assets/js/admin-auth.js` without changing existing Accounts, Settings, Public Site, Logout, OAuth, manual email/password login, or admin promotion behavior.
+
+### Human-Readable Notes
+
+- Creating or selecting a product banner such as NEW or LIMITED in Products and saving the product no longer leaves the banner registry browser-local.
+- Public sync can be checked by comparing Admin site-data `updatedAt` / revision / banner count with the public merch API override diagnostics.
+- The Admin user menu is now dismissible by clicking elsewhere or pressing Escape.
+
+### Known Limitations
+
+- Auto-publish remains blocked if live `DC_ADMIN_KV` is unavailable; save responses continue to report that public sync did not complete instead of pretending the public site updated.
+- Hosted verification still depends on the deployed Admin/Public Pages projects and their configured public site-data URL.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/js/admin-app.js`
+- `assets/js/admin-auth.js`
+- `functions/_shared/printful-products.js`
+- `functions/_shared/public-site-data.js`
+- `functions/api/admin/products/[[path]].js`
+- `tests/public-site-data-export.test.mjs`
+
 ## Auth Return-To And Merch Banner Auto-Publish Milestone
 
 ### Technical Notes

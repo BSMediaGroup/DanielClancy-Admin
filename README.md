@@ -327,6 +327,7 @@ The response contract is stable JSON:
 - `ok`
 - `schemaVersion: "danielclancy-public-site-data.v1"`
 - `generatedAt`
+- `updatedAt`
 - `source: "published_kv_snapshot" | "live_reconciled_fallback" | "baseline_fallback"`
 - `revision`
 - `publishedAt`
@@ -341,7 +342,7 @@ The response contract is stable JSON:
 - `assets.docs`
 - `warnings`
 
-Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
+Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. The export `meta` includes `productOverrideCount` and `bannerRegistryCount`, and publish response counts include `productOverrides` and `banners` for public merch verification. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
 
 CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use `Cache-Control: no-store` plus an ETag when a revision exists so managed product/banner changes can be visible on refresh; errors also use `no-store`.
 
@@ -349,10 +350,11 @@ CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.dan
 
 1. Save/Sync edits in the Projects, Companies, Platforms, or Positions CMS page.
 2. Use Overview or Settings `Publish site data` for those non-merch CMS collections.
-3. Products, product bulk actions, and Shop Settings save to `cms:products` and auto-publish the sanitized public snapshot as part of the save response.
-4. Confirm the returned revision, published timestamp, and counts.
+3. Products, product bulk actions, and Shop Settings save to `cms:products` and auto-publish the sanitized public snapshot as part of the save response. Product-editor quick-created banner rows are included with the product save so assigned banners are not left browser-local.
+4. Confirm the returned revision, published timestamp, product override count, and banner count.
 5. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
-6. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
+6. Verify `GET /api/merch/products` on the public site reports the same `overrideRevision` and exposes product `banners` for assigned/enabled banner rows.
+7. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
 
 If Admin is in static/local-only mode or `DC_ADMIN_KV` is unavailable, the dashboard shows `Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.` Save/Sync remains separate from Publish.
 
@@ -522,7 +524,7 @@ DanielClancy-Admin/
 - Platforms page for predefined software/platform options used by Projects, seeded from the public CV/source data, with KV/local fallback, active/archive status, `software-*` full-color SVG logos, selected-platform icon chips, and optional logo upload.
 - Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.
 - Sidebar has separate collapse and hide controls; the mode is persisted locally, hidden mode exposes a reopen control, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
-- The topbar loading strip sits on the bottom edge of the topbar and uses the StreamSuites-style purple gradient motion. The topbar user dropdown includes session identity details plus Accounts, Settings, Public Site, and Logout actions.
+- The topbar loading strip sits on the bottom edge of the topbar and uses the StreamSuites-style purple gradient motion. The topbar user dropdown includes session identity details plus Accounts, Settings, Public Site, and Logout actions, and closes on outside click or Escape without changing the existing auth gate.
 - Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
 - Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
 - Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.

@@ -253,12 +253,13 @@ async function saveProductOverride(context, session) {
     return json({ ok: false, error: "product_identity_required" }, { status: 400, headers: JSON_HEADERS });
   }
   const current = await readOverrides(env);
+  const settings = mergeBannerSettingsPatch(current.settings, payload, session);
   const keys = overrideKeys(override);
   const items = current.items.filter((item) => !overrideKeys(item).some((key) => keys.includes(key)));
   items.push(override);
-  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt: override.updatedAt, updatedBy: actor(session), settings: current.settings, items }, null, 2));
+  await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt: override.updatedAt, updatedBy: actor(session), settings, items }, null, 2));
   const publish = await publishProductsSnapshot(context, session);
-  return json({ ok: true, saved: true, item: override, items, storageConfigured: true, publish, publicSync: publish.ok ? "published" : "blocked" }, { headers: JSON_HEADERS });
+  return json({ ok: true, saved: true, item: override, items, settings, storageConfigured: true, publish, publicSync: publish.ok ? "published" : "blocked" }, { headers: JSON_HEADERS });
 }
 
 async function bulkUpdateProducts(context, session) {
@@ -526,6 +527,22 @@ function normalizeSettings(raw = {}, session = null) {
     updatedAt: cleanString(raw.updatedAt || new Date().toISOString(), 80),
     updatedBy: actor(session || raw)
   };
+}
+
+function mergeBannerSettingsPatch(currentSettings = {}, payload = {}, session = null) {
+  const patchBanners = payload?.settingsPatch?.banners || payload?.bannerRegistry || payload?.settings?.banners;
+  if (!Array.isArray(patchBanners)) return currentSettings;
+  const map = new Map();
+  normalizeBannerSettings(currentSettings.banners || []).forEach((banner) => map.set(banner.slug, banner));
+  normalizeBannerSettings(patchBanners).forEach((banner) => map.set(banner.slug, banner));
+  return normalizeSettings(
+    {
+      ...currentSettings,
+      banners: Array.from(map.values()),
+      updatedAt: new Date().toISOString()
+    },
+    session
+  );
 }
 
 function normalizeCategorySettings(value) {

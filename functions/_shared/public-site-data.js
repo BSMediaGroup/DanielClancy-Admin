@@ -87,6 +87,8 @@ export async function buildPublicSiteData(context, options = {}) {
     (id) => companyNameById(companiesResult.items, id)
   );
   const projectsResult = mergeProjectsBaselineWithKv(projectsPayload, projectsStored.items, projectsStored.wrapper);
+  const publicProductOverrides = productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean);
+  const publicProductSettings = sanitizeProductSettings(productsStored.wrapper?.settings || {});
 
   warnings.push(...publicWarnings(companiesResult), ...publicWarnings(platformsResult), ...publicWarnings(positionsResult));
 
@@ -95,13 +97,14 @@ export async function buildPublicSiteData(context, options = {}) {
     ok: true,
     schemaVersion: "danielclancy-public-site-data.v1",
     generatedAt,
+    updatedAt: generatedAt,
     source: options.source || source,
     revision: "",
     publishedAt: null,
     collections: {
       projects: projectsResult.items.map((item) => sanitizeProject(item)).filter(Boolean),
-      products: productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean),
-      productSettings: sanitizeProductSettings(productsStored.wrapper?.settings || {}),
+      products: publicProductOverrides,
+      productSettings: publicProductSettings,
       companies: companiesResult.items.map((item) => sanitizeCompany(item)).filter(Boolean),
       platforms: platformsResult.items.map((item) => sanitizePlatform(item)).filter(Boolean),
       positions: positionsResult.items.map((item) => sanitizePosition(item, companiesResult.items)).filter(Boolean)
@@ -112,6 +115,8 @@ export async function buildPublicSiteData(context, options = {}) {
       projectsBaselineVersion: PROJECTS_BASELINE_VERSION,
       projectsBaselineCount: projectsResult.meta.baselineCount,
       projectsMergedCount: projectsResult.meta.mergedCount,
+      productOverrideCount: publicProductOverrides.length,
+      bannerRegistryCount: Array.isArray(publicProductSettings.banners) ? publicProductSettings.banners.length : 0,
       assetCatalogGeneratedAt: assetCatalog?.metadata?.generatedAt || null
     },
     warnings: Array.from(new Set(warnings.filter(Boolean)))
@@ -690,6 +695,8 @@ export function collectionCounts(payload = {}) {
   return {
     projects: Array.isArray(collections.projects) ? collections.projects.length : 0,
     products: Array.isArray(collections.products) ? collections.products.length : 0,
+    productOverrides: Array.isArray(collections.products) ? collections.products.length : 0,
+    banners: Array.isArray(collections.productSettings?.banners) ? collections.productSettings.banners.length : 0,
     companies: Array.isArray(collections.companies) ? collections.companies.length : 0,
     platforms: Array.isArray(collections.platforms) ? collections.platforms.length : 0,
     positions: Array.isArray(collections.positions) ? collections.positions.length : 0,
@@ -701,7 +708,7 @@ export function collectionCounts(payload = {}) {
 }
 
 async function publicSiteDataRevision(payload) {
-  const stable = stableJson(payload, new Set(["generatedAt", "revision"]));
+  const stable = stableJson(payload, new Set(["generatedAt", "updatedAt", "revision"]));
   const bytes = new TextEncoder().encode(stable);
   if (globalThis.crypto?.subtle) {
     const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);

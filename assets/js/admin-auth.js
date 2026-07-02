@@ -379,6 +379,22 @@
     }
   });
 
+  document.addEventListener("click", (event) => {
+    const menu = document.querySelector(".topbar-user-menu[open]");
+    if (!(menu instanceof HTMLDetailsElement)) return;
+    if (event.target instanceof Node && menu.contains(event.target)) return;
+    menu.open = false;
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const menu = document.querySelector(".topbar-user-menu[open]");
+    if (!(menu instanceof HTMLDetailsElement)) return;
+    menu.open = false;
+    const summary = menu.querySelector("summary");
+    if (summary instanceof HTMLElement) summary.focus();
+  });
+
   document.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || !target.closest("[data-auth-login]")) return;

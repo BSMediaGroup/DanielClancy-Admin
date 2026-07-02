@@ -671,6 +671,7 @@ function resolveProductBanners(override = {}, settings = {}) {
   const bySlug = new Map(registry.map((entry) => [entry.slug, entry]));
   return assigned
     .map((banner) => {
+      if (banner.enabled === false) return null;
       const configured = bySlug.get(banner.slug);
       if (configured && configured.enabled === false) return null;
       return { ...banner, ...(configured || {}), enabled: true };
