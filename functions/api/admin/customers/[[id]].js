@@ -4,6 +4,7 @@ import {
   adminCustomerSummary,
   cleanId,
   cleanText,
+  customerHasAdminAccess,
   customerStorage,
   listCustomerIds,
   merchOrderStorage,
@@ -31,7 +32,7 @@ export async function onRequest(context) {
       const id = Array.isArray(params.id) ? params.id.join("/") : String(params.id || "");
       if (request.method === "GET" && !id) response = await listCustomers(env);
       else if (request.method === "GET" && id) response = await getCustomer(env, id);
-      else if (request.method === "PATCH" && id) response = await patchCustomer(request, env, id);
+      else if (request.method === "PATCH" && id) response = await patchCustomer(request, env, id, admin.session);
       else response = json({ ok: false, error: "method_not_allowed" }, 405);
     }
   } catch {
@@ -68,20 +69,73 @@ async function getCustomer(env, id) {
   return json({ ok: true, configured: true, customer: adminCustomerDetail(profile, orders) });
 }
 
-async function patchCustomer(request, env, id) {
+async function patchCustomer(request, env, id, adminSession) {
   const storage = customerStorage(env);
   if (!storage) return storageNeeded();
   const profile = await readCustomerProfile(storage, cleanId(id));
   if (!profile) return json({ ok: false, error: "customer_not_found" }, 404);
   const payload = await request.json().catch(() => null);
-  const status = cleanText(payload?.status, 40);
-  const updated = await putCustomerProfile(storage, {
+  const action = cleanText(payload?.action, 80);
+  const now = new Date().toISOString();
+  const patch = {
     ...profile,
-    status: status === "disabled" ? "disabled" : "active",
-    adminNotes: cleanText(payload?.adminNotes || payload?.admin_notes, 1000),
-    updatedAt: new Date().toISOString()
-  });
+    updatedAt: now
+  };
+
+  if (Object.prototype.hasOwnProperty.call(payload || {}, "status")) {
+    const status = cleanText(payload?.status, 40);
+    patch.status = status === "disabled" ? "disabled" : "active";
+  }
+  if (Object.prototype.hasOwnProperty.call(payload || {}, "adminNotes") || Object.prototype.hasOwnProperty.call(payload || {}, "admin_notes")) {
+    patch.adminNotes = cleanText(payload?.adminNotes || payload?.admin_notes, 1000);
+  }
+
+  if (action === "promote-admin" || payload?.adminAccess === true) {
+    const blocked = selfTargetError(profile, adminSession, "promote");
+    if (blocked) return blocked;
+    patch.roles = Array.from(new Set([...(Array.isArray(profile.roles) ? profile.roles : []), "admin"]));
+    patch.adminAccess = true;
+    patch.adminAccessUpdatedAt = now;
+    patch.adminAccessUpdatedBy = adminSession.email || adminSession.display_name || adminSession.provider || "admin";
+    patch.adminAccessRevokedAt = "";
+    patch.adminAccessRevokedBy = "";
+  } else if (action === "revoke-admin" || payload?.adminAccess === false) {
+    const blocked = selfTargetError(profile, adminSession, "revoke");
+    if (blocked) return blocked;
+    const lastAdmin = await wouldRevokeLastCustomerAdmin(storage, profile.id);
+    if (lastAdmin && adminSession.roleSource === "customer_session") {
+      return json({ ok: false, error: "last_customer_admin", message: "Refusing to revoke the last customer-admin while authenticated only by customer admin access." }, 409);
+    }
+    patch.roles = (Array.isArray(profile.roles) ? profile.roles : []).filter((role) => cleanText(role, 40).toLowerCase() !== "admin");
+    patch.adminAccess = false;
+    patch.adminAccessRevokedAt = now;
+    patch.adminAccessRevokedBy = adminSession.email || adminSession.display_name || adminSession.provider || "admin";
+  }
+
+  const updated = await putCustomerProfile(storage, patch);
   return json({ ok: true, customer: adminCustomerDetail(updated, await readOrders(merchOrderStorage(env), await readCustomerOrderIds(storage, updated.id))) });
+}
+
+function selfTargetError(profile, adminSession, action) {
+  const adminEmail = cleanText(adminSession?.email, 180).toLowerCase();
+  const targetEmail = cleanText(profile?.email, 180).toLowerCase();
+  if ((adminSession?.customer_id && adminSession.customer_id === profile.id) || (adminEmail && targetEmail && adminEmail === targetEmail)) {
+    return json({ ok: false, error: `self_admin_${action}_blocked`, message: "Use another active admin account for changes to your own admin access." }, 409);
+  }
+  return null;
+}
+
+async function wouldRevokeLastCustomerAdmin(storage, targetId) {
+  const ids = await listCustomerIds(storage);
+  let adminCount = 0;
+  for (const id of ids) {
+    const profile = await readCustomerProfile(storage, id);
+    if (profile?.id === targetId || customerHasAdminAccess(profile)) {
+      if (profile?.id === targetId ? customerHasAdminAccess(profile) : true) adminCount += 1;
+    }
+    if (adminCount > 1) return false;
+  }
+  return adminCount <= 1;
 }
 
 async function readOrders(storage, orderIds) {

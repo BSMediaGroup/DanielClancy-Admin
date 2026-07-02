@@ -41,9 +41,9 @@ Manual email/password master admin accounts are the first production admin path:
 - `mail@danielclancy.net` via `DC_ADMIN_EMAIL_1` / `DC_ADMIN_SECRET_1`
 - `daniel@brainstream.media` via `DC_ADMIN_EMAIL_2` / `DC_ADMIN_SECRET_2`
 
-Password verification happens only inside the Pages Function. Session cookies are signed with `DC_AUTH_SESSION_SECRET`, HttpOnly, SameSite=Lax, and Secure on HTTPS requests. Do not place `DC_ADMIN_SECRET_1`, `DC_ADMIN_SECRET_2`, or OAuth client secrets in frontend JavaScript.
+Password verification happens only inside the Pages Function. Admin-only session cookies are signed with `DC_AUTH_SESSION_SECRET`, HttpOnly, SameSite=Lax, and Secure on HTTPS requests. Successful Admin login also creates the shared `dc_customer_session` customer cookie when `DC_CUSTOMERS_KV` is available, so `danielclancy.net` can recognize the same account. Do not place `DC_ADMIN_SECRET_1`, `DC_ADMIN_SECRET_2`, OAuth client secrets, or customer session tokens in frontend JavaScript.
 
-The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials.
+The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials. Logout clears both the Admin-only signed cookie and the shared customer cookie.
 
 The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Manual login, signup scaffold responses, and OAuth start redirects do not render or require Turnstile. OAuth callbacks are unchanged. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
 
@@ -83,9 +83,10 @@ Printful Products env:
 - Product image upload to Printful requires durable public media storage. The product upload path uses `DC_ADMIN_ASSETS_R2` plus `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` so the Admin can upload an image, obtain a public HTTPS URL, and register that URL with Printful `/v2/files`. If public media storage is not configured, the Products image upload UI remains disabled and existing Printful image selection still works.
 - Merch Stripe webhook setup remains in the public DanielClancy Pages project. The Admin project does not need `STRIPE_MERCH_WEBHOOK_SECRET` or `STRIPE_WEBHOOK_SECRET` for read-only merch order visibility.
 
-Recommended shared-cookie env var:
+Recommended shared-cookie env vars:
 
 - `DC_AUTH_COOKIE_DOMAIN` - recommended `.danielclancy.net`
+- `DC_CUSTOMER_COOKIE_DOMAIN` - optional customer-cookie override. If omitted, the customer helper reuses `DC_AUTH_COOKIE_DOMAIN`; production defaults to `.danielclancy.net` on `danielclancy.net` and `admin.danielclancy.net`, while localhost/dev remains host-only.
 
 Turnstile helper files may remain for compatibility, but admin login/signup/OAuth auth flows no longer use `DC_TURNSTILE_SITE_KEY`, `DC_TURNSTILE_SECRET_KEY`, `DC_TURNSTILE_DEV_BYPASS`, `/api/turnstile/config`, or Cloudflare Siteverify.
 
@@ -149,7 +150,7 @@ The two manual master admin accounts are always synthesized at runtime from env 
 
 Locked env-backed master admins cannot be deleted, disabled, demoted, or edited for role/status through the UI/API. OAuth callback registration creates or updates known regular accounts by default. OAuth users are not automatically promoted to admin; a master admin must promote a KV-backed account through the Accounts UI/API. Non-master admins can read the account list but cannot change roles, status, or notes. The Accounts page can update the current signed-in user's display name/avatar as account overlay metadata; it does not store passwords or OAuth tokens.
 
-`GET /api/auth/session` resolves role from env-backed manual master sessions first, then `accounts:registry`, then the signed session fallback. The frontend local scaffold account rows are not production authority and cannot override the server-resolved role.
+`GET /api/auth/session` resolves role from env-backed manual master sessions first, then `accounts:registry`, then an explicit `DC_CUSTOMERS_KV` customer-admin grant from the shared `dc_customer_session`, then the signed session fallback. The frontend local scaffold account rows are not production authority and cannot override the server-resolved role.
 
 ## Overview Status API
 
@@ -288,7 +289,9 @@ Implemented endpoints:
 - `GET /api/admin/customers/:id`
 - `PATCH /api/admin/customers/:id`
 
-The Customers page (`#/customers`) is an admin-session-protected customer management surface backed by `DC_CUSTOMERS_KV -> danielclancy-customers`. It reads public customer profiles, status/admin-note fields, address summaries, contact preferences, Stripe customer id presence, and linked merch order summaries. It uses `DC_MERCH_ORDERS_KV` only for order-history summaries and does not store customer profiles/sessions in the merch order namespace.
+The Customers page (`#/customers`) is an admin-session-protected customer management surface backed by `DC_CUSTOMERS_KV -> danielclancy-customers`. It reads public customer profiles, status/admin-note fields, explicit Admin access status, address summaries, contact preferences, Stripe customer id presence, and linked merch order summaries. It uses `DC_MERCH_ORDERS_KV` only for order-history summaries and does not store customer profiles/sessions in the merch order namespace.
+
+Admin promotion for public/customer accounts is stored on the customer profile in `DC_CUSTOMERS_KV` using the normalized `roles` / `adminAccess` fields plus audit-ish metadata (`adminAccessUpdatedAt`, `adminAccessUpdatedBy`, `adminAccessRevokedAt`, `adminAccessRevokedBy`). The Customers page exposes Promote to Admin and Revoke Admin actions. These actions require a server-verified Admin session, reject self-changes, and never trust client-provided role flags. Public customer APIs do not expose or mutate these Admin access fields.
 
 The Customers table shows customer id, display name, email, created/updated/login dates, order count, total spend where safely derivable from linked orders, default country, preference summary, Stripe mapped yes/no, status, and actions. Full detail opens in a modal with profile summary, address summaries, preferences, order history summary, and Stripe customer mapping presence only. Raw card details, CVCs, bank details, and raw Stripe payment method payloads are never stored or displayed by Admin.
 

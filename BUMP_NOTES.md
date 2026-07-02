@@ -1,5 +1,38 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Shared Customer Session + Admin Promotion Repair Milestone
+
+### Technical Notes
+
+- Kept the existing signed `dc_auth_session` Admin cookie for Admin-only manual/OAuth sessions, but Admin login now also creates the shared `dc_customer_session` cookie against `DC_CUSTOMERS_KV` when an email-backed customer profile can be resolved.
+- Admin logout clears both the Admin-only signed cookie and the shared customer cookie.
+- Added compatible `dc_customer_session` read/create/clear helpers to `functions/_shared/customer-records.js`, matching the public customer key prefixes, hashed session-token lookup, expiry handling, and production `.danielclancy.net` cookie behavior.
+- Updated `resolveSession()` so `/api/auth/session` can honor the shared customer session only when the server-stored customer profile has explicit Admin access. Logged-in non-admin customers are authenticated but still denied Admin access.
+- Added normalized customer `roles` / `adminAccess` fields plus audit-ish grant/revoke metadata in `DC_CUSTOMERS_KV` customer profiles.
+- Repaired the Admin Customers page/API with Admin access status, Promote to Admin, and Revoke Admin actions. The endpoint requires server-verified Admin auth, writes to `DC_CUSTOMERS_KV`, rejects self access changes, and does not trust client role flags.
+- Preserved the existing `DC_ADMIN_KV` account registry and env-backed master-admin flow; customer-profile grants are the shared public/Admin access model rather than browser-local scaffold state.
+- Removed client-side display of `DC_ADMIN_SECRET_1` / `DC_ADMIN_SECRET_2` variable names from the master-admin reference UI; the browser now shows only the email env key plus a server-only secret note.
+
+### Human-Readable Notes
+
+- A public customer session can unlock Admin only after an existing Admin grants that customer explicit Admin access.
+- A successful Admin login also creates a public-recognizable customer session when customer storage is configured.
+- Non-admin customers remain blocked from the Admin dashboard even when their shared login is valid.
+
+### Known Limitations
+
+- OAuth providers that do not return an email cannot create a public customer profile/session from the Admin callback until a verified email identity exists.
+- Existing pre-repair Admin-only cookies remain Admin-only until the user logs in again and receives the shared customer cookie.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/js/admin-app.js`
+- `functions/_shared/admin-accounts.js`
+- `functions/_shared/customer-records.js`
+- `functions/api/auth/[[path]].js`
+- `functions/api/admin/customers/[[id]].js`
+
 ## Admin Customers Management Milestone
 
 ### Technical Notes

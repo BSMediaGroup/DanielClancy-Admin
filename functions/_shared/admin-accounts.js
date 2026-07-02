@@ -1,3 +1,5 @@
+import { customerHasAdminAccess, readCustomerSession } from "./customer-records.js";
+
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 export const ACCOUNT_REGISTRY_KEY = "accounts:registry";
@@ -78,10 +80,17 @@ function cookieAttributes(request, env, maxAge = SESSION_TTL_SECONDS) {
     "SameSite=Lax",
     `Max-Age=${maxAge}`
   ];
-  const domain = String(env.DC_AUTH_COOKIE_DOMAIN || "").trim();
+  const domain = authCookieDomain(request, env);
   if (domain) attributes.push(`Domain=${domain}`);
   if (isHttps(request)) attributes.push("Secure");
   return attributes;
+}
+
+function authCookieDomain(request, env) {
+  const configured = String(env.DC_AUTH_COOKIE_DOMAIN || "").trim();
+  if (configured) return configured;
+  const hostname = new URL(request.url).hostname.toLowerCase();
+  return hostname === "danielclancy.net" || hostname === "admin.danielclancy.net" ? ".danielclancy.net" : "";
 }
 
 export function clearSessionCookie(request, env) {
@@ -416,6 +425,8 @@ export async function updateCurrentAccountProfile(env, session, patch) {
 export async function resolveSession(request, env) {
   const session = await readSession(request, env);
   if (!session) {
+    const customerSession = await resolveCustomerSession(request, env);
+    if (customerSession) return customerSession;
     return {
       authenticated: false,
       provider: "",
@@ -471,6 +482,16 @@ export async function resolveSession(request, env) {
     };
   }
 
+  const customerSession = await resolveCustomerSession(request, env);
+  if (customerSession?.is_admin && (!email || customerSession.email === email)) {
+    return {
+      ...customerSession,
+      provider: provider || customerSession.provider,
+      username: username || customerSession.username,
+      roleSource: "customer_session"
+    };
+  }
+
   return {
     authenticated: true,
     provider,
@@ -482,6 +503,34 @@ export async function resolveSession(request, env) {
     is_admin: false,
     is_master_admin: false,
     roleSource: "session"
+  };
+}
+
+async function resolveCustomerSession(request, env) {
+  const { session, profile } = await readCustomerSession(request, env);
+  if (!session || !profile) return null;
+  const allowed = customerHasAdminAccess(profile);
+  return {
+    authenticated: true,
+    provider: "customer",
+    email: profile.email,
+    username: "",
+    display_name: profile.displayName || profile.email || "DanielClancy customer",
+    avatar_url: profile.avatarUrl || "",
+    customer_id: profile.id,
+    account_type: allowed ? "admin" : "regular",
+    admin_level: allowed ? "admin" : "none",
+    is_admin: allowed,
+    is_master_admin: false,
+    roleSource: "customer_session",
+    admin_access: {
+      allowed,
+      roles: profile.roles || [],
+      updatedAt: profile.adminAccessUpdatedAt || "",
+      updatedBy: profile.adminAccessUpdatedBy || "",
+      revokedAt: profile.adminAccessRevokedAt || "",
+      revokedBy: profile.adminAccessRevokedBy || ""
+    }
   };
 }
 

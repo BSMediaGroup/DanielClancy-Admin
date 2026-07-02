@@ -1,5 +1,12 @@
 import { postDanielClancyAlert } from "../../_shared/alert-sender.js";
 import { registerOAuthAccount, resolveSession } from "../../_shared/admin-accounts.js";
+import {
+  clearCustomerSessionCookie,
+  createCustomerSession,
+  customerStorage,
+  normalizeEmail,
+  upsertCustomerByEmail
+} from "../../_shared/customer-records.js";
 
 const COOKIE_NAME = "dc_auth_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -34,12 +41,14 @@ function logAlertFailure(event, result) {
 }
 
 function json(payload, init = {}) {
+  const headers = new Headers(JSON_HEADERS);
+  new Headers(init.headers || {}).forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") headers.append(key, value);
+    else headers.set(key, value);
+  });
   return new Response(JSON.stringify(payload), {
     ...init,
-    headers: {
-      ...JSON_HEADERS,
-      ...(init.headers || {})
-    }
+    headers
   });
 }
 
@@ -119,10 +128,17 @@ function cookieAttributes(request, env, maxAge = SESSION_TTL_SECONDS) {
     "SameSite=Lax",
     `Max-Age=${maxAge}`
   ];
-  const domain = String(env.DC_AUTH_COOKIE_DOMAIN || "").trim();
+  const domain = authCookieDomain(request, env);
   if (domain) attributes.push(`Domain=${domain}`);
   if (isHttps(request)) attributes.push("Secure");
   return attributes;
+}
+
+function authCookieDomain(request, env) {
+  const configured = String(env.DC_AUTH_COOKIE_DOMAIN || "").trim();
+  if (configured) return configured;
+  const hostname = new URL(request.url).hostname.toLowerCase();
+  return hostname === "danielclancy.net" || hostname === "admin.danielclancy.net" ? ".danielclancy.net" : "";
 }
 
 function clearCookie(request, env) {
@@ -208,7 +224,10 @@ function sessionResponse(session) {
     is_admin: accountType === "admin",
     is_master_admin: session.admin_level === "master",
     roleSource: session.roleSource || "session",
-    display_name: session.display_name || session.email || "DanielClancy account"
+    display_name: session.display_name || session.email || "DanielClancy account",
+    avatar_url: session.avatar_url || session.avatarUrl || "",
+    customer_id: session.customer_id || "",
+    admin_access: session.admin_access || null
   };
 }
 
@@ -241,6 +260,13 @@ async function handleLogin(context) {
     account_type: "admin",
     admin_level: "master",
     display_name: email
+  });
+  const sharedCustomerCookie = await createSharedCustomerSessionCookie(context, {
+    email,
+    displayName: email,
+    provider: "password",
+    adminAccess: true,
+    adminAccessUpdatedBy: "env_master"
   });
   logAlertFailure(
     "admin_login_alert_delivery_failed",
@@ -278,7 +304,7 @@ async function handleLogin(context) {
         admin_level: "master"
       })
     },
-    { headers: { "set-cookie": cookie } }
+    { headers: setCookieHeaders([cookie, sharedCustomerCookie]) }
   );
 }
 
@@ -488,6 +514,12 @@ async function handleOAuthCallback(context, provider) {
       account_type: "regular",
       admin_level: "none"
     });
+    const sharedCustomerCookie = await createSharedCustomerSessionCookie(context, {
+      email: account.email || profile.email || "",
+      displayName: account.displayName || profile.displayName || profile.username || "",
+      avatarUrl: account.avatarUrl || profile.avatarUrl || "",
+      provider
+    });
     logAlertFailure(
       "oauth_login_alert_delivery_failed",
       await postDanielClancyAlert(context, {
@@ -519,7 +551,7 @@ async function handleOAuthCallback(context, provider) {
     redirect.hash = registration.ok
       ? `/login?oauth=${provider}-registered`
       : `/login?oauth=${provider}-${registration.error || "storage_not_configured"}`;
-    return Response.redirect(redirect.toString(), 302, { headers: { "set-cookie": cookie } });
+    return Response.redirect(redirect.toString(), 302, { headers: setCookieHeaders([cookie, sharedCustomerCookie]) });
   } catch {
     redirect.hash = `/login?oauth=${provider}-callback-failed`;
     return Response.redirect(redirect.toString(), 302);
@@ -541,7 +573,7 @@ export async function onRequest(context) {
     } else if (path === "signup") {
       response = await handleSignup(request, env);
     } else if (path === "logout") {
-      response = json({ ok: true }, { headers: { "set-cookie": clearCookie(request, env) } });
+      response = json({ ok: true }, { headers: setCookieHeaders([clearCookie(request, env), clearCustomerSessionCookie(request, env)]) });
     } else {
       const match = path.match(/^oauth\/(github|google|twitter)\/(start|callback)$/);
       if (!match) {
@@ -558,4 +590,34 @@ export async function onRequest(context) {
   const headers = new Headers(response.headers);
   Object.entries(corsHeaders(request, env)).forEach(([key, value]) => headers.set(key, value));
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+async function createSharedCustomerSessionCookie(context, profilePatch) {
+  const { request, env } = context;
+  const storage = customerStorage(env);
+  const email = normalizeEmail(profilePatch?.email);
+  if (!storage || !email) return "";
+  const now = new Date().toISOString();
+  const existing = await upsertCustomerByEmail(storage, email, {
+    displayName: profilePatch.displayName || "",
+    avatarUrl: profilePatch.avatarUrl || "",
+    lastLoginAt: now,
+    ...(profilePatch.adminAccess
+      ? {
+          roles: ["admin"],
+          adminAccess: true,
+          adminAccessUpdatedAt: now,
+          adminAccessUpdatedBy: profilePatch.adminAccessUpdatedBy || profilePatch.provider || "admin_login"
+        }
+      : {})
+  });
+  if (!existing) return "";
+  const session = await createCustomerSession(storage, request, env, existing);
+  return session.cookie;
+}
+
+function setCookieHeaders(cookies) {
+  const headers = new Headers();
+  cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
+  return headers;
 }

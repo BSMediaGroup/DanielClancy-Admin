@@ -113,8 +113,8 @@ import {
     }
   };
   const MASTER_ADMIN_ACCOUNTS = [
-    { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1", envSecret: "DC_ADMIN_SECRET_1" },
-    { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2", envSecret: "DC_ADMIN_SECRET_2" }
+    { email: "mail@danielclancy.net", envEmail: "DC_ADMIN_EMAIL_1" },
+    { email: "daniel@brainstream.media", envEmail: "DC_ADMIN_EMAIL_2" }
   ];
   const projectBaselineState = {
     loaded: false,
@@ -2298,6 +2298,46 @@ import {
       customerManagementState.message = "Customer detail API unavailable.";
     }
     renderCustomers();
+  }
+
+  async function mutateCustomerAdminAccess(action, id) {
+    if (!id) return;
+    const grant = action === "promote-admin";
+    customerManagementState.message = grant ? "Promoting customer admin access..." : "Revoking customer admin access...";
+    if (activePageIs("customers")) renderCustomers();
+    try {
+      const response = await fetch(`/api/admin/customers/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        customerManagementState.message = payload?.message || payload?.error || "Customer admin access update failed.";
+      } else {
+        customerManagementState.detail = payload.customer || null;
+        customerManagementState.customers = customerManagementState.customers.map((customer) =>
+          customer.id === id
+            ? {
+                ...customer,
+                adminAccess: Boolean(payload.customer?.adminAccess),
+                roles: payload.customer?.roles || customer.roles || [],
+                adminAccessUpdatedAt: payload.customer?.adminAccessUpdatedAt || customer.adminAccessUpdatedAt || "",
+                adminAccessUpdatedBy: payload.customer?.adminAccessUpdatedBy || customer.adminAccessUpdatedBy || "",
+                adminAccessRevokedAt: payload.customer?.adminAccessRevokedAt || customer.adminAccessRevokedAt || "",
+                adminAccessRevokedBy: payload.customer?.adminAccessRevokedBy || customer.adminAccessRevokedBy || "",
+                updatedAt: payload.customer?.updatedAt || customer.updatedAt
+              }
+            : customer
+        );
+        customerManagementState.message = grant ? "Customer admin access granted." : "Customer admin access revoked.";
+        await hydrateCustomers(false);
+      }
+    } catch {
+      customerManagementState.message = "Customer admin access update failed because the Admin API is unavailable.";
+    }
+    if (activePageIs("customers")) renderCustomers();
   }
 
   async function hydrateProductDetail(id, openMode = "edit") {
@@ -5215,6 +5255,7 @@ import {
     const customers = customerManagementState.customers;
     const mapped = customers.filter((customer) => customer.stripeCustomerMapped).length;
     const disabled = customers.filter((customer) => customer.status === "disabled").length;
+    const admins = customers.filter((customer) => customer.adminAccess === true).length;
     app.innerHTML = `
       <div class="page products-page">
         ${pageHeader(
@@ -5231,6 +5272,7 @@ import {
             { label: "Storage", value: customerManagementState.configured ? "Configured" : customerManagementState.loading ? "Checking" : "Config needed", note: customerManagementState.message, tone: customerManagementState.configured ? "success" : "warn" },
             { label: "Customers", value: String(customers.length), note: "Recent customer profiles visible from the customer KV index.", tone: customers.length ? "success" : "" },
             { label: "Stripe mapped", value: String(mapped), note: "Stripe customer id presence only; card details stay in Stripe.", tone: mapped ? "success" : "" },
+            { label: "Admin access", value: String(admins), note: "Explicit customer-profile admin grants in DC_CUSTOMERS_KV.", tone: admins ? "success" : "" },
             { label: "Disabled", value: String(disabled), note: "Admin status field only.", tone: disabled ? "warn" : "" }
           ])
         )}
@@ -5252,10 +5294,10 @@ import {
         <table class="table product-table">
           <thead>
             <tr>
-              <th>Customer id</th><th>Name</th><th>Email</th><th>Created</th><th>Updated/login</th><th>Orders</th><th>Total spend</th><th>Country</th><th>Preferences</th><th>Stripe</th><th>Status</th><th>Actions</th>
+              <th>Customer id</th><th>Name</th><th>Email</th><th>Created</th><th>Updated/login</th><th>Orders</th><th>Total spend</th><th>Country</th><th>Preferences</th><th>Stripe</th><th>Admin</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
-          <tbody>${customers.map(renderCustomerRow).join("") || `<tr><td colspan="12"><div class="empty-state">${escapeHtml(customerManagementState.message || "No customers are available.")}</div></td></tr>`}</tbody>
+          <tbody>${customers.map(renderCustomerRow).join("") || `<tr><td colspan="13"><div class="empty-state">${escapeHtml(customerManagementState.message || "No customers are available.")}</div></td></tr>`}</tbody>
         </table>
       </div>
     `;
@@ -5274,8 +5316,16 @@ import {
         <td>${escapeHtml(customer.defaultCountry || "n/a")}</td>
         <td>${escapeHtml(customer.preferenceSummary || "none")}</td>
         <td>${badge(customer.stripeCustomerMapped ? "yes" : "no", customer.stripeCustomerMapped ? "success" : "warn")}</td>
+        <td>${badge(customer.adminAccess ? "Admin" : "No", customer.adminAccess ? "success" : "")}</td>
         <td>${badge(customer.status || "active", customer.status === "disabled" ? "warn" : "success")}</td>
-        <td><button class="button button-secondary" type="button" data-customer-action="detail" data-customer-id="${escapeHtml(customer.id || "")}">Open</button></td>
+        <td>
+          <div class="row-actions">
+            <button class="button button-secondary" type="button" data-customer-action="detail" data-customer-id="${escapeHtml(customer.id || "")}">Open</button>
+            ${customer.adminAccess
+              ? `<button class="button button-danger" type="button" data-customer-action="revoke-admin" data-customer-id="${escapeHtml(customer.id || "")}">Revoke Admin</button>`
+              : `<button class="button" type="button" data-customer-action="promote-admin" data-customer-id="${escapeHtml(customer.id || "")}">Promote to Admin</button>`}
+          </div>
+        </td>
       </tr>
     `;
   }
@@ -5302,6 +5352,12 @@ import {
               ["Updated", formatTimestamp(customer.updatedAt)],
               ["Last login", formatTimestamp(customer.lastLoginAt)],
               ["Stripe customer", customer.stripeCustomerMapped ? "Mapped" : "Not mapped"],
+              ["Admin access", customer.adminAccess ? "Granted" : "Not granted"],
+              ["Admin roles", Array.isArray(customer.roles) && customer.roles.length ? customer.roles.join(", ") : "none"],
+              ["Admin access updated", formatTimestamp(customer.adminAccessUpdatedAt)],
+              ["Admin access updated by", customer.adminAccessUpdatedBy || "None"],
+              ["Admin access revoked", formatTimestamp(customer.adminAccessRevokedAt)],
+              ["Admin access revoked by", customer.adminAccessRevokedBy || "None"],
               ["Marketing", customer.marketingOptIn ? "Opted in" : "Off"],
               ["Preferences", customer.preferenceSummary || "none"],
               ["Admin notes", customer.adminNotes || "None"]
@@ -5317,6 +5373,9 @@ import {
             </div>
           </div>
           <footer class="modal-footer">
+            ${customer.adminAccess
+              ? `<button class="button button-danger" type="button" data-customer-action="revoke-admin" data-customer-id="${escapeHtml(customer.id || "")}">Revoke Admin</button>`
+              : `<button class="button" type="button" data-customer-action="promote-admin" data-customer-id="${escapeHtml(customer.id || "")}">Promote to Admin</button>`}
             <button class="button button-secondary" type="button" data-customer-action="close-detail">Close</button>
           </footer>
         </section>
@@ -7150,7 +7209,7 @@ import {
         <article class="account-access-row">
           <div class="account-access-meta">
             <strong>${escapeHtml(account.email)}</strong>
-            <span class="muted">Env-backed master admin: ${escapeHtml(account.envEmail)} / ${escapeHtml(account.envSecret)}</span>
+            <span class="muted">Env-backed master admin: ${escapeHtml(account.envEmail)} / server-only password secret</span>
           </div>
           ${badge("Not removable", "success")}
         </article>
@@ -7871,6 +7930,10 @@ import {
     }
     if (customerAction === "detail" && customerId) {
       hydrateCustomerDetail(customerId);
+      return;
+    }
+    if ((customerAction === "promote-admin" || customerAction === "revoke-admin") && customerId) {
+      mutateCustomerAdminAccess(customerAction, customerId);
       return;
     }
     if (customerAction === "close-detail" || target.matches("[data-customer-modal-backdrop]")) {
