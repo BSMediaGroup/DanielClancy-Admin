@@ -2742,6 +2742,18 @@ import {
     productState.message = "Hero slide settings edited locally. Save shop settings to persist.";
   }
 
+  function productPublicSyncMessage(result, savedMessage) {
+    const publish = result?.publish || {};
+    if (publish.published) {
+      const revision = publish.revision ? ` Revision ${publish.revision}.` : "";
+      return `${savedMessage} Public storefront snapshot published.${revision} Refresh /shop to see the update.`;
+    }
+    if (publish.message || publish.error) {
+      return `${savedMessage} Public storefront auto-publish did not complete: ${publish.message || publish.error}`;
+    }
+    return `${savedMessage} Public storefront auto-publish status was not returned.`;
+  }
+
   async function saveProductFromForm(form) {
     const productId = formValue(form, "productId");
     const existing = productState.products.find((product) => (product.printfulProductId || product.id) === productId) || {};
@@ -2792,7 +2804,7 @@ import {
           : product
       );
       productState.modal = null;
-      productState.message = "Product override saved. Publish site data before expecting /shop to consume the public override snapshot.";
+      productState.message = productPublicSyncMessage(result, "Product override saved.");
       hydratePublishStatus(activePageIs("products"));
     } catch {
       productState.message = "Product override save API unavailable.";
@@ -2818,7 +2830,7 @@ import {
         productState.products = productState.products.map((product) =>
           ids.includes(product.printfulProductId || product.id) ? { ...product, ...patch, overrideUpdatedAt: new Date().toISOString() } : product
         );
-        productState.message = `Saved storefront overrides for ${ids.length} selected product(s).`;
+        productState.message = productPublicSyncMessage(result, `Saved storefront overrides for ${ids.length} selected product(s).`);
         hydratePublishStatus(activePageIs("products"));
       }
     } catch {
@@ -2849,7 +2861,7 @@ import {
         productState.message = result?.message || result?.error || "Storefront settings save failed.";
       } else {
         productState.settings = result.settings || settings;
-        productState.message = "Storefront shop settings saved. Publish site data before expecting public overrides to refresh.";
+        productState.message = productPublicSyncMessage(result, "Storefront shop settings saved.");
         hydratePublishStatus(activePageIs("shop-settings"));
       }
     } catch {
@@ -5499,7 +5511,7 @@ import {
             { label: "Base currency", value: productState.settings?.baseCurrency || "AUD", note: "Storefront and checkout totals are server-validated in the store currency.", tone: "success" },
             { label: "Converted default", value: productState.settings?.convertedCurrencyDefault || "USD", note: "Public display default for secondary converted estimates.", tone: "success" },
             { label: "Storage", value: productState.health?.storage?.ok ? "Configured" : "Config needed", note: "DC_ADMIN_KV is required before settings can persist.", tone: productState.health?.storage?.ok ? "success" : "warn" },
-            { label: "Publish", value: publishState.revision ? "Snapshot ready" : "Local/API state", note: "Publish site data before expecting the public storefront to consume override snapshots.", tone: publishState.revision ? "success" : "warn" }
+            { label: "Publish", value: publishState.revision ? "Snapshot ready" : "Auto on save", note: "Product, banner, and shop setting saves publish a sanitized storefront snapshot automatically.", tone: publishState.revision ? "success" : "warn" }
           ])
         )}
         ${panel(

@@ -55,7 +55,7 @@ export async function onRequest(context) {
       const result = await buildPublicSiteDataResponse(context);
       response = json(result.payload, {
         headers: {
-          "cache-control": "public, max-age=60, stale-while-revalidate=300",
+          "cache-control": "no-store",
           ...(result.etag ? { etag: result.etag } : {})
         }
       });

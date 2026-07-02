@@ -1,4 +1,5 @@
 import { requireAdmin } from "../../../_shared/admin-accounts.js";
+import { publishPublicSiteData } from "../../../_shared/public-site-data.js";
 import {
   fetchPrintfulProductDetail,
   fetchPrintfulProductList,
@@ -72,13 +73,13 @@ async function handleAdminProducts(context, session, parts) {
     return productList(env);
   }
   if (request.method === "POST" && action === "override") {
-    return saveProductOverride(request, env, session);
+    return saveProductOverride(context, session);
   }
   if (request.method === "POST" && action === "bulk") {
-    return bulkUpdateProducts(request, env, session);
+    return bulkUpdateProducts(context, session);
   }
   if (request.method === "POST" && action === "settings") {
-    return saveProductSettings(request, env, session);
+    return saveProductSettings(context, session);
   }
   if (request.method === "POST" && action === "files") {
     return registerProductFile(request, env);
@@ -232,7 +233,8 @@ async function productDetail(env, lookup) {
   );
 }
 
-async function saveProductOverride(request, env, session) {
+async function saveProductOverride(context, session) {
+  const { request, env } = context;
   const storage = productStorage(env);
   if (!storage) {
     return json(
@@ -255,10 +257,12 @@ async function saveProductOverride(request, env, session) {
   const items = current.items.filter((item) => !overrideKeys(item).some((key) => keys.includes(key)));
   items.push(override);
   await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt: override.updatedAt, updatedBy: actor(session), settings: current.settings, items }, null, 2));
-  return json({ ok: true, saved: true, item: override, items, storageConfigured: true }, { headers: JSON_HEADERS });
+  const publish = await publishProductsSnapshot(context, session);
+  return json({ ok: true, saved: true, item: override, items, storageConfigured: true, publish, publicSync: publish.ok ? "published" : "blocked" }, { headers: JSON_HEADERS });
 }
 
-async function bulkUpdateProducts(request, env, session) {
+async function bulkUpdateProducts(context, session) {
+  const { request, env } = context;
   const storage = productStorage(env);
   if (!storage) {
     return json({ ok: false, error: "storage_not_configured", message: "DC_ADMIN_KV is required for bulk product overrides." }, { status: 503, headers: JSON_HEADERS });
@@ -277,10 +281,12 @@ async function bulkUpdateProducts(request, env, session) {
   });
   const items = Array.from(byId.values());
   await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), settings: current.settings, items }, null, 2));
-  return json({ ok: true, saved: true, count: ids.length, items, storageConfigured: true }, { headers: JSON_HEADERS });
+  const publish = await publishProductsSnapshot(context, session);
+  return json({ ok: true, saved: true, count: ids.length, items, storageConfigured: true, publish, publicSync: publish.ok ? "published" : "blocked" }, { headers: JSON_HEADERS });
 }
 
-async function saveProductSettings(request, env, session) {
+async function saveProductSettings(context, session) {
+  const { request, env } = context;
   const storage = productStorage(env);
   if (!storage) {
     return json({ ok: false, error: "storage_not_configured", message: "DC_ADMIN_KV is required for storefront category settings." }, { status: 503, headers: JSON_HEADERS });
@@ -290,7 +296,39 @@ async function saveProductSettings(request, env, session) {
   const settings = normalizeSettings(payload?.settings || payload, session);
   const updatedAt = new Date().toISOString();
   await storage.put(PRODUCTS_KEY, JSON.stringify({ collection: "products", updatedAt, updatedBy: actor(session), settings, items: current.items }, null, 2));
-  return json({ ok: true, saved: true, settings, items: current.items, storageConfigured: true }, { headers: JSON_HEADERS });
+  const publish = await publishProductsSnapshot(context, session);
+  return json({ ok: true, saved: true, settings, items: current.items, storageConfigured: true, publish, publicSync: publish.ok ? "published" : "blocked" }, { headers: JSON_HEADERS });
+}
+
+async function publishProductsSnapshot(context, session) {
+  try {
+    const result = await publishPublicSiteData(context, session);
+    if (!result?.ok) {
+      return {
+        ok: false,
+        published: false,
+        error: result?.error || "publish_failed",
+        message: result?.message || "Saved in Admin KV, but public site-data auto-publish did not complete.",
+        status: result?.status || 500
+      };
+    }
+    return {
+      ok: true,
+      published: true,
+      revision: result.revision || "",
+      publishedAt: result.publishedAt || "",
+      publicUrl: result.publicUrl || "",
+      counts: result.counts || {},
+      warnings: Array.isArray(result.warnings) ? result.warnings : []
+    };
+  } catch {
+    return {
+      ok: false,
+      published: false,
+      error: "publish_failed",
+      message: "Saved in Admin KV, but public site-data auto-publish failed."
+    };
+  }
 }
 
 async function registerProductFile(request, env) {

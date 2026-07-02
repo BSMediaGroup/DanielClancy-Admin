@@ -1,5 +1,38 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Auth Return-To And Merch Banner Auto-Publish Milestone
+
+### Technical Notes
+
+- Preserved the existing Admin login modal/auth gate with OAuth provider buttons and the collapsed manual email/password section; no passwordless magic-link primary flow was added to Admin.
+- Added validated OAuth `return_to` state support for the public DanielClancy login modal, allowing Admin OAuth callbacks to redirect back to allowed public/admin origins after setting cookies.
+- Replaced OAuth callback `Response.redirect` cookie handling with an explicit 302 response that attaches `Set-Cookie` headers, so OAuth/manual login can create the shared customer session reliably.
+- Kept Admin access server-authoritative: `resolveSession()` continues to honor shared customer sessions only when `DC_CUSTOMERS_KV` profile data has explicit `roles` / `adminAccess`, and the existing Customers Promote/Revoke controls remain the mutation path.
+- Product override, bulk product override, and Shop Settings saves now publish the sanitized public site-data snapshot automatically after writing `cms:products`.
+- Admin product save responses include a `publish` result and the Products/Shop Settings UI reports either the published revision or the reason public sync did not complete.
+- `GET /api/public/site-data` now returns successful responses with `Cache-Control: no-store` while merch product/banner management is live-edited.
+- Added public site-data export coverage for sanitized product banner assignments and the banner registry.
+
+### Human-Readable Notes
+
+- Public login can reuse Admin OAuth/manual auth and land back on DanielClancy.net with shared session recognition.
+- Product promo banner changes no longer require a hidden manual publish step; saving the product/banner settings publishes the public-safe snapshot when live Admin KV is available.
+- Non-admin customers remain denied Admin dashboard access until promoted by an existing Admin.
+
+### Known Limitations
+
+- OAuth providers that do not return an email cannot create a public customer session until a verified email identity exists.
+- Auto-publish can still be blocked by missing/unavailable `DC_ADMIN_KV`; in that case the Admin save stays truthful and reports that public sync did not complete.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/js/admin-app.js`
+- `functions/api/admin/products/[[path]].js`
+- `functions/api/auth/[[path]].js`
+- `functions/api/public/site-data.js`
+- `tests/public-site-data-export.test.mjs`
+
 ## Shared Customer Session + Admin Promotion Repair Milestone
 
 ### Technical Notes

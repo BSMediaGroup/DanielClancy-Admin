@@ -165,6 +165,12 @@ test("public site-data export includes sanitized product overrides only", async 
       if (key === "cms:products") {
         return JSON.stringify({
           collection: "products",
+          settings: {
+            banners: [
+              { label: "Limited Drop", slug: "limited-drop", enabled: true, theme: "gold", sortOrder: 2 },
+              { label: "Internal", slug: "internal", enabled: false, sortOrder: 9, secretToken: "never-public" }
+            ]
+          },
           items: [
             {
               productId: "123",
@@ -175,6 +181,7 @@ test("public site-data export includes sanitized product overrides only", async 
               categoryOverride: "Apparel",
               visibility: "public",
               featured: true,
+              banners: [{ label: "Limited Drop", slug: "limited-drop", enabled: true, theme: "gold", sortOrder: 2 }],
               heroImageOverride: "https://cdn.example.test/signature-tee.webp",
               galleryOverride: ["https://cdn.example.test/signature-tee.webp", "javascript:alert(1)"],
               sortOrder: 4,
@@ -202,6 +209,11 @@ test("public site-data export includes sanitized product overrides only", async 
 
   assert.equal(payload.collections.products.length, 1);
   assert.equal(payload.collections.products[0].slugOverride, "signature-tee");
+  assert.deepEqual(payload.collections.products[0].banners, [{ label: "LIMITED DROP", slug: "limited-drop", enabled: true, theme: "gold", sortOrder: 2 }]);
+  assert.deepEqual(payload.collections.productSettings.banners, [
+    { label: "LIMITED DROP", slug: "limited-drop", enabled: true, sortOrder: 2, theme: "gold" },
+    { label: "INTERNAL", slug: "internal", enabled: false, sortOrder: 9, theme: "purple-orange" }
+  ]);
   assert.equal(payload.collections.products[0].heroImageOverride, "https://cdn.example.test/signature-tee.webp");
   assert.deepEqual(payload.collections.products[0].galleryOverride, ["https://cdn.example.test/signature-tee.webp"]);
   assert.equal(payload.collections.products[0].updatedBy, undefined);

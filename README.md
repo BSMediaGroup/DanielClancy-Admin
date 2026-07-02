@@ -45,7 +45,7 @@ Password verification happens only inside the Pages Function. Admin-only session
 
 The admin auth gate is a polished restricted-access screen with OAuth buttons first, a collapsed manual email/password admin login section, and a sign in/create account toggle. OAuth non-admin sessions render a clear "admin access required" state with sign out instead of looping through generic failed-login copy. Email/password signup is intentionally scaffold-only; `/api/auth/signup` returns a durable-account-store-required response and does not persist credentials. Logout clears both the Admin-only signed cookie and the shared customer cookie.
 
-The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Manual login, signup scaffold responses, and OAuth start redirects do not render or require Turnstile. OAuth callbacks are unchanged. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
+The admin auth gate uses `assets/logos/logo.webp` as the top modal brand mark and keeps internal setup notes out of the surfaced login UI. Manual email/password remains collapsed by default. Manual login, signup scaffold responses, and OAuth start redirects do not render or require Turnstile. OAuth callbacks accept a validated same-site `return_to` state for the public login modal and set session cookies on the redirect response. CMS pages and CMS API endpoints remain signed-session protected and do not render or require Turnstile widgets.
 
 Required Cloudflare env vars:
 
@@ -275,9 +275,9 @@ The merch dashboard is split into Products (`#/products`), Orders (`#/merch-orde
 
 Every public product has the locked system `All Products` category with slug `all`. Additional categories come from Printful category/collection/tag/product-type fields when present, or from Admin category overrides when Printful does not expose enough data. Shop Settings manages public-safe category labels, slugs, enabled state, source, descriptions, and sort order; `All Products` is system-owned and cannot be removed or disabled. Product editors use selectable managed category chips with `All Products` locked and selected, plus quick category creation and primary-category selection from assigned categories. The public export preserves only sanitized category fields and strips admin-only metadata. Admin Products displays a read-only Printful price/price-range column. There is no Admin price overwrite path and bulk actions do not mutate price data.
 
-Promo banners are managed separately from categories. Shop Settings manages banner labels, slugs, enabled state, theme, and sort order; product editors assign enabled banners as selectable chips and can quick-create new banner rows. Published banners render publicly only when enabled and explicitly assigned to products.
+Promo banners are managed separately from categories. Shop Settings manages banner labels, slugs, enabled state, theme, and sort order; product editors assign enabled banners as selectable chips and can quick-create new banner rows. Product override, bulk override, and Shop Settings saves auto-publish the sanitized public site-data snapshot after writing `cms:products`, so refreshed public product cards/details can show current enabled banner assignments without a separate hidden publish step. If auto-publish is blocked, the Admin UI reports that the saved Admin KV change did not publish publicly.
 
-Shop hero slides are managed through Product Settings, not by writing runtime files into the deployed repository. Static repo-backed slides must exist in the public site under `assets/backgrounds/shopheroslides/` and be listed by the public manifest before Admin can configure them as static records. Runtime/uploaded slide records must use public R2/CDN URLs. Shop Settings controls enabled slides, order, active set, crossfade interval, and crossfade duration, then publishing site data exposes the sanitized configuration to `danielclancy.net`.
+Shop hero slides are managed through Product Settings, not by writing runtime files into the deployed repository. Static repo-backed slides must exist in the public site under `assets/backgrounds/shopheroslides/` and be listed by the public manifest before Admin can configure them as static records. Runtime/uploaded slide records must use public R2/CDN URLs. Shop Settings controls enabled slides, order, active set, crossfade interval, and crossfade duration, then saving Shop Settings auto-publishes the sanitized product/shop configuration to `danielclancy.net` when live Admin KV is available.
 
 Printful Status labels products with only `All Products` as a setup/action-needed state instead of a missing-category API failure. Those products remain browseable at `/products/all`. The status page also reports managed category, banner, and hero slide counts.
 
@@ -343,15 +343,16 @@ The response contract is stable JSON:
 
 Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
 
-CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use short caching with `Cache-Control: public, max-age=60, stale-while-revalidate=300` plus an ETag when a revision exists; errors use `no-store`.
+CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use `Cache-Control: no-store` plus an ETag when a revision exists so managed product/banner changes can be visible on refresh; errors also use `no-store`.
 
 ## Publishing Workflow
 
-1. Save/Sync edits in the Projects, Products, Companies, Platforms, or Positions CMS page.
-2. Use Overview or Settings `Publish site data`.
-3. Confirm the returned revision, published timestamp, and counts.
-4. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
-5. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
+1. Save/Sync edits in the Projects, Companies, Platforms, or Positions CMS page.
+2. Use Overview or Settings `Publish site data` for those non-merch CMS collections.
+3. Products, product bulk actions, and Shop Settings save to `cms:products` and auto-publish the sanitized public snapshot as part of the save response.
+4. Confirm the returned revision, published timestamp, and counts.
+5. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
+6. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
 
 If Admin is in static/local-only mode or `DC_ADMIN_KV` is unavailable, the dashboard shows `Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.` Save/Sync remains separate from Publish.
 

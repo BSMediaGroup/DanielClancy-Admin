@@ -333,6 +333,65 @@ function buildCallbackUrl(request, env, provider) {
   return `${origin.replace(/\/+$/, "")}/api/auth/oauth/${provider}/callback`;
 }
 
+function encodeOAuthState(returnTo = "") {
+  return base64UrlEncode(JSON.stringify({ nonce: crypto.randomUUID(), returnTo }));
+}
+
+function decodeOAuthState(value) {
+  if (!value) return { nonce: "", returnTo: "" };
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(base64UrlDecode(value)));
+    return {
+      nonce: String(parsed?.nonce || ""),
+      returnTo: String(parsed?.returnTo || "")
+    };
+  } catch {
+    return { nonce: String(value || ""), returnTo: "" };
+  }
+}
+
+function allowedRedirectOrigins(request, env) {
+  return new Set(
+    [
+      env.DC_PUBLIC_SITE_ORIGIN || "https://danielclancy.net",
+      "https://www.danielclancy.net",
+      env.DC_ADMIN_SITE_ORIGIN || "https://admin.danielclancy.net",
+      new URL(request.url).origin,
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:4173",
+      "http://127.0.0.1:4173"
+    ].filter(Boolean).map((origin) => String(origin).replace(/\/+$/g, ""))
+  );
+}
+
+function safeOAuthReturnTo(request, env, value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const fallback = env.DC_PUBLIC_SITE_ORIGIN || "https://danielclancy.net";
+    const url = new URL(raw, fallback);
+    if (!/^https?:$/i.test(url.protocol)) return "";
+    if (!allowedRedirectOrigins(request, env).has(url.origin.replace(/\/+$/g, ""))) return "";
+    if (/^\/api\//i.test(url.pathname)) return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function oauthRedirectUrl(request, env, state, status) {
+  const adminOrigin = (env.DC_ADMIN_SITE_ORIGIN || "https://admin.danielclancy.net").replace(/\/+$/, "");
+  const returnTo = safeOAuthReturnTo(request, env, state?.returnTo);
+  const redirect = new URL(returnTo || adminOrigin);
+  if (returnTo) {
+    redirect.searchParams.set("auth", status);
+  } else {
+    redirect.hash = `/login?oauth=${status}`;
+  }
+  return redirect.toString();
+}
+
 async function handleOAuthStart(request, env, provider) {
   const config = OAUTH_PROVIDERS[provider];
   if (!config) return json({ ok: false, error: "unknown_provider" }, { status: 404 });
@@ -354,7 +413,7 @@ async function handleOAuthStart(request, env, provider) {
   endpoint.searchParams.set("redirect_uri", buildCallbackUrl(request, env, provider));
   endpoint.searchParams.set("response_type", "code");
   endpoint.searchParams.set("scope", config.scope);
-  endpoint.searchParams.set("state", crypto.randomUUID());
+  endpoint.searchParams.set("state", encodeOAuthState(safeOAuthReturnTo(request, env, new URL(request.url).searchParams.get("return_to"))));
   if (provider === "twitter") {
     endpoint.searchParams.set("code_challenge", "danielclancy-admin-oauth-scaffold");
     endpoint.searchParams.set("code_challenge_method", "plain");
@@ -481,19 +540,16 @@ async function handleOAuthCallback(context, provider) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
-  const adminOrigin = (env.DC_ADMIN_SITE_ORIGIN || "https://admin.danielclancy.net").replace(/\/+$/, "");
-  const redirect = new URL(adminOrigin);
+  const state = decodeOAuthState(url.searchParams.get("state"));
   if (error || !code) {
-    redirect.hash = "/login?oauth=not-ready";
-    return Response.redirect(redirect.toString(), 302);
+    return redirectResponse(oauthRedirectUrl(request, env, state, "not-ready"));
   }
 
   try {
     const tokenPayload = await exchangeOAuthToken(request, env, provider, code);
     const profile = await fetchOAuthProfile(provider, tokenPayload);
     if (!profile?.providerSubject) {
-      redirect.hash = `/login?oauth=${provider}-profile-unavailable`;
-      return Response.redirect(redirect.toString(), 302);
+      return redirectResponse(oauthRedirectUrl(request, env, state, `${provider}-profile-unavailable`));
     }
     const registration = await registerOAuthAccount(env, profile);
     const account = registration.account || {
@@ -548,13 +604,17 @@ async function handleOAuthCallback(context, provider) {
         },
       }),
     );
-    redirect.hash = registration.ok
-      ? `/login?oauth=${provider}-registered`
-      : `/login?oauth=${provider}-${registration.error || "storage_not_configured"}`;
-    return Response.redirect(redirect.toString(), 302, { headers: setCookieHeaders([cookie, sharedCustomerCookie]) });
+    return redirectResponse(
+      oauthRedirectUrl(
+        request,
+        env,
+        state,
+        registration.ok ? `${provider}-registered` : `${provider}-${registration.error || "storage_not_configured"}`
+      ),
+      [cookie, sharedCustomerCookie]
+    );
   } catch {
-    redirect.hash = `/login?oauth=${provider}-callback-failed`;
-    return Response.redirect(redirect.toString(), 302);
+    return redirectResponse(oauthRedirectUrl(request, env, state, `${provider}-callback-failed`));
   }
 }
 
@@ -620,4 +680,10 @@ function setCookieHeaders(cookies) {
   const headers = new Headers();
   cookies.filter(Boolean).forEach((cookie) => headers.append("set-cookie", cookie));
   return headers;
+}
+
+function redirectResponse(location, cookies = []) {
+  const headers = setCookieHeaders(cookies);
+  headers.set("location", location);
+  return new Response(null, { status: 302, headers });
 }
