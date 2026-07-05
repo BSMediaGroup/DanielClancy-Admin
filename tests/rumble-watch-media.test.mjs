@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { normalizeWatchMediaItem, parseRumbleInput, resolveRumbleMetadata, sanitizeWatchMediaItem } from "../functions/_shared/rumble-watch-media.js";
 
@@ -48,12 +49,40 @@ test("Rumble shorts normalize as portrait gallery-only and not hero embeddable",
     title: "Portrait short",
     sourceUrl: "https://rumble.com/v7c9m82-short.html",
     thumbnailUrl: "https://cdn.example.test/short.webp",
-    visible: true
+    visible: true,
+    heroEmbeddable: true
   });
 
   assert.equal(item.aspect, "portrait");
   assert.equal(item.galleryOnly, true);
   assert.equal(item.heroEmbeddable, false);
+});
+
+test("Rumble video dates persist through normalized public sanitizer", () => {
+  const visible = sanitizeWatchMediaItem({
+    id: "rumble-video-dated",
+    sourcePlatform: "rumble",
+    entryType: "video",
+    source: "manual",
+    title: "Newest Rumble video",
+    sourceUrl: "https://rumble.com/v7c9m82-video.html",
+    embedUrl: "https://rumble.com/embed/v7a2y7u/?pub=vmzw3",
+    thumbnailUrl: "https://cdn.example.test/thumb.webp",
+    visible: true,
+    publishedAt: "2026-07-05T01:00:00.000Z",
+    sortDate: "2026-07-06T01:00:00.000Z",
+    enteredAt: "2026-07-04T01:00:00.000Z",
+    createdAt: "2026-07-03T01:00:00.000Z",
+    updatedAt: "2026-07-06T02:00:00.000Z"
+  });
+
+  assert.equal(visible.publishedAt, "2026-07-05T01:00:00.000Z");
+  assert.equal(visible.sortDate, "2026-07-06T01:00:00.000Z");
+  assert.equal(visible.enteredAt, "2026-07-04T01:00:00.000Z");
+  assert.equal(visible.createdAt, "2026-07-03T01:00:00.000Z");
+  assert.equal(visible.updatedAt, "2026-07-06T02:00:00.000Z");
+  assert.equal(visible.heroEmbeddable, true);
+  assert.equal(visible.galleryOnly, false);
 });
 
 test("public watch media sanitizer removes hidden and admin-only fields", () => {
@@ -75,4 +104,17 @@ test("public watch media sanitizer removes hidden and admin-only fields", () => 
   assert.equal(visible.updatedBy, undefined);
   assert.equal(visible.secretToken, undefined);
   assert.equal(visible.heroEmbeddable, true);
+});
+
+test("Admin Media runtime does not render scaffold/demo seed rows", async () => {
+  const appSource = await readFile(new URL("../assets/js/admin-app.js", import.meta.url), "utf8");
+  const seedSource = await readFile(new URL("../assets/js/scaffold-data.js", import.meta.url), "utf8");
+
+  assert.match(appSource, /message: "Checking Watch Media CMS\. No scaffold media rows are rendered\."/);
+  assert.match(appSource, /return \[\];/);
+  assert.match(appSource, /No watch media entries yet\./);
+  assert.doesNotMatch(appSource, /Reset Media CMS scaffold rows to the repo seed data/);
+  assert.doesNotMatch(appSource, /No local scaffold media items/);
+  assert.match(seedSource, /media:\s*\[\]/);
+  assert.doesNotMatch(seedSource, /latest-youtube-release-scaffold|scheduled-livestream-scaffold|archived-replay-scaffold/);
 });

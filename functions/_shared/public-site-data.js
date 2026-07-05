@@ -91,7 +91,10 @@ export async function buildPublicSiteData(context, options = {}) {
     (id) => companyNameById(companiesResult.items, id)
   );
   const projectsResult = mergeProjectsBaselineWithKv(projectsPayload, projectsStored.items, projectsStored.wrapper);
-  const publicWatchMedia = mediaStored.items.map((item) => sanitizeWatchMediaItem(item)).filter(Boolean);
+  const publicWatchMedia = mediaStored.items
+    .map((item) => sanitizeWatchMediaItem(item))
+    .filter(Boolean)
+    .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left));
   const publicProductOverrides = productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean);
   const publicProductSettings = sanitizeProductSettings(productsStored.wrapper?.settings || {});
 
@@ -122,6 +125,8 @@ export async function buildPublicSiteData(context, options = {}) {
       projectsBaselineCount: projectsResult.meta.baselineCount,
       projectsMergedCount: projectsResult.meta.mergedCount,
       watchMediaCount: publicWatchMedia.length,
+      manualMediaCount: publicWatchMedia.filter((item) => item.source === "manual").length,
+      youtubeCount: publicWatchMedia.filter((item) => item.sourcePlatform === "youtube").length,
       productOverrideCount: publicProductOverrides.length,
       bannerRegistryCount: Array.isArray(publicProductSettings.banners) ? publicProductSettings.banners.length : 0,
       assetCatalogGeneratedAt: assetCatalog?.metadata?.generatedAt || null
@@ -130,6 +135,11 @@ export async function buildPublicSiteData(context, options = {}) {
   };
   payload.revision = options.revision || await publicSiteDataRevision(payload);
   return payload;
+}
+
+function watchMediaSortTime(item = {}) {
+  const parsed = new Date(item.sortDate || item.publishedAt || item.enteredAt || item.createdAt || 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export async function readPublishedSiteData(context) {

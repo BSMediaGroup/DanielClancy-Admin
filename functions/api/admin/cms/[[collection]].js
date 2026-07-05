@@ -441,14 +441,16 @@ async function readCollection(request, env, collection) {
     return {
       ok: true,
       configured: true,
-      source: "seed",
+      source: collection === "media" ? "live_cms_empty" : "seed",
       collection,
       items: [],
       meta: {
         storage: "kv",
         binding: "DC_ADMIN_KV",
         key: COLLECTIONS[collection].key,
-        message: "No KV record exists yet for this collection."
+        message: collection === "media" ? "No watch media entries yet." : "No KV record exists yet for this collection.",
+        manualMediaCount: 0,
+        youtubeCount: 0
       }
     };
   }
@@ -484,6 +486,7 @@ async function readCollection(request, env, collection) {
         }
       };
     }
+    const mediaMeta = collection === "media" ? mediaCollectionMeta(items) : {};
     return {
       ok: true,
       configured: true,
@@ -494,7 +497,8 @@ async function readCollection(request, env, collection) {
         storage: "kv",
         binding: "DC_ADMIN_KV",
         key: COLLECTIONS[collection].key,
-        updatedAt: parsed?.updatedAt || null
+        updatedAt: parsed?.updatedAt || null,
+        ...mediaMeta
       }
     };
   } catch {
@@ -555,6 +559,14 @@ function registryReadResponse(collection, merged, options = {}) {
       excludedRows: merged.meta?.excludedRows || [],
       warnings: merged.meta?.warnings || []
     }
+  };
+}
+
+function mediaCollectionMeta(items = []) {
+  const rows = Array.isArray(items) ? items : [];
+  return {
+    manualMediaCount: rows.filter((item) => item?.source === "manual" || item?.sourcePlatform === "rumble").length,
+    youtubeCount: rows.filter((item) => item?.sourcePlatform === "youtube" || item?.platform === "youtube").length
   };
 }
 
@@ -639,6 +651,8 @@ async function writeCollection(context, collection, session) {
       customRowsCount: merged.meta?.customRowsCount || 0,
       excludedRowsCount: merged.meta?.excludedRowsCount || 0
     };
+  } else if (collection === "media") {
+    responseMeta = mediaCollectionMeta(items);
   }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
   const publishResult = collection === "media" ? await publishPublicSiteData(context, session) : null;

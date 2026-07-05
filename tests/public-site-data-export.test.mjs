@@ -242,6 +242,9 @@ test("public site-data export includes sanitized manual watch media only", async
               sourceUrl: "https://rumble.com/v7c9m82-video.html",
               embedUrl: "https://rumble.com/embed/v7a2y7u/?pub=vmzw3",
               publishedAt: "2026-07-04T00:00:00.000Z",
+              sortDate: "2026-07-04T02:00:00.000Z",
+              enteredAt: "2026-07-03T00:00:00.000Z",
+              createdAt: "2026-07-02T00:00:00.000Z",
               visible: true,
               updatedBy: "admin@example.test",
               secretToken: "never-public"
@@ -254,6 +257,7 @@ test("public site-data export includes sanitized manual watch media only", async
               title: "Rumble short",
               thumbnailUrl: "https://cdn.example.test/short.webp",
               sourceUrl: "https://rumble.com/v7c9m82-short.html",
+              sortDate: "2026-07-05T00:00:00.000Z",
               visible: true
             },
             {
@@ -276,11 +280,16 @@ test("public site-data export includes sanitized manual watch media only", async
 
   assert.equal(payload.collections.watchMedia.length, 2);
   assert.equal(payload.meta.watchMediaCount, 2);
-  assert.equal(payload.collections.watchMedia[0].updatedBy, undefined);
-  assert.equal(payload.collections.watchMedia[0].secretToken, undefined);
-  assert.equal(payload.collections.watchMedia[0].heroEmbeddable, true);
-  assert.equal(payload.collections.watchMedia[1].galleryOnly, true);
-  assert.equal(payload.collections.watchMedia[1].heroEmbeddable, false);
+  assert.equal(payload.meta.manualMediaCount, 2);
+  assert.equal(payload.meta.youtubeCount, 0);
+  assert.equal(payload.collections.watchMedia[0].id, "rumble-short");
+  assert.equal(payload.collections.watchMedia[1].id, "rumble-video");
+  assert.equal(payload.collections.watchMedia[1].updatedBy, undefined);
+  assert.equal(payload.collections.watchMedia[1].secretToken, undefined);
+  assert.equal(payload.collections.watchMedia[1].createdAt, "2026-07-02T00:00:00.000Z");
+  assert.equal(payload.collections.watchMedia[1].heroEmbeddable, true);
+  assert.equal(payload.collections.watchMedia[0].galleryOnly, true);
+  assert.equal(payload.collections.watchMedia[0].heroEmbeddable, false);
 });
 
 test("admin publish endpoint requires an admin session", async () => {

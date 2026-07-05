@@ -84,9 +84,8 @@ export function normalizeWatchMediaItem(raw = {}) {
   const visible = raw.visible !== undefined ? Boolean(raw.visible) : !["hidden", "draft", "private", "archived"].includes(cleanText(raw.visibility || raw.status).toLowerCase());
   const aspect = normalizeEnum(raw.aspect, ["landscape", "portrait"], entryType === "short" ? "portrait" : "landscape");
   const galleryOnly = raw.galleryOnly !== undefined ? Boolean(raw.galleryOnly) : sourcePlatform === "rumble" && entryType === "short";
-  const heroEmbeddable = raw.heroEmbeddable !== undefined
-    ? Boolean(raw.heroEmbeddable)
-    : !galleryOnly && Boolean(safeEmbedUrl(raw.embedUrl));
+  const embedUrl = safeEmbedUrl(raw.embedUrl);
+  const heroEmbeddable = galleryOnly ? false : Boolean(embedUrl);
   const enteredAt = cleanIsoish(raw.enteredAt || raw.createdAt || raw.updatedAt) || new Date().toISOString();
   const publishedAt = cleanIsoish(raw.publishedAtOverride || raw.publishedAt || raw.date) || "";
   const sortDate = cleanIsoish(raw.sortDate || raw.publishedAtOverride || raw.publishedAt || raw.enteredAt || raw.createdAt || raw.updatedAt) || enteredAt;
@@ -96,7 +95,6 @@ export function normalizeWatchMediaItem(raw = {}) {
   const externalUrl = safeHttpsUrl(raw.externalUrl || raw.externalPageUrl || raw.pageUrl || sourceUrl);
   const canonicalUrl = safeHttpsUrl(raw.canonicalUrl || externalUrl || sourceUrl);
   const thumbnailUrl = safeHttpsUrl(raw.thumbnailOverrideUrl || raw.thumbnailUrl || raw.thumbnailPath || "");
-  const embedUrl = safeEmbedUrl(raw.embedUrl);
 
   return {
     id,
@@ -164,6 +162,7 @@ export function sanitizeWatchMediaItem(raw = {}) {
     publishedAt: item.publishedAt,
     enteredAt: item.enteredAt,
     sortDate: item.sortDate,
+    createdAt: item.createdAt,
     visible: item.visible,
     featured: item.featured,
     manualHeroEligible: item.manualHeroEligible,

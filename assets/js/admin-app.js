@@ -232,7 +232,7 @@ import {
     selected: new Set(),
     bulkMode: false,
     modal: null,
-    message: "Local media scaffold loaded. Changes stay in this browser only.",
+    message: "Checking Watch Media CMS. No scaffold media rows are rendered.",
     storage: cmsStorageState.media
   };
   const alertsState = {
@@ -1965,6 +1965,7 @@ import {
     const externalUrl = String(raw?.externalUrl || raw?.externalPageUrl || raw?.pageUrl || sourceUrl);
     const enteredAt = String(raw?.enteredAt || raw?.createdAt || raw?.updatedAt || new Date().toISOString());
     const publishedAt = String(raw?.publishedAtOverride || raw?.publishedAt || raw?.published_at || raw?.date || "");
+    const createdAt = String(raw?.createdAt || enteredAt);
     const entryType = ["livestream", "video", "short", "other"].includes(type) ? type : "video";
     const sourcePlatform = ["youtube", "rumble", "manual", "external"].includes(platform) ? platform : "manual";
 
@@ -1985,10 +1986,10 @@ import {
       scheduledAt: String(raw?.scheduledAt || raw?.scheduled_at || ""),
       publishedAt,
       enteredAt,
-      sortDate: String(raw?.sortDate || publishedAt || enteredAt),
+      sortDate: String(raw?.sortDate || publishedAt || enteredAt || createdAt),
       featured: Boolean(raw?.featured),
       manualHeroEligible: Boolean(raw?.manualHeroEligible || raw?.featured),
-      heroEmbeddable: raw?.heroEmbeddable !== undefined ? Boolean(raw.heroEmbeddable) : !galleryOnly && Boolean(raw?.embedUrl),
+      heroEmbeddable: galleryOnly ? false : Boolean(raw?.embedUrl),
       galleryOnly,
       aspect: ["landscape", "portrait"].includes(aspect) ? aspect : "landscape",
       thumbnailPath: thumbnailUrl,
@@ -2012,7 +2013,7 @@ import {
       resolverWarnings: arrayFromValue(raw?.resolverWarnings || raw?.warnings || []),
       tags: arrayFromValue(raw?.tags || []),
       internalNotes: String(raw?.internalNotes || ""),
-      createdAt: String(raw?.createdAt || enteredAt),
+      createdAt,
       createdBy: String(raw?.createdBy || ""),
       updatedBy: String(raw?.updatedBy || ""),
       updatedAt: String(raw?.updatedAt || new Date().toISOString())
@@ -2020,22 +2021,20 @@ import {
   }
 
   function loadMediaItems() {
-    const seed = Array.isArray(data.media) ? data.media.map(normalizeMediaItem) : [];
-
     try {
       const stored = window.localStorage.getItem(MEDIA_STORAGE_KEY);
       if (!stored) {
-        return seed;
+        return [];
       }
 
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) {
-        return seed;
+        return [];
       }
 
       return parsed.map(normalizeMediaItem);
     } catch {
-      return seed;
+      return [];
     }
   }
 
@@ -3103,10 +3102,16 @@ import {
       if (!response.ok || !payload?.ok) {
         const error = payload?.error || `http_${response.status}`;
         const status = error === "storage_not_configured" ? "not-configured" : "fallback";
-        markCmsStorage(collection, status, storageFallbackMessage(error), { source: "local" });
+        if (collection === "media") {
+          config.setItems([]);
+        }
+        markCmsStorage(collection, status, storageFallbackMessage(error, collection), { source: "unavailable" });
       } else if (payload.configured === false) {
-        markCmsStorage(collection, "not-configured", "DC_ADMIN_KV is not configured. Using local browser fallback.", {
-          source: payload.source || "local_fallback_unavailable"
+        if (collection === "media") {
+          config.setItems([]);
+        }
+        markCmsStorage(collection, "not-configured", storageFallbackMessage("storage_not_configured", collection), {
+          source: payload.source || "unavailable"
         });
       } else if (Array.isArray(payload.items) && (payload.source === "kv" || payload.meta?.reconciled || collection === "projects")) {
         if (collection === "projects") {
@@ -3154,17 +3159,26 @@ import {
               : "Loaded from admin storage.",
           {
           source: payload.source || "kv",
-          lastLoaded: payload.meta?.updatedAt || new Date().toISOString()
+          lastLoaded: payload.meta?.updatedAt || new Date().toISOString(),
+          manualMediaCount: Number(payload.meta?.manualMediaCount || 0),
+          youtubeCount: Number(payload.meta?.youtubeCount || 0)
           }
         );
       } else {
-        markCmsStorage(collection, "connected", "Admin storage is reachable. No saved collection exists yet; local browser data is still shown.", {
-          source: payload.source || "seed"
+        if (collection === "media") {
+          config.setItems([]);
+        }
+        markCmsStorage(collection, "connected", collection === "media" ? "No watch media entries yet." : "Admin storage is reachable. No saved collection exists yet; local browser data is still shown.", {
+          source: payload.source || (collection === "media" ? "live_cms_empty" : "seed"),
+          lastLoaded: payload.meta?.updatedAt || ""
         });
       }
     } catch {
-      markCmsStorage(collection, "fallback", "Pages Functions are unavailable here. Using local browser fallback.", {
-        source: "local"
+      if (collection === "media") {
+        config.setItems([]);
+      }
+      markCmsStorage(collection, "fallback", storageFallbackMessage("api_unavailable", collection), {
+        source: "unavailable"
       });
     }
     if (renderAfter && activePageIs(collection)) {
@@ -3332,7 +3346,7 @@ import {
       if (!response.ok || !payload?.ok) {
         const error = payload?.error || `http_${response.status}`;
         const status = error === "storage_not_configured" ? "not-configured" : "fallback";
-        markCmsStorage(collection, status, storageFallbackMessage(error), { source: "local" });
+        markCmsStorage(collection, status, storageFallbackMessage(error, collection), { source: "unavailable" });
       } else {
         if (collection === "projects" && payload.meta) {
           Object.assign(projectBaselineState, {
@@ -3369,24 +3383,55 @@ import {
           : "Saved to admin storage.";
         markCmsStorage(collection, "connected", publishMessage, {
           source: payload.source || "kv",
-          lastSaved: payload.meta?.updatedAt || new Date().toISOString()
+          lastSaved: payload.meta?.updatedAt || new Date().toISOString(),
+          autopublished: collection === "media" ? Boolean(payload.publish?.published || payload.publish?.ok) : undefined,
+          publicRevision: collection === "media" ? payload.publish?.revision || "" : undefined,
+          publicUpdatedAt: collection === "media" ? payload.publish?.publishedAt || payload.meta?.updatedAt || "" : undefined
         });
       }
     } catch {
-      markCmsStorage(collection, "fallback", "No live admin API connected; saved locally only.", {
-        source: "local"
-      });
+      markCmsStorage(collection, "fallback", collection === "media" ? storageFallbackMessage("api_unavailable", collection) : "No live admin API connected; saved locally only.", { source: "unavailable" });
     }
     if (renderAfter && activePageIs(collection)) {
       config.render();
     }
   }
 
-  function storageFallbackMessage(error) {
+  function storageFallbackMessage(error, collection = "") {
+    if (collection === "media") {
+      if (error === "storage_not_configured") return "Media CMS unavailable: DC_ADMIN_KV is not configured.";
+      if (error === "unauthenticated") return "Admin API authentication required.";
+      if (error === "admin_required") return "Admin API authentication required.";
+      return "Media CMS unavailable.";
+    }
     if (error === "storage_not_configured") return "DC_ADMIN_KV is not configured. Using local browser fallback.";
     if (error === "unauthenticated") return "Admin session is required. Using local browser fallback.";
     if (error === "admin_required") return "Signed-in account is not an admin. Using local browser fallback.";
     return "Admin storage is unavailable. Using local browser fallback.";
+  }
+
+  function watchMediaSortTime(item) {
+    const parsed = new Date(item?.sortDate || item?.publishedAt || item?.enteredAt || item?.createdAt || 0).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function mediaStorageSourceLabel(source, status) {
+    if (source === "kv") return "live CMS";
+    if (source === "published_kv_snapshot") return "public export";
+    if (source === "live_cms_empty") return "live CMS";
+    if (status === "fallback" || status === "not-configured" || source === "unavailable") return "unavailable";
+    return source || "unavailable";
+  }
+
+  function dateTimeLocalValue(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) {
+      return text.replace(/\.\d{3}Z$/, "").replace(/Z$/, "").slice(0, 16);
+    }
+    const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
   }
 
   function hydrateCmsCollections() {
@@ -4047,7 +4092,7 @@ import {
                 <span class="metric-label">${escapeHtml(item.label)}</span>
                 <strong>${escapeHtml(item.value)}</strong>
                 <p>${escapeHtml(item.note || "")}</p>
-                ${badge(item.tone === "warn" ? "Scaffold" : "Ready", item.tone)}
+                ${badge(item.badgeLabel || (item.tone === "warn" ? "Scaffold" : "Ready"), item.tone)}
               </article>
             `
           )
@@ -5835,9 +5880,13 @@ import {
     const rumbleCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble").length;
     const rumbleShortCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble" && item.entryType === "short").length;
     const youtubeCount = mediaState.items.filter((item) => item.sourcePlatform === "youtube").length;
+    const storageSource = mediaStorageSourceLabel(mediaState.storage.source, mediaState.storage.status);
+    const publicRevision = mediaState.storage.publicRevision || publishState.revision || "None";
+    const publicUpdatedAt = mediaState.storage.publicUpdatedAt || publishState.publishedAt || publishState.generatedAt || "";
+    const lastAutopublish = mediaState.storage.autopublished === true ? "Yes" : mediaState.storage.autopublished === false ? "No" : "Unknown";
     const currentHero = mediaState.items
       .filter((item) => item.visible && item.heroEmbeddable && !item.galleryOnly)
-      .sort((left, right) => new Date(right.sortDate || right.publishedAt || right.enteredAt || 0).getTime() - new Date(left.sortDate || left.publishedAt || left.enteredAt || 0).getTime())[0];
+      .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left))[0];
     const statuses = uniqueValues(mediaState.items.map((item) => item.status));
     const platforms = uniqueValues(mediaState.items.map((item) => item.platform));
 
@@ -5851,7 +5900,7 @@ import {
            <button class="button button-secondary" type="button" data-media-action="sync-cms">Save / auto-publish</button>
            <button class="button button-secondary" type="button" data-media-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-media-action="import-json">Import JSON</button>
-           <button class="button button-secondary" type="button" data-media-action="reset">Reset seed</button>`
+           <button class="button button-secondary" type="button" data-media-action="reset">Clear media rows</button>`
         )}
 
         ${cmsStatusMarkup("media", "media-action")}
@@ -5860,12 +5909,15 @@ import {
           "CMS status",
           "Manual media saves write to Admin KV when available and auto-publish sanitized watchMedia into the public site-data snapshot. Rumble metadata resolution is server-side and manual overrides remain available.",
           metricCards([
-            { label: "Total media", value: String(mediaState.items.length), note: mediaState.storage.status === "connected" ? "Rows loaded from Admin KV or local seed." : "Rows in local browser fallback.", tone: "warn" },
-            { label: "Manual Rumble", value: String(rumbleCount), note: "Rumble videos and shorts entered through Admin.", tone: rumbleCount ? "success" : "warn" },
-            { label: "Rumble shorts", value: String(rumbleShortCount), note: "Gallery-only portrait links; never selected for hero.", tone: rumbleShortCount ? "success" : "warn" },
-            { label: "YouTube autofetch", value: String(youtubeCount), note: "Public YouTube feed remains server-fetched outside this CMS.", tone: "warn" },
-            { label: "Current hero", value: currentHero?.title || "None", note: currentHero ? "Most recent visible embeddable media item by sort date." : "Add a visible embeddable Rumble video or rely on YouTube feed.", tone: currentHero ? "success" : "warn" },
-            { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; remote embeds can still fail gracefully.", tone: issueCount ? "warn" : "" }
+            { label: "Data source", value: storageSource, note: mediaState.storage.message || "CMS status pending.", tone: mediaState.storage.status === "connected" ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "Total media", value: String(mediaState.items.length), note: "Runtime rows from live CMS/public export only; no scaffold seed rows are rendered.", tone: mediaState.items.length ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "Manual Rumble", value: String(rumbleCount), note: "Rumble videos and shorts entered through Admin.", tone: rumbleCount ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "Rumble shorts", value: String(rumbleShortCount), note: "Gallery-only portrait links; never selected for hero.", tone: rumbleShortCount ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "YouTube autofetch", value: String(youtubeCount), note: "Public YouTube feed remains server-fetched outside this CMS.", tone: "warn", badgeLabel: "Feed" },
+            { label: "Public revision", value: publicRevision, note: publicUpdatedAt ? `Updated ${formatOperationalTimestamp(publicUpdatedAt)}` : "No public watch-media revision confirmed.", tone: publicRevision !== "None" ? "success" : "warn", badgeLabel: "Export" },
+            { label: "Last save autopublished", value: lastAutopublish, note: "Media saves auto-publish only when live Admin KV is available.", tone: mediaState.storage.autopublished ? "success" : "warn", badgeLabel: "Export" },
+            { label: "Current hero", value: currentHero?.title || "None", note: currentHero ? "Most recent visible embeddable media item by sort date." : "Add a visible embeddable Rumble video or rely on YouTube feed.", tone: currentHero ? "success" : "warn", badgeLabel: "Hero" },
+            { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; remote embeds can still fail gracefully.", tone: issueCount ? "warn" : "", badgeLabel: "Fields" }
           ])
         )}
 
@@ -6328,7 +6380,8 @@ import {
 
   function renderMediaTable(items) {
     if (!items.length) {
-      return `<div class="empty-state">No local scaffold media items match the current filters. Create a media item or reset the seed rows.</div>`;
+      const unavailable = mediaState.storage.status === "fallback" || mediaState.storage.status === "not-configured";
+      return `<div class="empty-state">${unavailable ? escapeHtml(mediaState.storage.message || "Media CMS unavailable.") : "No watch media entries yet."}</div>`;
     }
 
     return `
@@ -6447,8 +6500,8 @@ import {
                   ${["rumble", "youtube", "manual", "external"].map((platform) => `<option value="${platform}"${item.sourcePlatform === platform ? " selected" : ""}>${platform}</option>`).join("")}
                 </select>
               </label>
-              ${field("Published / entered date", "publishedAt", item.publishedAt, "datetime-local", false, readOnly)}
-              ${field("Manual sort date", "sortDate", item.sortDate, "datetime-local", false, readOnly)}
+              ${field("Published / entered date", "publishedAt", dateTimeLocalValue(item.publishedAt), "datetime-local", false, readOnly)}
+              ${field("Manual sort date", "sortDate", dateTimeLocalValue(item.sortDate), "datetime-local", false, readOnly)}
               <label class="checkbox-field">
                 <input type="checkbox" name="featured" ${item.featured ? "checked" : ""} ${readOnly ? "disabled" : ""} />
                 <span>Manual hero eligible</span>
@@ -8404,7 +8457,7 @@ import {
       renderMedia();
     } else if (mediaAction === "select-visible") {
       filteredMediaItems().forEach((item) => mediaState.selected.add(item.id));
-      mediaState.message = "Visible media scaffold rows selected.";
+      mediaState.message = "Visible watch media rows selected.";
       renderMedia();
     } else if (mediaAction === "clear-selection") {
       mediaState.selected.clear();
@@ -9076,7 +9129,10 @@ import {
     }
 
     const originalId = formValue(form, "originalId");
+    const existingItem = mediaState.items.find((item) => item.id === originalId);
+    const now = new Date().toISOString();
     const saved = normalizeMediaItem({
+      ...(existingItem || {}),
       id: slug,
       slug,
       title,
@@ -9109,13 +9165,15 @@ import {
       descriptionOverride: formValue(form, "descriptionOverride"),
       tags: textareaArray(formValue(form, "tags")),
       internalNotes: formValue(form, "internalNotes"),
-      updatedAt: new Date().toISOString()
+      enteredAt: existingItem?.enteredAt || now,
+      createdAt: existingItem?.createdAt || now,
+      updatedAt: now
     });
 
     const existingIndex = mediaState.items.findIndex((item) => item.id === originalId);
     const duplicate = mediaState.items.some((item, index) => item.id === saved.id && index !== existingIndex);
     if (duplicate) {
-      mediaState.message = "A media scaffold row already uses that slug/id.";
+      mediaState.message = "A watch media row already uses that slug/id.";
       renderMedia();
       return;
     }
@@ -9464,7 +9522,7 @@ import {
       return { ...item, tags: Array.from(tags), updatedAt: new Date().toISOString() };
     });
     persistMediaItems();
-    mediaState.message = `${mode === "add" ? "Added" : "Removed"} tag "${tag}" on selected local media scaffold row(s).`;
+    mediaState.message = `${mode === "add" ? "Added" : "Removed"} tag "${tag}" on selected watch media row(s).`;
     renderMedia();
   }
 
@@ -9571,13 +9629,13 @@ import {
           renderMedia();
         },
         () => {
-          window.prompt("Copy local media scaffold JSON", json);
+          window.prompt("Copy watch media JSON", json);
         }
       );
       return;
     }
 
-    window.prompt("Copy local media scaffold JSON", json);
+    window.prompt("Copy watch media JSON", json);
   }
 
   function copyAlertsJson() {
@@ -9728,14 +9786,14 @@ import {
   }
 
   function resetMedia() {
-    if (!window.confirm("Reset Media CMS scaffold rows to the repo seed data? Local browser edits will be replaced.")) {
+    if (!window.confirm("Clear Watch Media CMS rows from this editor before the next save? No scaffold rows will be restored.")) {
       return;
     }
 
-    mediaState.items = (data.media || []).map(normalizeMediaItem);
+    mediaState.items = [];
     mediaState.selected.clear();
     persistMediaItems();
-    mediaState.message = "Media CMS reset to repo seed data.";
+    mediaState.message = "Watch Media CMS rows cleared locally. Save / auto-publish to persist an empty CMS collection.";
     renderMedia();
   }
 
