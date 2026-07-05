@@ -1,5 +1,6 @@
 import { requireAdmin as resolveAdminSession } from "../../../_shared/admin-accounts.js";
 import { postDanielClancyAlert } from "../../../_shared/alert-sender.js";
+import { publishPublicSiteData } from "../../../_shared/public-site-data.js";
 import {
   extractClientOnlyIds,
   extractRequiredCompanyIds,
@@ -640,6 +641,7 @@ async function writeCollection(context, collection, session) {
     };
   }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
+  const publishResult = collection === "media" ? await publishPublicSiteData(context, session) : null;
   if (collection === "projects") {
     responseItems = mergeProjectsBaselineWithKv(await loadProjectsBaseline(request, env), items, stored).items;
   }
@@ -683,6 +685,7 @@ async function writeCollection(context, collection, session) {
     rows: responseItems,
     items: responseItems,
     saved: true,
+    publish: publishResult || undefined,
     overlaySchemaVersion: responseMeta.overlaySchemaVersion,
     overridesCount: responseMeta.overridesCount,
     customRowsCount: responseMeta.customRowsCount,

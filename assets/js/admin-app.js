@@ -1954,31 +1954,67 @@ import {
   function normalizeMediaItem(raw) {
     const fallbackId = createSlug(raw?.slug || raw?.id || raw?.title || `media-${Date.now()}`);
     const status = String(raw?.status || raw?.visibility || "draft").toLowerCase();
-    const platform = String(raw?.platform || raw?.provider || "local").toLowerCase();
-    const type = String(raw?.type || raw?.kind || "video").toLowerCase();
+    const platform = String(raw?.sourcePlatform || raw?.platform || raw?.provider || "manual").toLowerCase();
+    const type = String(raw?.entryType || raw?.type || raw?.kind || "video").toLowerCase();
+    const source = String(raw?.source || (platform === "youtube" ? "autofetch" : "manual")).toLowerCase();
+    const visible = raw?.visible !== undefined ? Boolean(raw.visible) : status === "published" || status === "live" || String(raw?.visibility || "").toLowerCase() === "public";
+    const galleryOnly = raw?.galleryOnly !== undefined ? Boolean(raw.galleryOnly) : platform === "rumble" && type === "short";
+    const aspect = String(raw?.aspect || (type === "short" ? "portrait" : "landscape")).toLowerCase();
+    const thumbnailUrl = String(raw?.thumbnailOverrideUrl || raw?.thumbnailUrl || raw?.thumbnailPath || "");
+    const sourceUrl = String(raw?.sourceUrl || raw?.videoUrl || raw?.url || "");
+    const externalUrl = String(raw?.externalUrl || raw?.externalPageUrl || raw?.pageUrl || sourceUrl);
+    const enteredAt = String(raw?.enteredAt || raw?.createdAt || raw?.updatedAt || new Date().toISOString());
+    const publishedAt = String(raw?.publishedAtOverride || raw?.publishedAt || raw?.published_at || raw?.date || "");
+    const entryType = ["livestream", "video", "short", "other"].includes(type) ? type : "video";
+    const sourcePlatform = ["youtube", "rumble", "manual", "external"].includes(platform) ? platform : "manual";
 
     return {
       id: String(raw?.id || fallbackId),
       slug: createSlug(raw?.slug || raw?.id || raw?.title || fallbackId),
       title: String(raw?.title || ""),
-      type: ["livestream", "video", "short", "clip", "podcast", "upload", "embed"].includes(type) ? type : "video",
+      type: entryType,
+      entryType,
       status: ["draft", "scheduled", "live", "archived", "hidden", "published"].includes(status) ? status : "draft",
       visibility: ["public", "draft", "hidden", "private"].includes(String(raw?.visibility || "").toLowerCase())
         ? String(raw.visibility).toLowerCase()
         : status === "published" || status === "live" ? "public" : status === "hidden" ? "hidden" : "draft",
-      platform: ["youtube", "rumble", "streamsuites", "local", "external"].includes(platform) ? platform : "external",
+      visible,
+      platform: sourcePlatform,
+      sourcePlatform,
+      source: ["autofetch", "manual"].includes(source) ? source : "manual",
       scheduledAt: String(raw?.scheduledAt || raw?.scheduled_at || ""),
-      publishedAt: String(raw?.publishedAt || raw?.published_at || raw?.date || ""),
+      publishedAt,
+      enteredAt,
+      sortDate: String(raw?.sortDate || publishedAt || enteredAt),
       featured: Boolean(raw?.featured),
-      thumbnailPath: String(raw?.thumbnailPath || raw?.thumbnailUrl || ""),
+      manualHeroEligible: Boolean(raw?.manualHeroEligible || raw?.featured),
+      heroEmbeddable: raw?.heroEmbeddable !== undefined ? Boolean(raw.heroEmbeddable) : !galleryOnly && Boolean(raw?.embedUrl),
+      galleryOnly,
+      aspect: ["landscape", "portrait"].includes(aspect) ? aspect : "landscape",
+      thumbnailPath: thumbnailUrl,
+      thumbnailUrl,
+      thumbnailOverrideUrl: String(raw?.thumbnailOverrideUrl || ""),
       embedUrl: String(raw?.embedUrl || ""),
-      videoUrl: String(raw?.videoUrl || raw?.url || ""),
+      sourceUrl,
+      videoUrl: sourceUrl || externalUrl,
       replayUrl: String(raw?.replayUrl || ""),
-      externalPageUrl: String(raw?.externalPageUrl || raw?.pageUrl || ""),
+      externalPageUrl: externalUrl,
+      externalUrl,
+      canonicalUrl: String(raw?.canonicalUrl || externalUrl || sourceUrl),
+      platformVideoId: String(raw?.platformVideoId || raw?.videoId || ""),
+      platformChannelId: String(raw?.platformChannelId || raw?.channelId || ""),
       summary: String(raw?.summary || raw?.excerpt || ""),
       description: String(raw?.description || ""),
+      titleOverride: String(raw?.titleOverride || ""),
+      descriptionOverride: String(raw?.descriptionOverride || ""),
+      publishedAtOverride: String(raw?.publishedAtOverride || ""),
+      rumbleInput: String(raw?.rumbleInput || ""),
+      resolverWarnings: arrayFromValue(raw?.resolverWarnings || raw?.warnings || []),
       tags: arrayFromValue(raw?.tags || []),
       internalNotes: String(raw?.internalNotes || ""),
+      createdAt: String(raw?.createdAt || enteredAt),
+      createdBy: String(raw?.createdBy || ""),
+      updatedBy: String(raw?.updatedBy || ""),
       updatedAt: String(raw?.updatedAt || new Date().toISOString())
     };
   }
@@ -2078,6 +2114,10 @@ import {
 
   function assetUploadEndpoint() {
     return "/api/admin/assets/upload";
+  }
+
+  function rumbleResolveEndpoint() {
+    return "/api/admin/media/resolve";
   }
 
   function adminStatusEndpoint() {
@@ -3089,6 +3129,8 @@ import {
           JSON.stringify(
             collection === "projects"
               ? projectsStoragePayload()
+              : collection === "media"
+                ? config.getItems()
               : registryOverlayPayload(collection, config.getItems(), config.state.reconciliation || payload.meta || {}),
             null,
             2
@@ -3320,7 +3362,12 @@ import {
             // The saved API result still updates in-memory rows when localStorage is unavailable.
           }
         }
-        markCmsStorage(collection, "connected", "Saved to admin storage.", {
+        const publishMessage = collection === "media" && payload.publish
+          ? payload.publish.ok
+            ? `Saved to admin storage and published public watch media snapshot (${payload.publish.revision || "new revision"}).`
+            : `Saved to admin storage. Public watch media auto-publish did not complete: ${payload.publish.message || payload.publish.error || "unknown"}`
+          : "Saved to admin storage.";
+        markCmsStorage(collection, "connected", publishMessage, {
           source: payload.source || "kv",
           lastSaved: payload.meta?.updatedAt || new Date().toISOString()
         });
@@ -3796,11 +3843,13 @@ import {
     if (!item.title) issues.push("missing title");
     if (!item.slug) issues.push("missing slug/id");
     if (!item.thumbnailPath) issues.push("missing thumbnail");
-    if (!item.embedUrl && !item.videoUrl) issues.push("missing embed/video URL");
+    if (!item.sourceUrl && !item.videoUrl && !item.externalUrl) issues.push("missing source URL");
+    if (item.sourcePlatform === "rumble" && item.entryType === "video" && !item.embedUrl) issues.push("missing Rumble embed URL");
+    if (item.sourcePlatform === "rumble" && item.entryType === "short" && item.embedUrl) issues.push("short should not embed");
     if (item.type === "livestream" && item.status === "archived" && !item.replayUrl) issues.push("missing replay URL");
     if (item.status === "scheduled" && !item.scheduledAt) issues.push("missing scheduled date");
     if (!item.tags.length) issues.push("missing tags");
-    if (item.status === "draft" || item.status === "hidden" || item.visibility !== "public") issues.push("hidden/draft status");
+    if (!item.visible || item.status === "draft" || item.status === "hidden" || item.visibility !== "public") issues.push("hidden/draft status");
 
     return issues;
   }
@@ -5782,19 +5831,24 @@ import {
     const visibleItems = filteredMediaItems();
     const selectedVisible = visibleItems.filter((item) => mediaState.selected.has(item.id)).length;
     const issueCount = mediaState.items.filter((item) => mediaCompletenessIssues(item).length).length;
-    const featuredCount = mediaState.items.filter((item) => item.featured).length;
-    const liveOrPublishedCount = mediaState.items.filter((item) => item.status === "live" || item.status === "published").length;
-    const archivedCount = mediaState.items.filter((item) => item.status === "archived").length;
+    const featuredCount = mediaState.items.filter((item) => item.heroEmbeddable && !item.galleryOnly).length;
+    const rumbleCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble").length;
+    const rumbleShortCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble" && item.entryType === "short").length;
+    const youtubeCount = mediaState.items.filter((item) => item.sourcePlatform === "youtube").length;
+    const currentHero = mediaState.items
+      .filter((item) => item.visible && item.heroEmbeddable && !item.galleryOnly)
+      .sort((left, right) => new Date(right.sortDate || right.publishedAt || right.enteredAt || 0).getTime() - new Date(left.sortDate || left.publishedAt || left.enteredAt || 0).getTime())[0];
     const statuses = uniqueValues(mediaState.items.map((item) => item.status));
     const platforms = uniqueValues(mediaState.items.map((item) => item.platform));
 
     app.innerHTML = `
       <div class="page media-page">
         ${pageHeader(
-          "Media CMS scaffold",
+          "Watch Media CMS",
           "Media",
-          "Manage future /watch page media metadata. Admin storage is used when available; local browser fallback remains available for static/dev views.",
-          `<button class="button" type="button" data-media-action="create">Create Media Item</button>
+          "Manage manual Rumble videos and shorts for DanielClancy.net /watch. YouTube rows remain auto-fetched by the public feed and can appear here when imported from public site-data.",
+          `<button class="button" type="button" data-media-action="create">Add Rumble Video</button>
+           <button class="button button-secondary" type="button" data-media-action="sync-cms">Save / auto-publish</button>
            <button class="button button-secondary" type="button" data-media-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-media-action="import-json">Import JSON</button>
            <button class="button button-secondary" type="button" data-media-action="reset">Reset seed</button>`
@@ -5804,24 +5858,26 @@ import {
 
         ${panel(
           "CMS status",
-          "This editor does not publish content, fetch YouTube/Rumble feeds, embed StreamSuites profiles, or write public exports. Completeness checks are local field checks only.",
+          "Manual media saves write to Admin KV when available and auto-publish sanitized watchMedia into the public site-data snapshot. Rumble metadata resolution is server-side and manual overrides remain available.",
           metricCards([
-            { label: "Media rows", value: String(mediaState.items.length), note: mediaState.storage.status === "connected" ? "Rows loaded from admin storage or local seed." : "Rows in local browser fallback.", tone: "warn" },
-            { label: "Live/published", value: String(liveOrPublishedCount), note: "Local status metadata only.", tone: "warn" },
-            { label: "Archived", value: String(archivedCount), note: "Future replay/history planning only.", tone: "warn" },
-            { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; links are not externally verified.", tone: issueCount ? "warn" : "" }
+            { label: "Total media", value: String(mediaState.items.length), note: mediaState.storage.status === "connected" ? "Rows loaded from Admin KV or local seed." : "Rows in local browser fallback.", tone: "warn" },
+            { label: "Manual Rumble", value: String(rumbleCount), note: "Rumble videos and shorts entered through Admin.", tone: rumbleCount ? "success" : "warn" },
+            { label: "Rumble shorts", value: String(rumbleShortCount), note: "Gallery-only portrait links; never selected for hero.", tone: rumbleShortCount ? "success" : "warn" },
+            { label: "YouTube autofetch", value: String(youtubeCount), note: "Public YouTube feed remains server-fetched outside this CMS.", tone: "warn" },
+            { label: "Current hero", value: currentHero?.title || "None", note: currentHero ? "Most recent visible embeddable media item by sort date." : "Add a visible embeddable Rumble video or rely on YouTube feed.", tone: currentHero ? "success" : "warn" },
+            { label: "Field issues", value: String(issueCount), note: "Missing-field checks only; remote embeds can still fail gracefully.", tone: issueCount ? "warn" : "" }
           ])
         )}
 
         ${panel(
           "Filters and bulk controls",
-          "Search media metadata, select rows, and apply bulk changes to local scaffold rows.",
+          "Search watch media metadata, select rows, and apply safe bulk visibility/platform/hero changes.",
           renderMediaControls(statuses, platforms, visibleItems.length, selectedVisible, featuredCount)
         )}
 
         ${panel(
           "Media table editor",
-          "Table-style CMS editor aligned to the current public /watch feed shape where practical, with room for livestream and replay metadata.",
+          "Visible manual entries are exported publicly. Rumble shorts are portrait gallery-only rows; Rumble videos can become the /watch hero when newest and embeddable.",
           renderMediaTable(visibleItems)
         )}
 
@@ -6226,14 +6282,14 @@ import {
         <div class="cms-toolbar-summary">
           ${badge(`${visibleCount} visible`, "warn")}
           ${badge(`${mediaState.selected.size} selected`, selectedVisible ? "success" : "warn")}
-          ${badge(`${featuredCount} featured`, "warn")}
-          ${badge("Browser local only", "warn")}
+          ${badge(`${featuredCount} hero eligible`, "warn")}
+          ${badge(mediaState.storage.status === "connected" ? "Admin KV" : "Browser fallback", mediaState.storage.status === "connected" ? "success" : "warn")}
         </div>
       </div>
       <div class="bulk-panel ${mediaState.bulkMode ? "is-open" : ""}">
         <div>
           <strong>Bulk editing mode</strong>
-          <p class="muted">Selected-row actions update ${escapeHtml(MEDIA_STORAGE_KEY)} only. Delete requires confirmation and never affects DanielClancy.net.</p>
+          <p class="muted">Selected-row actions save through the Media CMS collection when Admin KV is available. Delete disables/removes manual rows only.</p>
         </div>
         <div class="toolbar">
           <button class="button button-secondary" type="button" data-media-action="toggle-bulk">${mediaState.bulkMode ? "Close bulk mode" : "Open bulk mode"}</button>
@@ -6252,8 +6308,7 @@ import {
             <option value="">Set platform</option>
             <option value="youtube">YouTube</option>
             <option value="rumble">Rumble</option>
-            <option value="streamsuites">StreamSuites</option>
-            <option value="local">Local</option>
+            <option value="manual">Manual</option>
             <option value="external">External</option>
           </select>
           <select class="input input-compact" data-media-bulk-field="featured" ${mediaState.selected.size ? "" : "disabled"}>
@@ -6282,17 +6337,17 @@ import {
           <thead>
             <tr>
               <th><input type="checkbox" aria-label="Select visible media items" data-media-select-all ${items.every((item) => mediaState.selected.has(item.id)) ? "checked" : ""} /></th>
+              <th>Thumbnail</th>
               <th>Title</th>
-              <th>Slug / ID</th>
-              <th>Type</th>
-              <th>Status / visibility</th>
               <th>Platform</th>
-              <th>Date</th>
-              <th>Featured</th>
-              <th>URLs / thumbnail</th>
+              <th>Type</th>
+              <th>Source</th>
+              <th>Date / sort date</th>
+              <th>Hero eligible</th>
+              <th>Visible</th>
+              <th>Embed status</th>
+              <th>External/source URL</th>
               <th>Tags</th>
-              <th>Media health</th>
-              <th>Updated</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -6307,25 +6362,23 @@ import {
   function renderMediaRow(item) {
     const issues = mediaCompletenessIssues(item);
     const issueLabel = issues.length ? issues.join(", ") : "complete fields";
-    const dateLabel = item.scheduledAt || item.publishedAt || "Undated";
+    const dateLabel = item.sortDate || item.publishedAt || item.enteredAt || "Undated";
+    const sourceUrl = item.sourceUrl || item.videoUrl || item.externalUrl;
+    const canEmbed = item.heroEmbeddable && !item.galleryOnly && item.embedUrl;
     return `
       <tr>
         <td><input type="checkbox" aria-label="Select ${escapeHtml(item.title || item.slug)}" data-media-select="${escapeHtml(item.id)}" ${mediaState.selected.has(item.id) ? "checked" : ""} /></td>
-        <td><strong>${escapeHtml(item.title || "Untitled media scaffold")}</strong><br><span>${escapeHtml(item.summary || "No summary field")}</span></td>
-        <td><code>${escapeHtml(item.slug)}</code></td>
-        <td>${badge(item.type)}</td>
-        <td>${badge(item.status, mediaStatusTone(item.status))}<br>${badge(item.visibility, item.visibility === "public" ? "success" : "warn")}</td>
-        <td>${badge(item.platform)}</td>
+        <td>${item.thumbnailPath ? `<img class="media-thumb ${item.aspect === "portrait" ? "media-thumb--portrait" : ""}" src="${escapeHtml(item.thumbnailPath)}" alt="" loading="lazy" />` : `<span class="asset-preview-placeholder">No thumbnail</span>`}</td>
+        <td><strong>${escapeHtml(item.title || "Untitled media")}</strong><br><code>${escapeHtml(item.slug)}</code><br><span>${escapeHtml(item.summary || item.description || "No description field")}</span></td>
+        <td>${badge(item.sourcePlatform)}</td>
+        <td>${badge(item.entryType)}<br>${badge(item.aspect)}</td>
+        <td>${badge(item.source)}</td>
         <td>${escapeHtml(dateLabel)}</td>
-        <td>${item.featured ? badge("Featured", "success") : badge("Standard")}</td>
-        <td>
-          <span class="path-text">${escapeHtml(item.thumbnailPath || "Missing thumbnail")}</span>
-          <span class="path-text">${escapeHtml(item.embedUrl || item.videoUrl || "Missing embed/video URL")}</span>
-          <span class="path-text">${escapeHtml(item.replayUrl || "No replay URL")}</span>
-        </td>
+        <td>${canEmbed ? badge("Hero eligible", "success") : item.galleryOnly ? badge("Gallery only", "warn") : badge("Not embeddable", "warn")}</td>
+        <td>${item.visible ? badge("Visible", "success") : badge("Hidden", "warn")}<br>${badge(item.status, mediaStatusTone(item.status))}</td>
+        <td>${item.embedUrl ? `<span class="path-text">${escapeHtml(item.embedUrl)}</span>` : `<span class="muted">No embed URL</span>`}<br>${badge(issueLabel, mediaHealthTone(item))}</td>
+        <td>${sourceUrl ? `<a class="path-text" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(sourceUrl)}</a>` : `<span class="muted">Missing source URL</span>`}</td>
         <td><div class="chip-row">${item.tags.slice(0, 4).map((tag) => badge(tag)).join("") || badge("No tags", "warn")}</div></td>
-        <td>${badge(issueLabel, mediaHealthTone(item))}<br><small>Local field completeness only</small></td>
-        <td>${escapeHtml(formatTimestamp(item.updatedAt))}</td>
         <td>
           <div class="row-actions">
             <button class="button button-secondary" type="button" data-media-action="detail" data-media-id="${escapeHtml(item.id)}">Detail</button>
@@ -6341,27 +6394,39 @@ import {
     const item = modal.item;
     const readOnly = modal.mode === "detail";
     const issues = mediaCompletenessIssues(item);
-    const title = modal.mode === "create" ? "Create media scaffold" : modal.mode === "detail" ? "Media detail" : "Edit media scaffold";
+    const title = modal.mode === "create" ? "Add Rumble video" : modal.mode === "detail" ? "Media detail" : "Edit watch media";
+    const sourceUrl = item.sourceUrl || item.videoUrl || item.externalUrl || "";
     return `
       <div class="modal-backdrop" data-media-modal-backdrop>
         <section class="modal media-modal" role="dialog" aria-modal="true" aria-labelledby="media-modal-title">
           <header class="modal-header">
             <div>
-              <span class="section-kicker">Local /watch scaffold editor</span>
+              <span class="section-kicker">Watch media CMS</span>
               <h2 id="media-modal-title">${escapeHtml(title)}</h2>
-              <p>Save writes only to ${escapeHtml(MEDIA_STORAGE_KEY)} in this browser. It does not update DanielClancy.net or fetch external feeds.</p>
+              <p>Resolve Rumble metadata server-side when possible, then review or override title, description, thumbnail, date, visibility, and hero eligibility before saving.</p>
             </div>
             <button class="icon-close" type="button" aria-label="Close media editor" data-media-action="close-modal">x</button>
           </header>
           <form class="modal-body project-form media-form" data-media-form>
             <input type="hidden" name="originalId" value="${escapeHtml(item.id)}" />
             <div class="form-grid">
+              <label class="field field-wide">
+                <span>Rumble URL / embed / id</span>
+                <div class="input-with-action">
+                  <input class="input" type="text" name="rumbleInput" value="${escapeHtml(item.rumbleInput || sourceUrl || item.embedUrl || item.platformVideoId)}" ${readOnly ? "disabled" : ""} />
+                  <button class="button button-secondary" type="button" data-media-action="resolve-rumble" ${readOnly ? "disabled" : ""}>Resolve</button>
+                </div>
+                <small>Main URL, monetized URL, iframe HTML, embed URL, and raw Rumble ids are supported. Script snippets are not executed or stored.</small>
+              </label>
               ${field("Title", "title", item.title, "text", true, readOnly)}
               ${field("Slug / ID", "slug", item.slug, "text", true, readOnly)}
               <label class="field">
                 <span>Type</span>
                 <select class="input" name="type" ${readOnly ? "disabled" : ""}>
-                  ${["livestream", "video", "short", "clip", "podcast", "upload", "embed"].map((type) => `<option value="${type}"${item.type === type ? " selected" : ""}>${type}</option>`).join("")}
+                  <option value="video"${item.entryType === "video" ? " selected" : ""}>Rumble Video</option>
+                  <option value="short"${item.entryType === "short" ? " selected" : ""}>Rumble Short</option>
+                  <option value="livestream"${item.entryType === "livestream" ? " selected" : ""}>Livestream</option>
+                  <option value="other"${item.entryType === "other" ? " selected" : ""}>Other</option>
                 </select>
               </label>
               <label class="field">
@@ -6379,35 +6444,57 @@ import {
               <label class="field">
                 <span>Platform</span>
                 <select class="input" name="platform" ${readOnly ? "disabled" : ""}>
-                  ${["youtube", "rumble", "streamsuites", "local", "external"].map((platform) => `<option value="${platform}"${item.platform === platform ? " selected" : ""}>${platform}</option>`).join("")}
+                  ${["rumble", "youtube", "manual", "external"].map((platform) => `<option value="${platform}"${item.sourcePlatform === platform ? " selected" : ""}>${platform}</option>`).join("")}
                 </select>
               </label>
-              ${field("Scheduled/live date", "scheduledAt", item.scheduledAt, "datetime-local", false, readOnly)}
-              ${field("Published date", "publishedAt", item.publishedAt, "datetime-local", false, readOnly)}
+              ${field("Published / entered date", "publishedAt", item.publishedAt, "datetime-local", false, readOnly)}
+              ${field("Manual sort date", "sortDate", item.sortDate, "datetime-local", false, readOnly)}
               <label class="checkbox-field">
                 <input type="checkbox" name="featured" ${item.featured ? "checked" : ""} ${readOnly ? "disabled" : ""} />
-                <span>Featured media item</span>
+                <span>Manual hero eligible</span>
               </label>
-              ${field("Thumbnail path", "thumbnailPath", item.thumbnailPath, "text", false, readOnly)}
+              <label class="checkbox-field">
+                <input type="checkbox" name="visible" ${item.visible ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Visible on public /watch</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" name="galleryOnly" ${item.galleryOnly ? "checked" : ""} ${readOnly ? "disabled" : ""} />
+                <span>Gallery-only (required for Rumble shorts)</span>
+              </label>
+              <label class="field project-upload-field">
+                <span>Thumbnail URL / override</span>
+                <div class="input-with-action">
+                  <input class="input" type="url" name="thumbnailPath" value="${escapeHtml(item.thumbnailPath)}" ${readOnly ? "disabled" : ""} />
+                  <button class="button button-secondary" type="button" data-media-action="upload-thumbnail" ${readOnly ? "disabled" : ""}>Upload</button>
+                </div>
+                <span class="asset-preview-slot">${item.thumbnailPath ? `<img class="asset-preview-image ${item.aspect === "portrait" ? "asset-preview-image--portrait" : ""}" src="${escapeHtml(item.thumbnailPath)}" alt="Thumbnail preview" />` : `<span class="asset-preview-placeholder">No thumbnail selected</span>`}</span>
+                <input class="asset-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-media-thumbnail-upload-input />
+                <span class="upload-status" data-media-thumbnail-upload-status></span>
+              </label>
               ${field("Embed URL", "embedUrl", item.embedUrl, "url", false, readOnly)}
-              ${field("Video URL", "videoUrl", item.videoUrl, "url", false, readOnly)}
-              ${field("Replay URL", "replayUrl", item.replayUrl, "url", false, readOnly)}
-              ${field("External page URL", "externalPageUrl", item.externalPageUrl, "url", false, readOnly)}
+              ${field("Source URL", "sourceUrl", sourceUrl, "url", false, readOnly)}
+              ${field("Canonical URL", "canonicalUrl", item.canonicalUrl, "url", false, readOnly)}
+              ${field("Platform video id", "platformVideoId", item.platformVideoId, "text", false, readOnly)}
               ${textareaField("Summary / excerpt", "summary", item.summary, readOnly)}
               ${textareaField("Description", "description", item.description, readOnly)}
+              ${textareaField("Description override", "descriptionOverride", item.descriptionOverride, readOnly)}
               ${textareaField("Tags", "tags", item.tags.join("\n"), readOnly)}
               ${textareaField("Internal notes", "internalNotes", item.internalNotes, readOnly)}
             </div>
             <aside class="asset-status-box">
-              <h3>Media health</h3>
-              <p>Local field completeness only. No network checks, feed verification, external embed validation, or public publishing is performed.</p>
+              <h3>Resolved preview</h3>
+              <p>Rumble videos use safe iframe URLs. Rumble shorts are portrait gallery links and are never selected as the public hero.</p>
               <div class="chip-row">
                 ${issues.length ? issues.map((issue) => badge(issue, "warn")).join("") : badge("Complete local fields", "success")}
+                ${item.galleryOnly ? badge("Gallery only", "warn") : item.heroEmbeddable ? badge("Hero embeddable", "success") : badge("No hero embed", "warn")}
               </div>
+              ${item.embedUrl && !item.galleryOnly ? `<iframe class="media-embed-preview" src="${escapeHtml(item.embedUrl)}" title="${escapeHtml(item.title || "Rumble preview")}" loading="lazy" allowfullscreen></iframe>` : ""}
+              ${item.galleryOnly && item.thumbnailPath ? `<img class="media-portrait-preview" src="${escapeHtml(item.thumbnailPath)}" alt="Portrait short preview" loading="lazy" />` : ""}
+              ${item.resolverWarnings.length ? `<p class="muted">Resolver warnings: ${escapeHtml(item.resolverWarnings.join(", "))}</p>` : ""}
             </aside>
             <footer class="modal-footer">
               <button class="button button-secondary" type="button" data-media-action="close-modal">Cancel</button>
-              ${readOnly ? `<button class="button" type="button" data-media-action="edit" data-media-id="${escapeHtml(item.id)}">Edit</button>` : `<button class="button" type="submit">Save local scaffold</button>`}
+              ${readOnly ? `<button class="button" type="button" data-media-action="edit" data-media-id="${escapeHtml(item.id)}">Edit</button>` : `<button class="button" type="submit">Save media</button>`}
             </footer>
           </form>
         </section>
@@ -7085,9 +7172,15 @@ import {
       type: "video",
       status: "draft",
       visibility: "draft",
-      platform: "local",
+      visible: true,
+      platform: "rumble",
+      sourcePlatform: "rumble",
+      source: "manual",
+      aspect: "landscape",
+      heroEmbeddable: false,
+      galleryOnly: false,
       featured: false,
-      internalNotes: "Created in DanielClancy-Admin local media scaffold. Not published."
+      internalNotes: "Created in DanielClancy-Admin Watch Media CMS."
     });
   }
 
@@ -7577,6 +7670,11 @@ import {
       return;
     }
 
+    if (target.matches("[data-media-thumbnail-upload-input]")) {
+      uploadMediaThumbnail(target);
+      return;
+    }
+
     if (target.matches("[data-registry-upload-input]")) {
       uploadRegistryLogo(target, target.getAttribute("data-registry-upload-input"));
       return;
@@ -7829,7 +7927,7 @@ import {
 
     if (target.matches("[data-media-bulk-field='status']") && target.value) {
       bulkUpdateMedia((item) => ({ ...item, status: target.value, updatedAt: new Date().toISOString() }));
-      mediaState.message = `Updated status for ${mediaState.selected.size} selected media scaffold row(s).`;
+      mediaState.message = `Updated status for ${mediaState.selected.size} selected media row(s).`;
       persistMediaItems();
       renderMedia();
       return;
@@ -7837,7 +7935,7 @@ import {
 
     if (target.matches("[data-media-bulk-field='platform']") && target.value) {
       bulkUpdateMedia((item) => ({ ...item, platform: target.value, updatedAt: new Date().toISOString() }));
-      mediaState.message = `Updated platform for ${mediaState.selected.size} selected media scaffold row(s).`;
+      mediaState.message = `Updated platform for ${mediaState.selected.size} selected media row(s).`;
       persistMediaItems();
       renderMedia();
       return;
@@ -7846,7 +7944,7 @@ import {
     if (target.matches("[data-media-bulk-field='featured']") && target.value) {
       const featured = target.value === "true";
       bulkUpdateMedia((item) => ({ ...item, featured, updatedAt: new Date().toISOString() }));
-      mediaState.message = `Updated featured flag for ${mediaState.selected.size} selected media scaffold row(s).`;
+      mediaState.message = `Updated hero eligibility for ${mediaState.selected.size} selected media row(s).`;
       persistMediaItems();
       renderMedia();
       return;
@@ -8284,6 +8382,10 @@ import {
     if (mediaAction === "create") {
       mediaState.modal = { mode: "create", item: emptyMediaItem() };
       renderMedia();
+    } else if (mediaAction === "resolve-rumble") {
+      resolveRumbleMedia(target);
+    } else if (mediaAction === "upload-thumbnail") {
+      app.querySelector("[data-media-thumbnail-upload-input]")?.click();
     } else if (mediaAction === "detail") {
       const item = mediaState.items.find((entry) => entry.id === mediaId);
       if (item) mediaState.modal = { mode: "detail", item };
@@ -8981,17 +9083,30 @@ import {
       type: formValue(form, "type"),
       status: formValue(form, "status"),
       visibility: formValue(form, "visibility"),
+      visible: Boolean(form.querySelector("[name='visible']")?.checked),
       platform: formValue(form, "platform"),
-      scheduledAt: formValue(form, "scheduledAt"),
+      sourcePlatform: formValue(form, "platform"),
+      source: formValue(form, "platform") === "youtube" ? "autofetch" : "manual",
       publishedAt: formValue(form, "publishedAt"),
+      sortDate: formValue(form, "sortDate"),
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
+      manualHeroEligible: Boolean(form.querySelector("[name='featured']")?.checked),
+      galleryOnly: Boolean(form.querySelector("[name='galleryOnly']")?.checked) || formValue(form, "type") === "short",
+      heroEmbeddable: formValue(form, "type") !== "short" && Boolean(formValue(form, "embedUrl")),
+      aspect: formValue(form, "type") === "short" ? "portrait" : "landscape",
       thumbnailPath: formValue(form, "thumbnailPath"),
+      thumbnailUrl: formValue(form, "thumbnailPath"),
       embedUrl: formValue(form, "embedUrl"),
-      videoUrl: formValue(form, "videoUrl"),
-      replayUrl: formValue(form, "replayUrl"),
-      externalPageUrl: formValue(form, "externalPageUrl"),
+      sourceUrl: formValue(form, "sourceUrl"),
+      videoUrl: formValue(form, "sourceUrl"),
+      externalUrl: formValue(form, "sourceUrl"),
+      externalPageUrl: formValue(form, "sourceUrl"),
+      canonicalUrl: formValue(form, "canonicalUrl") || formValue(form, "sourceUrl"),
+      platformVideoId: formValue(form, "platformVideoId"),
+      rumbleInput: formValue(form, "rumbleInput"),
       summary: formValue(form, "summary"),
       description: formValue(form, "description"),
+      descriptionOverride: formValue(form, "descriptionOverride"),
       tags: textareaArray(formValue(form, "tags")),
       internalNotes: formValue(form, "internalNotes"),
       updatedAt: new Date().toISOString()
@@ -9017,8 +9132,161 @@ import {
 
     persistMediaItems();
     mediaState.modal = null;
-    mediaState.message = `Saved ${saved.title} locally. This does not publish to DanielClancy.net.`;
+    mediaState.message = `Saved ${saved.title}. Admin KV saves auto-publish public watch media when live storage is available.`;
     renderMedia();
+  }
+
+  function mediaDraftFromForm(form, base = mediaState.modal?.item || emptyMediaItem()) {
+    if (!form) return normalizeMediaItem(base);
+    const nextType = formValue(form, "type") || base.entryType || base.type || "video";
+    const nextPlatform = formValue(form, "platform") || base.sourcePlatform || base.platform || "rumble";
+    const thumbnailPath = formValue(form, "thumbnailPath") || base.thumbnailPath || base.thumbnailUrl;
+    const sourceUrl = formValue(form, "sourceUrl") || base.sourceUrl || base.externalUrl || base.videoUrl;
+    return normalizeMediaItem({
+      ...base,
+      id: formValue(form, "slug") || base.id,
+      slug: formValue(form, "slug") || base.slug,
+      title: formValue(form, "title") || base.title,
+      type: nextType,
+      entryType: nextType,
+      status: formValue(form, "status") || base.status,
+      visibility: formValue(form, "visibility") || base.visibility,
+      visible: form.querySelector("[name='visible']")?.checked ?? base.visible,
+      platform: nextPlatform,
+      sourcePlatform: nextPlatform,
+      source: nextPlatform === "youtube" ? "autofetch" : "manual",
+      publishedAt: formValue(form, "publishedAt") || base.publishedAt,
+      sortDate: formValue(form, "sortDate") || base.sortDate,
+      featured: form.querySelector("[name='featured']")?.checked ?? base.featured,
+      manualHeroEligible: form.querySelector("[name='featured']")?.checked ?? base.manualHeroEligible,
+      galleryOnly: (form.querySelector("[name='galleryOnly']")?.checked ?? base.galleryOnly) || nextType === "short",
+      heroEmbeddable: nextType !== "short" && Boolean(formValue(form, "embedUrl") || base.embedUrl),
+      aspect: nextType === "short" ? "portrait" : base.aspect,
+      thumbnailPath,
+      thumbnailUrl: thumbnailPath,
+      thumbnailOverrideUrl: thumbnailPath,
+      embedUrl: nextType === "short" ? "" : (formValue(form, "embedUrl") || base.embedUrl),
+      sourceUrl,
+      videoUrl: sourceUrl,
+      externalUrl: sourceUrl || base.externalUrl,
+      externalPageUrl: sourceUrl || base.externalPageUrl,
+      canonicalUrl: formValue(form, "canonicalUrl") || sourceUrl || base.canonicalUrl,
+      platformVideoId: formValue(form, "platformVideoId") || base.platformVideoId,
+      rumbleInput: formValue(form, "rumbleInput") || base.rumbleInput,
+      summary: formValue(form, "summary") || base.summary,
+      description: formValue(form, "description") || base.description,
+      descriptionOverride: formValue(form, "descriptionOverride") || base.descriptionOverride,
+      tags: textareaArray(formValue(form, "tags")).length ? textareaArray(formValue(form, "tags")) : base.tags,
+      internalNotes: formValue(form, "internalNotes") || base.internalNotes
+    });
+  }
+
+  async function resolveRumbleMedia(target) {
+    const form = target.closest("[data-media-form]");
+    const input = formValue(form, "rumbleInput") || formValue(form, "sourceUrl") || formValue(form, "embedUrl");
+    if (!form || !input) {
+      if (form && mediaState.modal) {
+        mediaState.modal = { ...mediaState.modal, item: mediaDraftFromForm(form) };
+      }
+      mediaState.message = "Enter a Rumble URL, embed iframe, embed URL, or video id before resolving.";
+      renderMedia();
+      return;
+    }
+    target.setAttribute("disabled", "true");
+    target.textContent = "Resolving...";
+    try {
+      const response = await fetch(rumbleResolveEndpoint(), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ input })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        mediaState.modal = {
+          ...(mediaState.modal || { mode: "create" }),
+          item: mediaDraftFromForm(form)
+        };
+        mediaState.message = `Rumble metadata resolution failed safely: ${payload.error || (payload.warnings || []).join(", ") || response.status}`;
+        renderMedia();
+        return;
+      }
+      const resolved = payload.media || {};
+      const current = mediaState.modal?.item || emptyMediaItem();
+      const nextType = formValue(form, "type") || current.entryType || "video";
+      mediaState.modal = {
+        ...(mediaState.modal || { mode: "create" }),
+        item: normalizeMediaItem({
+          ...current,
+          rumbleInput: input,
+          sourcePlatform: "rumble",
+          platform: "rumble",
+          source: "manual",
+          entryType: nextType,
+          type: nextType,
+          title: formValue(form, "title") || resolved.title || current.title,
+          description: formValue(form, "description") || resolved.description || current.description,
+          summary: formValue(form, "summary") || resolved.description || current.summary,
+          thumbnailUrl: formValue(form, "thumbnailPath") || resolved.thumbnailUrl || current.thumbnailUrl,
+          thumbnailPath: formValue(form, "thumbnailPath") || resolved.thumbnailUrl || current.thumbnailPath,
+          sourceUrl: resolved.sourceUrl || formValue(form, "sourceUrl") || current.sourceUrl,
+          externalUrl: resolved.externalUrl || resolved.sourceUrl || current.externalUrl,
+          canonicalUrl: resolved.canonicalUrl || resolved.sourceUrl || current.canonicalUrl,
+          embedUrl: nextType === "short" ? "" : (resolved.embedUrl || formValue(form, "embedUrl") || current.embedUrl),
+          platformVideoId: resolved.platformVideoId || current.platformVideoId,
+          visible: form.querySelector("[name='visible']")?.checked ?? current.visible,
+          galleryOnly: nextType === "short",
+          heroEmbeddable: nextType !== "short" && Boolean(resolved.embedUrl || formValue(form, "embedUrl") || current.embedUrl),
+          aspect: nextType === "short" ? "portrait" : "landscape",
+          resolverWarnings: payload.warnings || resolved.warnings || []
+        })
+      };
+      mediaState.message = payload.warnings?.length ? `Rumble metadata resolved with warning(s): ${payload.warnings.join(", ")}` : "Rumble metadata resolved. Review overrides before saving.";
+      renderMedia();
+    } catch {
+      mediaState.modal = {
+        ...(mediaState.modal || { mode: "create" }),
+        item: mediaDraftFromForm(form)
+      };
+      mediaState.message = "Rumble metadata resolution failed because the Admin Function is unavailable.";
+      renderMedia();
+    }
+  }
+
+  async function uploadMediaThumbnail(input) {
+    const file = input?.files?.[0];
+    const form = input?.closest("[data-media-form]");
+    const status = form?.querySelector("[data-media-thumbnail-upload-status]");
+    if (!file || !form) return;
+    if (status) status.textContent = `Selected ${file.name}; uploading...`;
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("field", "watch-media-thumbnail");
+    formData.set("projectSlug", formValue(form, "slug") || "watch-media");
+    try {
+      const response = await fetch(assetUploadEndpoint(), { method: "POST", credentials: "include", body: formData });
+      const payload = await response.json().catch(() => ({}));
+      const url = payload.url || payload.path || "";
+      if (!response.ok || !payload.ok || !/^https:\/\//i.test(url)) {
+        if (status) status.textContent = `Upload failed: ${payload.error || response.status}`;
+        return;
+      }
+      const current = mediaState.modal?.item || emptyMediaItem();
+      mediaState.modal = {
+        ...(mediaState.modal || { mode: "create" }),
+        item: normalizeMediaItem({
+          ...current,
+          thumbnailPath: url,
+          thumbnailUrl: url,
+          thumbnailOverrideUrl: url,
+          updatedAt: new Date().toISOString()
+        })
+      };
+      if (status) status.textContent = "Uploaded thumbnail to R2.";
+      renderMedia();
+    } catch {
+      if (status) status.textContent = "Upload failed because the Admin Function is unavailable.";
+    }
   }
 
   function saveAlertFromForm(form) {
@@ -9116,14 +9384,14 @@ import {
     const item = mediaState.items.find((entry) => entry.id === id);
     if (!item) return;
 
-    if (!window.confirm(`Delete local scaffold media item "${item.title || item.slug}"? This will not affect DanielClancy.net.`)) {
+    if (!window.confirm(`Delete manual media item "${item.title || item.slug}"? YouTube autofetch content is not deleted here.`)) {
       return;
     }
 
     mediaState.items = mediaState.items.filter((entry) => entry.id !== id);
     mediaState.selected.delete(id);
     persistMediaItems();
-    mediaState.message = `Deleted local scaffold row: ${item.title || item.slug}.`;
+    mediaState.message = `Deleted manual media row: ${item.title || item.slug}.`;
     renderMedia();
   }
 
@@ -9251,14 +9519,14 @@ import {
   function bulkDeleteMedia() {
     const count = mediaState.selected.size;
     if (!count) return;
-    if (!window.confirm(`Delete ${count} selected local scaffold media row(s)? This will not affect DanielClancy.net.`)) {
+    if (!window.confirm(`Delete ${count} selected manual media row(s)? YouTube autofetch content is not deleted here.`)) {
       return;
     }
 
     mediaState.items = mediaState.items.filter((item) => !mediaState.selected.has(item.id));
     mediaState.selected.clear();
     persistMediaItems();
-    mediaState.message = `Deleted ${count} local media scaffold row(s).`;
+    mediaState.message = `Deleted ${count} manual media row(s).`;
     renderMedia();
   }
 
@@ -9299,7 +9567,7 @@ import {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(json).then(
         () => {
-          mediaState.message = "Copied local media scaffold JSON to the clipboard.";
+          mediaState.message = "Copied watch media JSON to the clipboard.";
           renderMedia();
         },
         () => {
@@ -9369,7 +9637,7 @@ import {
   }
 
   function importMediaJson() {
-    const value = window.prompt("Paste a JSON array of media scaffold rows. This replaces local browser data only.");
+    const value = window.prompt("Paste a JSON array of watch media rows. This replaces the current Media table rows before the next save.");
     if (!value) return;
 
     try {
@@ -9384,14 +9652,14 @@ import {
         throw new Error("Media slug/id values must be unique.");
       }
 
-      if (!window.confirm(`Import ${normalized.length} media scaffold row(s) into local browser storage?`)) {
+      if (!window.confirm(`Import ${normalized.length} watch media row(s) into the Media table?`)) {
         return;
       }
 
       mediaState.items = normalized;
       mediaState.selected.clear();
       persistMediaItems();
-      mediaState.message = "Imported media scaffold JSON into local browser storage.";
+      mediaState.message = "Imported watch media JSON.";
       renderMedia();
     } catch (error) {
       mediaState.message = `Import failed: ${error.message}`;
@@ -9467,7 +9735,7 @@ import {
     mediaState.items = (data.media || []).map(normalizeMediaItem);
     mediaState.selected.clear();
     persistMediaItems();
-    mediaState.message = "Media CMS scaffold reset to repo seed data.";
+    mediaState.message = "Media CMS reset to repo seed data.";
     renderMedia();
   }
 

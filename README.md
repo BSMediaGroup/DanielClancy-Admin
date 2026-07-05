@@ -332,6 +332,7 @@ The response contract is stable JSON:
 - `revision`
 - `publishedAt`
 - `collections.projects`
+- `collections.watchMedia`
 - `collections.products`
 - `collections.productSettings`
 - `collections.companies`
@@ -342,7 +343,7 @@ The response contract is stable JSON:
 - `assets.docs`
 - `warnings`
 
-Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. The export `meta` includes `productOverrideCount` and `bannerRegistryCount`, and publish response counts include `productOverrides` and `banners` for public merch verification. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
+Projects are built from the protected public Projects baseline plus safe `cms:projects` KV overlay when available. Watch media entries are read from `cms:media`, sanitized into `collections.watchMedia`, and filtered to visible public-safe fields only. Rumble video rows can include safe `https://rumble.com/embed/...` iframe URLs for public hero playback; Rumble short rows are exported as portrait gallery-only links with `heroEmbeddable: false`. Product storefront overrides are read from `cms:products`, sanitized, and filtered so private/internal rows are not exposed. The export `meta` includes `watchMediaCount`, `productOverrideCount`, and `bannerRegistryCount`, and publish response counts include `watchMedia`, `productOverrides`, and `banners` for public verification. Companies, Platforms, and Positions use the same `registry-overlay.v3` reconciliation layer as the admin CMS endpoints. Client-only organizations remain excluded from public Companies; source client/provenance labels can remain on project rows where they are public metadata. If `DC_ADMIN_KV` is unavailable or a collection read fails, the endpoint returns reconciled baseline data with warnings instead of failing the public website.
 
 CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.danielclancy.net`, and local Vite/preview origins. It avoids wildcard origins and does not allow unsafe methods. Successful responses use `Cache-Control: no-store` plus an ETag when a revision exists so managed product/banner changes can be visible on refresh; errors also use `no-store`.
 
@@ -350,11 +351,12 @@ CORS allows `GET` and `OPTIONS` for `https://danielclancy.net`, `https://www.dan
 
 1. Save/Sync edits in the Projects, Companies, Platforms, or Positions CMS page.
 2. Use Overview or Settings `Publish site data` for those non-merch CMS collections.
-3. Products, product bulk actions, and Shop Settings save to `cms:products` and auto-publish the sanitized public snapshot as part of the save response. Product-editor quick-created banner rows are included with the product save so assigned banners are not left browser-local.
-4. Confirm the returned revision, published timestamp, product override count, and banner count.
-5. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
-6. Verify `GET /api/merch/products` on the public site reports the same `overrideRevision` and exposes product `banners` for assigned/enabled banner rows.
-7. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, or public assets were added.
+3. Media saves to `cms:media` and auto-publishes sanitized `collections.watchMedia` so manual Rumble videos/shorts can appear on public `/watch` after refresh.
+4. Products, product bulk actions, and Shop Settings save to `cms:products` and auto-publish the sanitized public snapshot as part of the save response. Product-editor quick-created banner rows are included with the product save so assigned banners are not left browser-local.
+5. Confirm the returned revision, published timestamp, watch media count, product override count, and banner count.
+6. The public site should fetch `https://admin.danielclancy.net/api/public/site-data` when `VITE_ADMIN_PUBLIC_SITE_DATA_URL` is configured in the public Cloudflare Pages project.
+7. Verify `GET /api/merch/products` on the public site reports the same `overrideRevision` and exposes product `banners` for assigned/enabled banner rows.
+8. Refresh the public site. Redeploy Public only when the env var changed, the committed fallback snapshot changed, rendering code changed, public assets were added, or the public watch renderer changed.
 
 If Admin is in static/local-only mode or `DC_ADMIN_KV` is unavailable, the dashboard shows `Cannot publish: live Admin API/KV is unavailable. Current edits are local-only.` Save/Sync remains separate from Publish.
 
@@ -446,6 +448,7 @@ DanielClancy-Admin/
 │   │   ├── printful-products.js
 │   │   ├── public-site-data.js
 │   │   ├── registry-reconciliation.js
+│   │   ├── rumble-watch-media.js
 │   │   └── turnstile.js
 │   └── api/
 │       ├── analytics/
@@ -462,6 +465,8 @@ DanielClancy-Admin/
 │       │   ├── customers/
 │       │   │   └── [[id]].js
 │       │   ├── merch-orders.js
+│       │   ├── media/
+│       │   │   └── resolve.js
 │       │   ├── products/
 │       │   │   └── [[path]].js
 │       │   ├── publish/
@@ -488,6 +493,7 @@ DanielClancy-Admin/
 │   ├── public-site-data-export.test.mjs
 │   ├── registry-overlay-persistence.test.mjs
 │   ├── registry-reconciliation.test.mjs
+│   ├── rumble-watch-media.test.mjs
 │   ├── source-audit-completeness.test.mjs
 │   └── version-consistency.test.mjs
 ├── tools/
@@ -525,8 +531,8 @@ DanielClancy-Admin/
 - Positions page for CV-derived employment position records, with KV/local fallback, source-baseline reconciliation, table view, search/status filter, create/edit modal, archive/delete confirmation, company selector, and platform/software multi-selector. Position company IDs must resolve to reconciled Companies.
 - Sidebar has separate collapse and hide controls; the mode is persisted locally, hidden mode exposes a reopen control, SVG UI icons are rendered from `assets/icons/ui`, and the brand subtext reads `ADMIN DASHBOARD`.
 - The topbar loading strip sits on the bottom edge of the topbar and uses the StreamSuites-style purple gradient motion. The topbar user dropdown includes session identity details plus Accounts, Settings, Public Site, and Logout actions, and closes on outside click or Escape without changing the existing auth gate.
-- Media CMS scaffold with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, create/edit/detail modal, local field-completeness checks, bulk actions, reset, and JSON copy/import controls for future `/watch` page management.
-- Media CMS does not publish to DanielClancy.net, fetch YouTube/Rumble feeds, or connect to StreamSuites.
+- Media CMS for `/watch` with admin API/KV hydration when `DC_ADMIN_KV` is configured, localStorage fallback, table editing, Add Rumble Video/Short workflow, edit/detail modal, Rumble metadata resolution, manual title/description/thumbnail/date/visibility overrides, R2 thumbnail upload through `DC_ADMIN_ASSETS_R2`, bulk actions, reset, and JSON copy/import controls.
+- Media CMS saves manual watch entries to `cms:media` and auto-publishes sanitized `collections.watchMedia` for DanielClancy.net. It does not execute or store raw Rumble scripts, does not mutate YouTube autofetch state, and does not connect to StreamSuites.
 - Alerts rule editing is disabled in DanielClancy-Admin. Alerts is removed from main navigation, direct `#/alerts` visits show the non-editable notice “Alert rules are managed in StreamSuites-Dashboard only,” and create/edit/delete/bulk/import/reset/copy/sync controls are not rendered.
 - Admin page visits, successful manual/OAuth auth, and successful Projects/Media/Alerts CMS saves may post DanielClancy alert events to the StreamSuites ingest bridge when `DANIELCLANCY_ALERT_INGEST_URL` and `DANIELCLANCY_ALERT_INGEST_SECRET` are configured. Event payload/context data is stripped of rule/configuration/manifest fields before sending.
 - DanielClancy-Admin cannot manage, sync, export, replace, or overwrite StreamSuites canonical alert rule definitions. StreamSuites-Dashboard is the only UI for alert rule definitions.

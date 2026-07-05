@@ -1,5 +1,46 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Watch Media CMS, Rumble Resolver, And Public Autopublish Milestone
+
+### Technical Notes
+
+- Converted `#/media` from a local scaffold-style page into a watch media CMS surface for manual Rumble videos and Rumble shorts.
+- Extended media rows with unified watch media fields: source platform, entry type, manual/autofetch source, source/embed/canonical URLs, platform ids, published/entered/sort dates, visibility, hero eligibility, gallery-only state, aspect, tags, created/updated metadata, and override fields.
+- Added a protected `POST /api/admin/media/resolve` endpoint backed by `functions/_shared/rumble-watch-media.js`.
+- Rumble resolver accepts main Rumble URLs, monetized URLs, iframe HTML, embed URLs, and raw Rumble ids; it parses safe metadata from Open Graph/Twitter tags and discovered iframe URLs without executing scripts.
+- Rumble videos can derive/store safe `https://rumble.com/embed/{id}/?pub=vmzw3` iframe URLs. Rumble shorts are normalized as portrait gallery-only rows with `heroEmbeddable: false`.
+- Added thumbnail upload support through the existing authenticated `DC_ADMIN_ASSETS_R2` asset upload path, returning public CDN URLs from `DC_ADMIN_ASSETS_PUBLIC_BASE_URL` when configured.
+- Public site-data export now reads `cms:media`, sanitizes visible manual watch media into `collections.watchMedia`, strips admin-only fields, includes `watchMediaCount`, and counts watch media in publish metadata.
+- Media CMS saves now auto-publish the sanitized public site-data snapshot when live `DC_ADMIN_KV` is available and report the publish revision or failure reason.
+- Fixed Media hydration local-cache shape so media rows are not cached as registry overlay payloads.
+- Rumble resolver failures now preserve the current modal draft values, keeping manual title/thumbnail/date overrides available when server-side metadata resolution is unavailable.
+- Added slim dark scrollbar styling for Admin sidebar, table wrappers, modals, and analytics sidebars.
+- Added focused tests for Rumble parsing/resolution, Rumble short normalization, and public watch-media export sanitization.
+
+### Human-Readable Notes
+
+- Admin can add a Rumble video or short, resolve metadata when available, manually override title/description/thumbnail/date/visibility, upload a thumbnail, and save it for public `/watch`.
+- Rumble videos can become the public hero if newest and embeddable; Rumble shorts remain portrait gallery links only.
+- Public updates are synced through the existing sanitized site-data snapshot instead of exposing Admin CMS routes or secrets to the public site.
+
+### Known Limitations
+
+- Auto-publish remains blocked if `DC_ADMIN_KV` is missing or unavailable.
+- Rumble metadata fetches may fail if the upstream page blocks server-side requests; manual override fields are the supported fallback.
+- YouTube autofetch remains owned by the public `functions/api/watch-feed.js` path, not by Admin Media CMS.
+
+### Files / Areas Changed
+
+- `README.md`
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/public-site-data.js`
+- `functions/_shared/rumble-watch-media.js`
+- `functions/api/admin/cms/[[collection]].js`
+- `functions/api/admin/media/resolve.js`
+- `tests/public-site-data-export.test.mjs`
+- `tests/rumble-watch-media.test.mjs`
+
 ## Product Banner Public Sync Diagnostics And User Dropdown Escape Repair
 
 ### Technical Notes

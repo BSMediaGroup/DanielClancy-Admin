@@ -5,9 +5,11 @@ import {
   reconcilePositionsCollection,
   reconcileRegistryCollection
 } from "./registry-reconciliation.js";
+import { sanitizeWatchMediaItem } from "./rumble-watch-media.js";
 
 const COLLECTIONS = {
   projects: { key: "cms:projects" },
+  media: { key: "cms:media" },
   products: { key: "cms:products" },
   companies: { key: "cms:companies" },
   platforms: { key: "cms:platforms" },
@@ -59,8 +61,9 @@ export async function buildPublicSiteData(context, options = {}) {
   }
 
   const kv = storageConfigured ? env.DC_ADMIN_KV : null;
-  const [projectsRaw, productsRaw, companiesRaw, platformsRaw, positionsRaw] = await Promise.all([
+  const [projectsRaw, mediaRaw, productsRaw, companiesRaw, platformsRaw, positionsRaw] = await Promise.all([
     getKvValue(kv, COLLECTIONS.projects.key, warnings),
+    getKvValue(kv, COLLECTIONS.media.key, warnings),
     getKvValue(kv, COLLECTIONS.products.key, warnings),
     getKvValue(kv, COLLECTIONS.companies.key, warnings),
     getKvValue(kv, COLLECTIONS.platforms.key, warnings),
@@ -68,6 +71,7 @@ export async function buildPublicSiteData(context, options = {}) {
   ]);
 
   const projectsStored = parseStoredCollection(projectsRaw, warnings, "projects");
+  const mediaStored = parseStoredCollection(mediaRaw, warnings, "media");
   const productsStored = parseStoredCollection(productsRaw, warnings, "products");
   const companiesStored = parseStoredValue(companiesRaw, warnings, "companies");
   const platformsStored = parseStoredValue(platformsRaw, warnings, "platforms");
@@ -87,6 +91,7 @@ export async function buildPublicSiteData(context, options = {}) {
     (id) => companyNameById(companiesResult.items, id)
   );
   const projectsResult = mergeProjectsBaselineWithKv(projectsPayload, projectsStored.items, projectsStored.wrapper);
+  const publicWatchMedia = mediaStored.items.map((item) => sanitizeWatchMediaItem(item)).filter(Boolean);
   const publicProductOverrides = productsStored.items.map((item) => sanitizeProductOverride(item)).filter(Boolean);
   const publicProductSettings = sanitizeProductSettings(productsStored.wrapper?.settings || {});
 
@@ -103,6 +108,7 @@ export async function buildPublicSiteData(context, options = {}) {
     publishedAt: null,
     collections: {
       projects: projectsResult.items.map((item) => sanitizeProject(item)).filter(Boolean),
+      watchMedia: publicWatchMedia,
       products: publicProductOverrides,
       productSettings: publicProductSettings,
       companies: companiesResult.items.map((item) => sanitizeCompany(item)).filter(Boolean),
@@ -115,6 +121,7 @@ export async function buildPublicSiteData(context, options = {}) {
       projectsBaselineVersion: PROJECTS_BASELINE_VERSION,
       projectsBaselineCount: projectsResult.meta.baselineCount,
       projectsMergedCount: projectsResult.meta.mergedCount,
+      watchMediaCount: publicWatchMedia.length,
       productOverrideCount: publicProductOverrides.length,
       bannerRegistryCount: Array.isArray(publicProductSettings.banners) ? publicProductSettings.banners.length : 0,
       assetCatalogGeneratedAt: assetCatalog?.metadata?.generatedAt || null
@@ -695,6 +702,7 @@ export function collectionCounts(payload = {}) {
   return {
     projects: Array.isArray(collections.projects) ? collections.projects.length : 0,
     products: Array.isArray(collections.products) ? collections.products.length : 0,
+    watchMedia: Array.isArray(collections.watchMedia) ? collections.watchMedia.length : 0,
     productOverrides: Array.isArray(collections.products) ? collections.products.length : 0,
     banners: Array.isArray(collections.productSettings?.banners) ? collections.productSettings.banners.length : 0,
     companies: Array.isArray(collections.companies) ? collections.companies.length : 0,

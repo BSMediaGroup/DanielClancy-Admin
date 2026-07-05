@@ -106,6 +106,7 @@ test("public site-data export returns sanitized baseline collections without KV"
   assert.ok(payload.collections.companies.length > 0, "companies should be exported");
   assert.ok(payload.collections.platforms.length > 0, "platforms should be exported");
   assert.ok(payload.collections.positions.length > 0, "positions should be exported");
+  assert.deepEqual(payload.collections.watchMedia, [], "watch media should default to an empty public collection");
   assert.ok(payload.assets.portfolioThumbs.length > 0, "portfolio thumbnails should be exported");
   assert.ok(payload.assets.portfolioImages.length > 0, "portfolio images should be exported");
   assert.ok(payload.assets.docs.length > 0, "docs should be exported");
@@ -221,6 +222,65 @@ test("public site-data export includes sanitized product overrides only", async 
   assert.deepEqual(payload.collections.products[0].galleryOverride, ["https://cdn.example.test/signature-tee.webp"]);
   assert.equal(payload.collections.products[0].updatedBy, undefined);
   assert.equal(payload.collections.products[0].secretToken, undefined);
+});
+
+test("public site-data export includes sanitized manual watch media only", async () => {
+  const kv = {
+    async get(key) {
+      if (key === "cms:media") {
+        return JSON.stringify({
+          collection: "media",
+          items: [
+            {
+              id: "rumble-video",
+              sourcePlatform: "rumble",
+              entryType: "video",
+              source: "manual",
+              title: "Rumble video",
+              description: "Manual video description.",
+              thumbnailUrl: "https://cdn.example.test/rumble.webp",
+              sourceUrl: "https://rumble.com/v7c9m82-video.html",
+              embedUrl: "https://rumble.com/embed/v7a2y7u/?pub=vmzw3",
+              publishedAt: "2026-07-04T00:00:00.000Z",
+              visible: true,
+              updatedBy: "admin@example.test",
+              secretToken: "never-public"
+            },
+            {
+              id: "rumble-short",
+              sourcePlatform: "rumble",
+              entryType: "short",
+              source: "manual",
+              title: "Rumble short",
+              thumbnailUrl: "https://cdn.example.test/short.webp",
+              sourceUrl: "https://rumble.com/v7c9m82-short.html",
+              visible: true
+            },
+            {
+              id: "hidden-media",
+              title: "Hidden media",
+              sourceUrl: "https://rumble.com/v1-hidden.html",
+              visible: false
+            }
+          ]
+        });
+      }
+      return null;
+    }
+  };
+
+  const payload = await buildPublicSiteData({
+    request: mockRequest(),
+    env: { ASSETS: mockAssets(), DC_ADMIN_KV: kv }
+  });
+
+  assert.equal(payload.collections.watchMedia.length, 2);
+  assert.equal(payload.meta.watchMediaCount, 2);
+  assert.equal(payload.collections.watchMedia[0].updatedBy, undefined);
+  assert.equal(payload.collections.watchMedia[0].secretToken, undefined);
+  assert.equal(payload.collections.watchMedia[0].heroEmbeddable, true);
+  assert.equal(payload.collections.watchMedia[1].galleryOnly, true);
+  assert.equal(payload.collections.watchMedia[1].heroEmbeddable, false);
 });
 
 test("admin publish endpoint requires an admin session", async () => {
