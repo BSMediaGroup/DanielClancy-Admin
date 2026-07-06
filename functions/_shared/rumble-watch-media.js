@@ -124,14 +124,18 @@ export async function resolveRumbleMetadata(input, options = {}) {
 }
 
 export function normalizeWatchMediaItem(raw = {}) {
-  const sourcePlatform = normalizeEnum(raw.sourcePlatform || raw.platform || raw.provider, ["youtube", "rumble", "manual"], "manual");
+  const sourcePlatform = normalizeEnum(raw.sourcePlatform || raw.platform || raw.provider, ["youtube", "rumble", "manual", "external", "cloudflare_stream", "hls", "custom_embed"], "manual");
   const entryType = normalizeEnum(raw.entryType || raw.type || raw.kind, ["video", "short", "livestream", "other"], "video");
   const source = normalizeEnum(raw.source, ["autofetch", "manual"], sourcePlatform === "youtube" ? "autofetch" : "manual");
   const visible = raw.visible !== undefined ? Boolean(raw.visible) : !["hidden", "draft", "private", "archived"].includes(cleanText(raw.visibility || raw.status).toLowerCase());
   const aspect = normalizeEnum(raw.aspect, ["landscape", "portrait"], entryType === "short" ? "portrait" : "landscape");
   const galleryOnly = raw.galleryOnly !== undefined ? Boolean(raw.galleryOnly) : sourcePlatform === "rumble" && entryType === "short";
   const embedUrl = safeEmbedUrl(raw.embedUrl);
-  const heroEmbeddable = galleryOnly ? false : Boolean(embedUrl);
+  const customEmbedUrl = safeCustomEmbedUrl(raw.customEmbedUrl || raw.playerUrl || "");
+  const hlsUrl = safeHlsUrl(raw.hlsUrl || raw.streamUrl || "");
+  const cloudflareStreamUid = safeCloudflareStreamUid(raw.cloudflareStreamUid || raw.streamUid || raw.playerUid || "");
+  const liveStatus = normalizeEnum(raw.liveStatus || raw.streamStatus || raw.availability || raw.status, ["ready", "live", "offline", "upcoming", "no-live-source", "replay", "ended"], "");
+  const heroEmbeddable = galleryOnly ? false : Boolean(embedUrl || customEmbedUrl || hlsUrl || cloudflareStreamUid);
   const enteredAt = cleanIsoish(raw.enteredAt || raw.createdAt || raw.updatedAt) || new Date().toISOString();
   const publishedAt = cleanIsoish(raw.publishedAt || raw.publishedAtOverride || raw.date) || "";
   const sortDate = cleanIsoish(raw.sortDate || raw.publishedAt || raw.publishedAtOverride || raw.enteredAt || raw.createdAt || raw.updatedAt) || enteredAt;
@@ -140,7 +144,7 @@ export function normalizeWatchMediaItem(raw = {}) {
   const sourceUrl = safeHttpsUrl(raw.sourceUrl || raw.videoUrl || raw.url || "");
   const externalUrl = safeHttpsUrl(raw.externalUrl || raw.externalPageUrl || raw.pageUrl || sourceUrl);
   const canonicalUrl = safeHttpsUrl(raw.canonicalUrl || externalUrl || sourceUrl);
-  const thumbnailUrl = safeHttpsUrl(raw.thumbnailOverrideUrl || raw.thumbnailUrl || raw.thumbnailPath || "");
+  const thumbnailUrl = safePublicMediaUrl(raw.thumbnailOverrideUrl || raw.thumbnailUrl || raw.thumbnailPath || raw.posterUrl || raw.poster || "");
 
   return {
     id,
@@ -156,9 +160,20 @@ export function normalizeWatchMediaItem(raw = {}) {
     sourceUrl,
     videoUrl: sourceUrl || externalUrl,
     embedUrl,
+    cloudflareStreamUid,
+    streamUid: cleanText(raw.streamUid || cloudflareStreamUid || "", 160),
+    hlsUrl,
+    customEmbedUrl,
+    playbackType: normalizeEnum(raw.playbackType || raw.publicPlaybackType, ["none", "cloudflare_uid", "cloudflare_embed", "hls", "custom_embed", "external_url"], ""),
+    publicPlaybackType: normalizeEnum(raw.publicPlaybackType || raw.playbackType, ["none", "cloudflare_uid", "cloudflare_embed", "hls", "custom_embed", "external_url"], ""),
     externalUrl,
     externalPageUrl: externalUrl,
     canonicalUrl,
+    liveStatus,
+    scheduledStartAt: cleanIsoish(raw.scheduledStartAt || raw.scheduledAt || raw.startsAt || raw.startTime) || "",
+    startedAt: cleanIsoish(raw.startedAt || raw.startAt || raw.liveStartedAt) || "",
+    endedAt: cleanIsoish(raw.endedAt || raw.endAt || raw.liveEndedAt) || "",
+    sourceLabel: cleanText(raw.sourceLabel || raw.platformLabel || "", 120),
     platformVideoId: cleanText(raw.platformVideoId || raw.videoId || "", 160),
     platformChannelId: cleanText(raw.platformChannelId || raw.channelId || "", 160),
     publishedAt: publishedAt || null,
@@ -189,8 +204,9 @@ export function normalizeWatchMediaItem(raw = {}) {
 export function sanitizeWatchMediaItem(raw = {}) {
   if (isScaffoldWatchMediaEntry(raw)) return null;
   const item = normalizeWatchMediaItem(raw);
+  const stateOnlyLivestream = item.entryType === "livestream" && ["offline", "upcoming", "no-live-source"].includes(String(item.liveStatus || "").toLowerCase());
   if (!item.visible) return null;
-  if (!item.title || (!item.sourceUrl && !item.externalUrl && !item.embedUrl)) return null;
+  if (!item.title || (!item.sourceUrl && !item.externalUrl && !item.embedUrl && !item.cloudflareStreamUid && !item.hlsUrl && !item.customEmbedUrl && !stateOnlyLivestream)) return null;
   return {
     id: item.id,
     sourcePlatform: item.sourcePlatform,
@@ -202,8 +218,19 @@ export function sanitizeWatchMediaItem(raw = {}) {
     thumbnailUrl: item.thumbnailUrl,
     sourceUrl: item.sourceUrl,
     embedUrl: item.embedUrl,
+    cloudflareStreamUid: item.cloudflareStreamUid,
+    streamUid: item.streamUid,
+    hlsUrl: item.hlsUrl,
+    customEmbedUrl: item.customEmbedUrl,
+    playbackType: item.playbackType,
+    publicPlaybackType: item.publicPlaybackType,
     externalUrl: item.externalUrl,
     canonicalUrl: item.canonicalUrl,
+    liveStatus: item.liveStatus,
+    scheduledStartAt: item.scheduledStartAt,
+    startedAt: item.startedAt,
+    endedAt: item.endedAt,
+    sourceLabel: item.sourceLabel,
     platformVideoId: item.platformVideoId,
     platformChannelId: item.platformChannelId,
     publishedAt: item.publishedAt,
@@ -291,12 +318,41 @@ function safeHttpsUrl(value) {
   return url ? url.toString() : "";
 }
 
+function safePublicMediaUrl(value) {
+  const text = cleanText(value, 2000);
+  if (!text) return "";
+  if (/^\/(media|assets|docs)\//i.test(text)) return text;
+  if (/^\.(\/(public\/)?(media|assets|docs)\/)/i.test(text)) return text.replace(/^\.\/public\//i, "/").replace(/^\./, "");
+  return safeHttpsUrl(text);
+}
+
 function safeEmbedUrl(value) {
   const url = safeUrl(value);
   if (!url) return "";
   if (url.hostname === "rumble.com" && url.pathname.startsWith("/embed/")) return url.toString();
   if (url.hostname.endsWith("youtube.com") && url.pathname.startsWith("/embed/")) return url.toString();
+  if (url.hostname === "iframe.videodelivery.net" && safeCloudflareStreamUid(url.pathname.replace(/^\/+/, "").split("/")[0] || "")) return url.toString();
   return "";
+}
+
+function safeCustomEmbedUrl(value) {
+  const url = safeUrl(value);
+  if (!url) return "";
+  if (url.hostname === "rumble.com" && url.pathname.startsWith("/embed/")) return url.toString();
+  if (url.hostname.endsWith("youtube.com") && url.pathname.startsWith("/embed/")) return url.toString();
+  if (url.hostname === "iframe.videodelivery.net" && safeCloudflareStreamUid(url.pathname.replace(/^\/+/, "").split("/")[0] || "")) return url.toString();
+  return url.toString();
+}
+
+function safeHlsUrl(value) {
+  const url = safeUrl(value);
+  if (!url) return "";
+  return /\.m3u8($|\?)/i.test(`${url.pathname}${url.search}`) ? url.toString() : "";
+}
+
+function safeCloudflareStreamUid(value) {
+  const text = cleanText(value, 160);
+  return /^[A-Za-z0-9._-]{8,128}$/.test(text) && !text.includes("/") ? text : "";
 }
 
 function isRumbleUrl(url) {

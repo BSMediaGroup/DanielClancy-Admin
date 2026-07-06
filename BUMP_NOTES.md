@@ -1,5 +1,31 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Admin Livestream Configuration Milestone
+
+### Technical notes
+- Added a `#/livestream` Admin route in the existing dashboard shell for configuring the public `/live` and `/watch` livestream row without adding a new authority layer.
+- The page saves one sanitized `public-livestream-config` row through the existing Media CMS/public site-data path, preserving existing Media CMS rows and auto-publish behavior when live Admin KV is available.
+- Supported public-safe playback fields now include livestream status, title, description, scheduled start, poster/thumbnail, Cloudflare Stream public UID/embed URL, HLS URL, custom embed URL, external source URL, source label, and watch-player-compatible live status metadata.
+- Extended the Admin-side public watch-media sanitizer to keep Cloudflare Stream, HLS, custom embed, livestream status, schedule, and safe relative poster asset fields while still stripping admin/private fields.
+- Added export-contract coverage proving livestream playback config is included in `collections.watchMedia` and private ingest/setup values such as ingest URL, stream key, and internal notes do not publish.
+- Private ingest/setup fields are redacted local-only markers in this milestone; raw ingest URL, stream key, and private notes are intentionally discarded because no verified private-only durable livestream credential store exists yet.
+
+### Human-readable notes
+- Admin now has a dedicated Livestream page for manually setting what the public live/watch surfaces should show before Cloudflare Stream automation exists.
+- The default/fallback posture remains offline and truthful; no fake active livestream or invented stream date is created.
+- Operators can record that private setup exists, but secret values are not saved or published from this Admin surface.
+
+### Deferred intentionally
+- Cloudflare Stream API live-input creation remains Task 4.
+- Persistent comments, likes/dislikes, D1 interaction storage, Turnstile protection for public interactions, and public interaction moderation remain later tasks.
+
+### Files / Areas Changed
+- `assets/css/admin.css`
+- `assets/js/admin-app.js`
+- `functions/_shared/rumble-watch-media.js`
+- `tests/public-site-data-export.test.mjs`
+- `BUMP_NOTES.md`
+
 ## Watch Media Hard Repair Follow-Up
 
 ### Technical notes

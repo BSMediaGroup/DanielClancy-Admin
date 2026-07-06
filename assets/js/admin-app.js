@@ -45,6 +45,7 @@ import {
     { id: "settings", label: "Settings", icon: "cog.svg", path: "#/settings" },
     { id: "projects", label: "Projects", icon: "photostack.svg", path: "#/projects" },
     { id: "media", label: "Media", icon: "media.svg", path: "#/media" },
+    { id: "livestream", label: "Livestream", icon: "tvlive.svg", path: "#/livestream" },
     { id: "companies", label: "Companies", icon: "profilecard.svg", path: "#/companies" },
     { id: "platforms", label: "Platforms", icon: "appspark.svg", path: "#/platforms" },
     { id: "positions", label: "Positions", icon: "idbadge.svg", path: "#/positions" }
@@ -63,6 +64,19 @@ import {
   const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
   const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
+  const LIVESTREAM_MEDIA_ID = "public-livestream-config";
+  const LIVESTREAM_PRIVATE_SETUP_STORAGE_KEY = "danielclancy-admin.livestream.private.redacted.v1";
+  const LIVESTREAM_STATUSES = ["offline", "upcoming", "live", "replay", "ended"];
+  const LIVESTREAM_PLAYBACK_TYPES = ["none", "cloudflare_uid", "cloudflare_embed", "hls", "custom_embed", "external_url"];
+  const LIVESTREAM_PLATFORM_MAP = {
+    none: "manual",
+    cloudflare_uid: "cloudflare_stream",
+    cloudflare_embed: "cloudflare_stream",
+    hls: "hls",
+    custom_embed: "custom_embed",
+    external_url: "external"
+  };
+  const LIVESTREAM_PRIVATE_PROVIDERS = ["cloudflare_stream_manual", "rumble_studio_rtmp", "streamyard_rtmp", "obs_custom_rtmp", "other_manual"];
   const SCAFFOLD_MEDIA_EXACT = new Set([
     "latest-youtube-release-scaffold",
     "latest youtube release scaffold",
@@ -243,6 +257,10 @@ import {
     modal: null,
     message: "Checking Watch Media CMS. No scaffold media rows are rendered.",
     storage: cmsStorageState.media
+  };
+  const livestreamState = {
+    message: "Livestream settings use the Media CMS public export. Private ingest fields are redacted and are not published.",
+    privateSetup: loadLivestreamPrivateSetup()
   };
   const alertsState = {
     rules: loadAlertRules(),
@@ -2006,7 +2024,11 @@ import {
     const publishedAt = cleanMediaIsoish(raw?.publishedAt || raw?.publishedAtOverride || raw?.published_at || raw?.date);
     const createdAt = cleanMediaIsoish(raw?.createdAt || enteredAt) || enteredAt;
     const entryType = ["livestream", "video", "short", "other"].includes(type) ? type : "video";
-    const sourcePlatform = ["youtube", "rumble", "manual", "external"].includes(platform) ? platform : "manual";
+    const sourcePlatform = ["youtube", "rumble", "manual", "external", "cloudflare_stream", "hls", "custom_embed"].includes(platform) ? platform : "manual";
+    const liveStatus = normalizeLivestreamStatus(raw?.liveStatus || raw?.streamStatus || raw?.availability || "");
+    const scheduledStartAt = cleanMediaIsoish(raw?.scheduledStartAt || raw?.scheduledAt || raw?.startsAt || raw?.startTime);
+    const startedAt = cleanMediaIsoish(raw?.startedAt || raw?.startAt || raw?.liveStartedAt);
+    const endedAt = cleanMediaIsoish(raw?.endedAt || raw?.endAt || raw?.liveEndedAt);
 
     return {
       id: String(raw?.id || fallbackId),
@@ -2028,13 +2050,24 @@ import {
       sortDate: cleanMediaIsoish(raw?.sortDate || publishedAt || enteredAt || createdAt) || enteredAt,
       featured: Boolean(raw?.featured),
       manualHeroEligible: Boolean(raw?.manualHeroEligible || raw?.featured),
-      heroEmbeddable: galleryOnly ? false : Boolean(raw?.embedUrl),
+      heroEmbeddable: galleryOnly ? false : Boolean(raw?.heroEmbeddable || raw?.embedUrl || raw?.cloudflareStreamUid || raw?.streamUid || raw?.hlsUrl || raw?.customEmbedUrl),
       galleryOnly,
       aspect: ["landscape", "portrait"].includes(aspect) ? aspect : "landscape",
       thumbnailPath: thumbnailUrl,
       thumbnailUrl,
       thumbnailOverrideUrl: String(raw?.thumbnailOverrideUrl || ""),
       embedUrl: String(raw?.embedUrl || ""),
+      cloudflareStreamUid: String(raw?.cloudflareStreamUid || raw?.streamUid || raw?.playerUid || ""),
+      streamUid: String(raw?.streamUid || raw?.cloudflareStreamUid || raw?.playerUid || ""),
+      hlsUrl: String(raw?.hlsUrl || raw?.streamUrl || ""),
+      customEmbedUrl: String(raw?.customEmbedUrl || raw?.playerUrl || ""),
+      playbackType: normalizeLivestreamPlaybackType(raw?.playbackType || raw?.publicPlaybackType || ""),
+      publicPlaybackType: normalizeLivestreamPlaybackType(raw?.publicPlaybackType || raw?.playbackType || ""),
+      liveStatus,
+      scheduledStartAt,
+      startedAt,
+      endedAt,
+      sourceLabel: String(raw?.sourceLabel || raw?.platformLabel || ""),
       sourceUrl,
       videoUrl: sourceUrl || externalUrl,
       replayUrl: String(raw?.replayUrl || ""),
@@ -2091,6 +2124,115 @@ import {
     }
     window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
     persistCmsCollection("media");
+  }
+
+  function normalizeLivestreamStatus(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (text === "ended") return "ended";
+    if (text === "replay") return "replay";
+    return LIVESTREAM_STATUSES.includes(text) ? text : "";
+  }
+
+  function normalizeLivestreamPlaybackType(value) {
+    const text = String(value || "").trim().toLowerCase();
+    return LIVESTREAM_PLAYBACK_TYPES.includes(text) ? text : "none";
+  }
+
+  function livestreamMediaStatus(liveStatus) {
+    if (liveStatus === "live") return "live";
+    return "published";
+  }
+
+  function livestreamSourcePlatform(playbackType) {
+    return LIVESTREAM_PLATFORM_MAP[normalizeLivestreamPlaybackType(playbackType)] || "manual";
+  }
+
+  function livestreamPlaybackTypeFromItem(item = {}) {
+    const explicit = normalizeLivestreamPlaybackType(item.playbackType || item.publicPlaybackType || "");
+    if (explicit !== "none" || item.playbackType === "none" || item.publicPlaybackType === "none") return explicit;
+    if (item.cloudflareStreamUid || item.streamUid) return "cloudflare_uid";
+    if (String(item.embedUrl || "").includes("iframe.videodelivery.net")) return "cloudflare_embed";
+    if (item.hlsUrl) return "hls";
+    if (item.customEmbedUrl) return "custom_embed";
+    if (item.sourceUrl || item.externalUrl) return "external_url";
+    return "none";
+  }
+
+  function defaultLivestreamMediaItem() {
+    return normalizeMediaItem({
+      id: LIVESTREAM_MEDIA_ID,
+      slug: LIVESTREAM_MEDIA_ID,
+      title: "Livestream offline",
+      entryType: "livestream",
+      type: "livestream",
+      status: "published",
+      visibility: "public",
+      visible: true,
+      sourcePlatform: "manual",
+      platform: "manual",
+      source: "manual",
+      liveStatus: "offline",
+      publicPlaybackType: "none",
+      playbackType: "none",
+      galleryOnly: false,
+      aspect: "landscape",
+      heroEmbeddable: false,
+      tags: ["livestream", "public-livestream-config"],
+      internalNotes: "Public livestream configuration row managed from DanielClancy-Admin Livestream."
+    });
+  }
+
+  function livestreamMediaItem() {
+    return mediaState.items.find((item) => item.id === LIVESTREAM_MEDIA_ID) || defaultLivestreamMediaItem();
+  }
+
+  function upsertLivestreamMediaItem(item) {
+    const normalized = normalizeMediaItem(item);
+    const index = mediaState.items.findIndex((entry) => entry.id === LIVESTREAM_MEDIA_ID);
+    if (index >= 0) {
+      mediaState.items[index] = normalized;
+    } else {
+      mediaState.items.unshift(normalized);
+    }
+  }
+
+  function loadLivestreamPrivateSetup() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(LIVESTREAM_PRIVATE_SETUP_STORAGE_KEY) || "{}");
+      return {
+        provider: LIVESTREAM_PRIVATE_PROVIDERS.includes(parsed.provider) ? parsed.provider : "cloudflare_stream_manual",
+        hasIngestUrl: Boolean(parsed.hasIngestUrl),
+        hasStreamKey: Boolean(parsed.hasStreamKey),
+        hasPrivateNotes: Boolean(parsed.hasPrivateNotes),
+        updatedAt: String(parsed.updatedAt || "")
+      };
+    } catch {
+      return {
+        provider: "cloudflare_stream_manual",
+        hasIngestUrl: false,
+        hasStreamKey: false,
+        hasPrivateNotes: false,
+        updatedAt: ""
+      };
+    }
+  }
+
+  function persistLivestreamPrivateSetup(form) {
+    const next = {
+      provider: LIVESTREAM_PRIVATE_PROVIDERS.includes(formValue(form, "privateProvider")) ? formValue(form, "privateProvider") : "cloudflare_stream_manual",
+      hasIngestUrl: Boolean(formValue(form, "privateIngestUrl")) || Boolean(livestreamState.privateSetup.hasIngestUrl),
+      hasStreamKey: Boolean(formValue(form, "privateStreamKey")) || Boolean(livestreamState.privateSetup.hasStreamKey),
+      hasPrivateNotes: Boolean(formValue(form, "privateNotes")) || Boolean(livestreamState.privateSetup.hasPrivateNotes),
+      updatedAt: new Date().toISOString()
+    };
+    livestreamState.privateSetup = next;
+    try {
+      window.localStorage.setItem(LIVESTREAM_PRIVATE_SETUP_STORAGE_KEY, JSON.stringify(next, null, 2));
+      livestreamState.message = "Private ingest/setup markers saved locally with secret values redacted. Raw ingest URL, stream key, and private notes were not stored.";
+    } catch {
+      livestreamState.message = "Private ingest/setup markers could not be saved locally. Raw secret values were not stored.";
+    }
+    renderLivestreamSettings();
   }
 
   function normalizeAlertRule(raw) {
@@ -3146,6 +3288,14 @@ import {
     });
   }
 
+  function renderCmsCollectionView(collection, config) {
+    if (collection === "media" && activePageIs("livestream")) {
+      renderLivestreamSettings();
+      return;
+    }
+    config?.render?.();
+  }
+
   async function hydrateCmsCollection(collection, renderAfter = false) {
     const config = getCmsConfig(collection);
     if (!config) return;
@@ -3248,7 +3398,7 @@ import {
       });
     }
     if (renderAfter && activePageIs(collection)) {
-      config.render();
+      renderCmsCollectionView(collection, config);
     }
   }
 
@@ -3289,6 +3439,7 @@ import {
       }
     }
     if (renderAfter && activePageIs("projects")) renderProjects();
+    if (renderAfter && activePageIs("livestream")) renderLivestreamSettings();
   }
 
   function catalogEntries(type) {
@@ -3394,7 +3545,7 @@ import {
       }
     }
     markCmsStorage(collection, "saving", "Saving to admin storage...");
-    if (renderAfter && activePageIs(collection)) config.render();
+    if (renderAfter && (activePageIs(collection) || (collection === "media" && activePageIs("livestream")))) renderCmsCollectionView(collection, config);
     try {
       const response = await fetch(cmsEndpoint(collection), {
         method: "PUT",
@@ -3472,7 +3623,7 @@ import {
       markCmsStorage(collection, "fallback", collection === "media" ? storageFallbackMessage("api_unavailable", collection) : "No live admin API connected; saved locally only.", { source: "unavailable" });
     }
     if (renderAfter && activePageIs(collection)) {
-      config.render();
+      renderCmsCollectionView(collection, config);
     }
   }
 
@@ -3524,7 +3675,9 @@ import {
   }
 
   function hydrateCmsCollections() {
-    ["projects", "media", "alerts", "companies", "platforms", "positions"].forEach((collection) => hydrateCmsCollection(collection, activePageIs(collection)));
+    ["projects", "media", "alerts", "companies", "platforms", "positions"].forEach((collection) =>
+      hydrateCmsCollection(collection, activePageIs(collection) || (collection === "media" && activePageIs("livestream")))
+    );
   }
 
   async function hydrateAccountRegistry(renderAfter = false) {
@@ -3752,7 +3905,7 @@ import {
   }
 
   function isPublishCollectionPage() {
-    return ["projects", "companies", "platforms", "positions", "products"].includes(parseRoute().page);
+    return ["projects", "companies", "platforms", "positions", "products", "media", "livestream"].includes(parseRoute().page);
   }
 
   function canPublishSiteData() {
@@ -6654,6 +6807,250 @@ import {
     `;
   }
 
+  function renderLivestreamSettings() {
+    routeTitle.textContent = "Livestream";
+    const item = livestreamMediaItem();
+    const playbackType = livestreamPlaybackTypeFromItem(item);
+    const liveStatus = normalizeLivestreamStatus(item.liveStatus) || "offline";
+    const privateSetup = livestreamState.privateSetup || loadLivestreamPrivateSetup();
+    const statusBadges = [
+      badge(`Public status: ${liveStatus}`, liveStatus === "live" ? "success" : "warn"),
+      badge(`Playback: ${playbackType.replace(/_/g, " ")}`, playbackType === "none" ? "warn" : "success"),
+      badge(mediaState.storage.status === "connected" ? "Live CMS" : "CMS unavailable", mediaState.storage.status === "connected" ? "success" : "warn")
+    ].join("");
+    const publicForm = `
+      <form class="project-form livestream-form" data-livestream-public-form>
+        <div class="form-grid">
+          <label class="field">
+            <span>Public livestream status *</span>
+            <select class="input" name="liveStatus" required>
+              ${LIVESTREAM_STATUSES.map((status) => `<option value="${status}"${liveStatus === status ? " selected" : ""}>${status === "replay" ? "ended / replay" : status}</option>`).join("")}
+            </select>
+          </label>
+          <label class="field">
+            <span>Provider / playback type *</span>
+            <select class="input" name="playbackType" required>
+              <option value="none"${playbackType === "none" ? " selected" : ""}>Offline / no playback source</option>
+              <option value="cloudflare_uid"${playbackType === "cloudflare_uid" ? " selected" : ""}>Cloudflare Stream public UID</option>
+              <option value="cloudflare_embed"${playbackType === "cloudflare_embed" ? " selected" : ""}>Cloudflare Stream embed URL</option>
+              <option value="hls"${playbackType === "hls" ? " selected" : ""}>External HLS playback URL</option>
+              <option value="custom_embed"${playbackType === "custom_embed" ? " selected" : ""}>Custom embed URL</option>
+              <option value="external_url"${playbackType === "external_url" ? " selected" : ""}>External platform / watch URL</option>
+            </select>
+          </label>
+          ${field("Public title", "title", item.title, "text", true)}
+          ${field("Scheduled start time/date", "scheduledStartAt", dateTimeLocalValue(item.scheduledStartAt || item.publishedAt), "datetime-local")}
+          <label class="field field-wide project-upload-field">
+            <span>Public poster / thumbnail URL</span>
+            <input class="input" type="text" name="thumbnailPath" value="${escapeHtml(item.thumbnailPath || item.thumbnailUrl || "")}" />
+            <select class="input asset-picker" data-livestream-poster-select>
+              <option value="">Choose existing public asset</option>
+              ${catalogOptions("portfolio_image", item.thumbnailPath || item.thumbnailUrl || "")}
+            </select>
+            <span class="asset-preview-slot">${assetPreview(item.thumbnailPath || item.thumbnailUrl || "", "Livestream poster", { kind: "portfolio_image" })}</span>
+          </label>
+          ${textareaField("Public description", "description", item.description, false)}
+          ${field("Cloudflare Stream public UID", "cloudflareStreamUid", item.cloudflareStreamUid || item.streamUid || "", "text")}
+          ${field("Cloudflare Stream embed URL", "embedUrl", item.embedUrl, "url")}
+          ${field("External HLS playback URL", "hlsUrl", item.hlsUrl, "url")}
+          ${field("Custom embed URL", "customEmbedUrl", item.customEmbedUrl, "url")}
+          ${field("Public source / platform label", "sourceLabel", item.sourceLabel, "text")}
+          ${field("Public source / platform URL", "sourceUrl", item.sourceUrl || item.externalUrl || item.canonicalUrl, "url")}
+        </div>
+        <div class="asset-status-box livestream-safe-export">
+          <h3>Safe public export</h3>
+          <p>Only public playback fields are saved into the Media CMS row and exported to DanielClancy.net. Ingest URL, stream key, API tokens, account IDs, and private notes are never included in public site-data.</p>
+          <div class="chip-row">${statusBadges}</div>
+        </div>
+        <footer class="modal-footer livestream-footer">
+          <button class="button" type="submit">Save livestream settings</button>
+          <button class="button button-secondary" type="button" data-livestream-action="sync-cms">Sync/save media CMS</button>
+          <button class="button button-secondary" type="button" data-livestream-action="refresh-cms">Refresh media CMS</button>
+          <button class="button button-secondary" type="button" data-livestream-action="reset-offline">Reset to offline</button>
+        </footer>
+      </form>
+    `;
+    const privateForm = `
+      <form class="project-form livestream-private-form" data-livestream-private-form>
+        <div class="cms-storage-status">
+          ${badge("Private setup", "warn")}
+          <span>Raw ingest URL, stream key, and private notes are not persisted in this Admin build. Saved markers are redacted browser-local flags only.</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Provider setup note</span>
+            <select class="input" name="privateProvider">
+              <option value="cloudflare_stream_manual"${privateSetup.provider === "cloudflare_stream_manual" ? " selected" : ""}>Cloudflare Stream manual setup</option>
+              <option value="rumble_studio_rtmp"${privateSetup.provider === "rumble_studio_rtmp" ? " selected" : ""}>Rumble Studio custom RTMP</option>
+              <option value="streamyard_rtmp"${privateSetup.provider === "streamyard_rtmp" ? " selected" : ""}>StreamYard custom RTMP</option>
+              <option value="obs_custom_rtmp"${privateSetup.provider === "obs_custom_rtmp" ? " selected" : ""}>OBS custom RTMP/RTMPS/SRT</option>
+              <option value="other_manual"${privateSetup.provider === "other_manual" ? " selected" : ""}>Other manual provider</option>
+            </select>
+          </label>
+          ${field("Private RTMP / RTMPS / SRT ingest URL", "privateIngestUrl", privateSetup.hasIngestUrl ? "Stored as redacted marker only" : "", "password")}
+          ${field("Private stream key", "privateStreamKey", privateSetup.hasStreamKey ? "Stored as redacted marker only" : "", "password")}
+          ${textareaField("Private notes", "privateNotes", privateSetup.hasPrivateNotes ? "Stored as redacted marker only" : "", false)}
+        </div>
+        <div class="asset-status-box">
+          <h3>Private fields warning</h3>
+          <p>Do not paste API tokens or Cloudflare account IDs here. This section is for manual setup context only; raw secret values are discarded on save because this Admin repo does not yet have a verified private-only storage contract for livestream ingest credentials.</p>
+          <div class="chip-row">
+            ${badge(privateSetup.hasIngestUrl ? "Ingest URL redacted" : "No ingest URL stored", "warn")}
+            ${badge(privateSetup.hasStreamKey ? "Stream key redacted" : "No stream key stored", "warn")}
+            ${badge(privateSetup.updatedAt ? `Updated ${formatTimestamp(privateSetup.updatedAt)}` : "Not saved", "warn")}
+          </div>
+        </div>
+        <footer class="modal-footer livestream-footer">
+          <button class="button button-secondary" type="submit">Save redacted setup markers</button>
+        </footer>
+      </form>
+    `;
+    app.innerHTML = `
+      <div class="page livestream-page">
+        ${pageHeader(
+          "Public livestream configuration",
+          "Livestream",
+          "Configure the sanitized public state and playback source for /live and /watch before Stream API automation exists.",
+          `<a class="button button-secondary" href="#/media">Open Media CMS</a>`
+        )}
+        ${cmsStatusMarkup("media", "livestream-action")}
+        <div class="project-message" role="status">${escapeHtml(livestreamState.message)}</div>
+        ${panel("Public livestream state", "Status, title, description, and schedule details exported through public site-data.", publicForm)}
+        ${panel("Private ingest/setup notes", "Admin-only setup context. Secret values are redacted and intentionally not published.", privateForm)}
+        ${publishStatusPanel(true)}
+      </div>
+    `;
+  }
+
+  function validatePublicLivestreamForm(form) {
+    const liveStatus = normalizeLivestreamStatus(formValue(form, "liveStatus"));
+    const playbackType = normalizeLivestreamPlaybackType(formValue(form, "playbackType"));
+    const scheduledAt = isoDateFromDateTimeLocal(formValue(form, "scheduledStartAt"));
+    if (!liveStatus) return { ok: false, message: "Public livestream status must be one of the allowed values." };
+    if (!LIVESTREAM_PLAYBACK_TYPES.includes(playbackType)) return { ok: false, message: "Playback type must be one of the allowed values." };
+    if (!scheduledAt.ok) return { ok: false, message: "Scheduled start must be a valid date/time value." };
+    if (!formValue(form, "title")) return { ok: false, message: "Public title is required." };
+    const playbackUrlFields = ["embedUrl", "hlsUrl", "customEmbedUrl", "sourceUrl"];
+    for (const name of playbackUrlFields) {
+      const value = formValue(form, name);
+      if (value && !isSafePublicUrl(value)) {
+        return { ok: false, message: `${name} must be an https URL.` };
+      }
+    }
+    const poster = formValue(form, "thumbnailPath");
+    if (poster && !isSafePosterUrl(poster)) {
+      return { ok: false, message: "Poster/thumbnail must be an https URL or a public /media, /assets, or /docs path." };
+    }
+    const uid = formValue(form, "cloudflareStreamUid");
+    if (uid && (!/^[A-Za-z0-9._-]{8,128}$/.test(uid) || uid.includes("/"))) {
+      return { ok: false, message: "Cloudflare Stream public UID must look like a public playback UID, not an API token or account id." };
+    }
+    const hlsUrl = formValue(form, "hlsUrl");
+    if (hlsUrl && !/\.m3u8($|\?)/i.test(new URL(hlsUrl).pathname + new URL(hlsUrl).search)) {
+      return { ok: false, message: "External HLS playback URL must be an https .m3u8 URL." };
+    }
+    if (playbackType === "cloudflare_uid" && liveStatus !== "offline" && !uid) return { ok: false, message: "Cloudflare UID playback requires a public Stream UID unless status is offline." };
+    if (playbackType === "cloudflare_embed" && liveStatus !== "offline" && !formValue(form, "embedUrl")) return { ok: false, message: "Cloudflare embed playback requires an embed URL unless status is offline." };
+    if (playbackType === "hls" && liveStatus !== "offline" && !formValue(form, "hlsUrl")) return { ok: false, message: "HLS playback requires a playback URL unless status is offline." };
+    if (playbackType === "custom_embed" && liveStatus !== "offline" && !formValue(form, "customEmbedUrl")) return { ok: false, message: "Custom embed playback requires an embed URL unless status is offline." };
+    if (playbackType === "external_url" && liveStatus !== "offline" && !formValue(form, "sourceUrl")) return { ok: false, message: "External platform playback requires a public source URL unless status is offline." };
+    return { ok: true, liveStatus, playbackType, scheduledAt: scheduledAt.value };
+  }
+
+  function isSafePublicUrl(value) {
+    try {
+      const parsed = new URL(String(value || "").trim());
+      return parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  function isSafePosterUrl(value) {
+    const text = String(value || "").trim();
+    if (!text) return true;
+    if (/^\/(media|assets|docs)\//i.test(text)) return true;
+    if (/^\.(\/(public\/)?(media|assets|docs)\/)/i.test(text)) return true;
+    return isSafePublicUrl(text);
+  }
+
+  function saveLivestreamFromForm(form) {
+    const validation = validatePublicLivestreamForm(form);
+    if (!validation.ok) {
+      livestreamState.message = validation.message;
+      renderLivestreamSettings();
+      return;
+    }
+    const now = new Date().toISOString();
+    const existing = livestreamMediaItem();
+    const sourcePlatform = livestreamSourcePlatform(validation.playbackType);
+    const scheduledStartAt = validation.scheduledAt;
+    const sourceUrl = formValue(form, "sourceUrl");
+    const liveStatus = validation.liveStatus;
+    const playbackType = validation.playbackType;
+    const hasPlayableSource = playbackType === "cloudflare_uid"
+      ? Boolean(formValue(form, "cloudflareStreamUid"))
+      : playbackType === "cloudflare_embed"
+        ? Boolean(formValue(form, "embedUrl"))
+        : playbackType === "hls"
+          ? Boolean(formValue(form, "hlsUrl"))
+          : playbackType === "custom_embed"
+            ? Boolean(formValue(form, "customEmbedUrl"))
+            : playbackType === "external_url"
+              ? Boolean(sourceUrl)
+              : false;
+    const publicRow = {
+      ...existing,
+      id: LIVESTREAM_MEDIA_ID,
+      slug: LIVESTREAM_MEDIA_ID,
+      title: formValue(form, "title"),
+      entryType: "livestream",
+      type: "livestream",
+      status: livestreamMediaStatus(liveStatus),
+      visibility: "public",
+      visible: true,
+      sourcePlatform,
+      platform: sourcePlatform,
+      source: "manual",
+      liveStatus,
+      publicPlaybackType: playbackType,
+      playbackType,
+      scheduledStartAt,
+      publishedAt: scheduledStartAt || existing.publishedAt || null,
+      sortDate: scheduledStartAt || existing.sortDate || existing.enteredAt || now,
+      thumbnailPath: formValue(form, "thumbnailPath"),
+      thumbnailUrl: formValue(form, "thumbnailPath"),
+      description: formValue(form, "description"),
+      summary: formValue(form, "description"),
+      excerpt: formValue(form, "description"),
+      cloudflareStreamUid: playbackType === "cloudflare_uid" ? formValue(form, "cloudflareStreamUid") : "",
+      streamUid: playbackType === "cloudflare_uid" ? formValue(form, "cloudflareStreamUid") : "",
+      embedUrl: playbackType === "cloudflare_embed" ? formValue(form, "embedUrl") : "",
+      hlsUrl: playbackType === "hls" ? formValue(form, "hlsUrl") : "",
+      customEmbedUrl: playbackType === "custom_embed" ? formValue(form, "customEmbedUrl") : "",
+      sourceUrl,
+      videoUrl: sourceUrl,
+      externalUrl: sourceUrl,
+      externalPageUrl: sourceUrl,
+      canonicalUrl: sourceUrl,
+      sourceLabel: formValue(form, "sourceLabel"),
+      galleryOnly: false,
+      aspect: "landscape",
+      featured: liveStatus === "live" || liveStatus === "replay" || liveStatus === "ended",
+      manualHeroEligible: liveStatus === "live" || liveStatus === "replay" || liveStatus === "ended",
+      heroEmbeddable: liveStatus !== "offline" && liveStatus !== "upcoming" && hasPlayableSource && playbackType !== "external_url",
+      tags: Array.from(new Set([...(existing.tags || []), "livestream", "public-livestream-config"])),
+      internalNotes: "Public livestream configuration row managed from DanielClancy-Admin Livestream. Private ingest details are not stored here.",
+      enteredAt: existing.enteredAt || now,
+      createdAt: existing.createdAt || now,
+      updatedAt: now
+    };
+    upsertLivestreamMediaItem(publicRow);
+    persistMediaItems();
+    livestreamState.message = "Saved public livestream configuration. Admin KV saves auto-publish sanitized public site-data when live storage is available.";
+    renderLivestreamSettings();
+  }
+
   function renderAlerts() {
     routeTitle.textContent = "Alerts";
     app.innerHTML = `
@@ -7669,6 +8066,8 @@ import {
       renderProjects();
     } else if (route.page === "media") {
       renderMedia();
+    } else if (route.page === "livestream") {
+      renderLivestreamSettings();
     } else if (route.page === "companies") {
       renderRegistryPage("companies");
     } else if (route.page === "platforms") {
@@ -7852,6 +8251,13 @@ import {
         renderProjectGalleryGrid(form);
         target.value = "";
       }
+      return;
+    }
+
+    if (target.matches("[data-livestream-poster-select]")) {
+      const form = target.closest("[data-livestream-public-form]");
+      const input = form?.querySelector("[name='thumbnailPath']");
+      if (input && target.value) input.value = target.value;
       return;
     }
 
@@ -8129,6 +8535,18 @@ import {
       return;
     }
 
+    if (form.matches("[data-livestream-public-form]")) {
+      event.preventDefault();
+      saveLivestreamFromForm(form);
+      return;
+    }
+
+    if (form.matches("[data-livestream-private-form]")) {
+      event.preventDefault();
+      persistLivestreamPrivateSetup(form);
+      return;
+    }
+
     if (form.matches("[data-product-form]")) {
       event.preventDefault();
       saveProductFromForm(form);
@@ -8191,13 +8609,14 @@ import {
       return;
     }
 
-    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-merch-orders-action], [data-customer-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-customer-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
+    const target = event.target.closest("[data-project-action], [data-project-upload], [data-project-clear], [data-gallery-move], [data-gallery-remove], [data-product-action], [data-merch-orders-action], [data-customer-action], [data-product-modal-backdrop], [data-product-image-modal-backdrop], [data-customer-modal-backdrop], [data-registry-action], [data-registry-modal-backdrop], [data-project-modal-backdrop], [data-media-action], [data-media-modal-backdrop], [data-livestream-action], [data-alert-action], [data-alert-modal-backdrop], [data-position-action], [data-position-modal-backdrop], [data-account-access-action], [data-account-action], [data-analytics-action], [data-publish-action]");
     if (!(target instanceof HTMLElement)) return;
 
     const action = target.getAttribute("data-project-action");
     const uploadField = target.getAttribute("data-project-upload");
     const clearField = target.getAttribute("data-project-clear");
     const mediaAction = target.getAttribute("data-media-action");
+    const livestreamAction = target.getAttribute("data-livestream-action");
     const productAction = target.getAttribute("data-product-action");
     const merchOrdersAction = target.getAttribute("data-merch-orders-action");
     const customerAction = target.getAttribute("data-customer-action");
@@ -8248,6 +8667,24 @@ import {
 
     if (publishAction === "refresh") {
       hydratePublishStatus(true);
+      return;
+    }
+
+    if (livestreamAction === "sync-cms") {
+      persistCmsCollection("media", true, true);
+      return;
+    }
+
+    if (livestreamAction === "refresh-cms") {
+      hydrateCmsCollection("media", true);
+      return;
+    }
+
+    if (livestreamAction === "reset-offline") {
+      upsertLivestreamMediaItem(defaultLivestreamMediaItem());
+      persistMediaItems();
+      livestreamState.message = "Livestream configuration reset to truthful offline public state.";
+      renderLivestreamSettings();
       return;
     }
 
@@ -10010,7 +10447,7 @@ import {
   seedRegistriesFromCvSource();
   seedRegistriesFromProjects();
   reconcilePositionsFromStorage();
-  hydratePublicAssetCatalog(activePageIs("projects"));
+  hydratePublicAssetCatalog(activePageIs("projects") || activePageIs("livestream"));
   hydrateCmsCollections();
   hydrateProductsManager(activePageIs("products"));
   hydrateCustomers(activePageIs("customers"));

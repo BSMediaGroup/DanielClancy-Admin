@@ -1589,6 +1589,22 @@ body.col-resizing-active {
   font-size: 11px;
 }
 
+.livestream-form,
+.livestream-private-form {
+  display: grid;
+  gap: 16px;
+}
+
+.livestream-safe-export {
+  border-color: rgba(99, 211, 166, 0.24);
+}
+
+.livestream-footer {
+  justify-content: flex-start;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
 .project-table {
   min-width: 1280px;
 }

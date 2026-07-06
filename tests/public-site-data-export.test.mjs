@@ -304,6 +304,64 @@ test("public site-data export includes sanitized manual watch media only", async
   assert.equal(payload.collections.watchMedia[0].heroEmbeddable, false);
 });
 
+test("public site-data export includes sanitized livestream playback config without private ingest fields", async () => {
+  const kv = {
+    async get(key) {
+      if (key === "cms:media") {
+        return JSON.stringify({
+          collection: "media",
+          items: [
+            {
+              id: "public-livestream-config",
+              sourcePlatform: "cloudflare_stream",
+              entryType: "livestream",
+              source: "manual",
+              title: "Public livestream",
+              description: "Sanitized stream description.",
+              thumbnailUrl: "/media/portfolio/thumbs/aqwest-thumb.webp",
+              cloudflareStreamUid: "abcDEF1234567890xyz_123",
+              liveStatus: "live",
+              scheduledStartAt: "2026-08-01T10:00:00.000Z",
+              sourceUrl: "https://example.test/live",
+              sourceLabel: "Cloudflare Stream",
+              publicPlaybackType: "cloudflare_uid",
+              playbackType: "cloudflare_uid",
+              visible: true,
+              heroEmbeddable: true,
+              privateIngestUrl: "rtmps://live.example.test/private",
+              streamKey: "never-public",
+              internalNotes: "operator-only note"
+            }
+          ]
+        });
+      }
+      return null;
+    }
+  };
+
+  const payload = await buildPublicSiteData({
+    request: mockRequest(),
+    env: { ASSETS: mockAssets(), DC_ADMIN_KV: kv }
+  });
+  const item = payload.collections.watchMedia[0];
+
+  assert.equal(payload.collections.watchMedia.length, 1);
+  assert.equal(item.id, "public-livestream-config");
+  assert.equal(item.entryType, "livestream");
+  assert.equal(item.sourcePlatform, "cloudflare_stream");
+  assert.equal(item.liveStatus, "live");
+  assert.equal(item.cloudflareStreamUid, "abcDEF1234567890xyz_123");
+  assert.equal(item.scheduledStartAt, "2026-08-01T10:00:00.000Z");
+  assert.equal(item.thumbnailUrl, "/media/portfolio/thumbs/aqwest-thumb.webp");
+  assert.equal(item.publicPlaybackType, "cloudflare_uid");
+  assert.equal(item.sourceLabel, "Cloudflare Stream");
+  assert.equal(item.privateIngestUrl, undefined);
+  assert.equal(item.streamKey, undefined);
+  assert.equal(item.internalNotes, undefined);
+  assert.equal(JSON.stringify(item).includes("never-public"), false);
+  assert.equal(JSON.stringify(item).includes("operator-only note"), false);
+});
+
 test("admin publish endpoint requires an admin session", async () => {
   const response = await publishSiteData({
     request: new Request("https://admin.danielclancy.net/api/admin/publish/site-data", { method: "POST" }),
