@@ -232,6 +232,17 @@ test("public site-data export includes sanitized manual watch media only", async
           collection: "media",
           items: [
             {
+              id: "archived-replay-scaffold",
+              sourcePlatform: "youtube",
+              entryType: "video",
+              source: "manual",
+              title: "Archived replay scaffold",
+              sourceUrl: "https://youtube.com/watch?v=scaffold",
+              embedUrl: "https://www.youtube.com/embed/scaffold",
+              sortDate: "2026-07-09T00:00:00.000Z",
+              visible: true
+            },
+            {
               id: "rumble-video",
               sourcePlatform: "rumble",
               entryType: "video",
@@ -282,6 +293,7 @@ test("public site-data export includes sanitized manual watch media only", async
   assert.equal(payload.meta.watchMediaCount, 2);
   assert.equal(payload.meta.manualMediaCount, 2);
   assert.equal(payload.meta.youtubeCount, 0);
+  assert.equal(payload.meta.scaffoldMediaPurgedCount, 1);
   assert.equal(payload.collections.watchMedia[0].id, "rumble-short");
   assert.equal(payload.collections.watchMedia[1].id, "rumble-video");
   assert.equal(payload.collections.watchMedia[1].updatedBy, undefined);

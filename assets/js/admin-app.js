@@ -63,6 +63,15 @@ import {
   const PROJECT_COLUMNS_STORAGE_KEY = "danielclancy-admin.projects.table.columns.v1";
   const SIDEBAR_MODE_STORAGE_KEY = "danielclancy-admin.sidebar.mode.v1";
   const MEDIA_STORAGE_KEY = "danielclancy-admin.media.scaffold.v1";
+  const SCAFFOLD_MEDIA_EXACT = new Set([
+    "latest-youtube-release-scaffold",
+    "latest youtube release scaffold",
+    "scheduled-livestream-scaffold",
+    "scheduled livestream scaffold",
+    "archived-replay-scaffold",
+    "archived replay scaffold"
+  ]);
+  const SCAFFOLD_MEDIA_TERMS = ["scaffold", "demo", "sample", "placeholder", "seeded watch media", "local placeholder"];
   const ALERTS_STORAGE_KEY = "danielclancy-admin.alerts.scaffold.v1";
   const ACCOUNT_ACCESS_STORAGE_KEY = "danielclancy-admin.accounts.scaffold.v1";
   const ALERT_SURFACES = ["danielclancy.net", "admin.danielclancy.net"];
@@ -174,7 +183,7 @@ import {
     loading: false,
     loaded: false,
     configured: false,
-    message: "Merch order visibility reads from DC_MERCH_ORDERS_KV when the binding is configured.",
+    message: "Merch order visibility reads from dedicated merch order storage when configured.",
     checkedAt: ""
   };
   const customerManagementState = {
@@ -183,7 +192,7 @@ import {
     loading: false,
     loaded: false,
     configured: false,
-    message: "Customer management reads customer profiles from DC_CUSTOMERS_KV and related order summaries from DC_MERCH_ORDERS_KV.",
+    message: "Customer management reads customer profiles and related order summaries from dedicated customer and merch order storage.",
     checkedAt: ""
   };
   const publicAssetCatalogState = {
@@ -1951,6 +1960,36 @@ import {
     };
   }
 
+  function isScaffoldWatchMediaEntry(raw) {
+    const candidates = [raw?.id, raw?.slug, raw?.title]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+    return candidates.some((value) => SCAFFOLD_MEDIA_EXACT.has(value) || SCAFFOLD_MEDIA_TERMS.some((term) => value.includes(term)));
+  }
+
+  function cleanMediaItems(items) {
+    const normalized = [];
+    let purgedCount = 0;
+    for (const item of Array.isArray(items) ? items : []) {
+      if (isScaffoldWatchMediaEntry(item)) {
+        purgedCount += 1;
+        continue;
+      }
+      normalized.push(normalizeMediaItem(item));
+    }
+    return {
+      items: normalized.sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left)),
+      purgedCount
+    };
+  }
+
+  function cleanMediaIsoish(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+  }
+
   function normalizeMediaItem(raw) {
     const fallbackId = createSlug(raw?.slug || raw?.id || raw?.title || `media-${Date.now()}`);
     const status = String(raw?.status || raw?.visibility || "draft").toLowerCase();
@@ -1963,9 +2002,9 @@ import {
     const thumbnailUrl = String(raw?.thumbnailOverrideUrl || raw?.thumbnailUrl || raw?.thumbnailPath || "");
     const sourceUrl = String(raw?.sourceUrl || raw?.videoUrl || raw?.url || "");
     const externalUrl = String(raw?.externalUrl || raw?.externalPageUrl || raw?.pageUrl || sourceUrl);
-    const enteredAt = String(raw?.enteredAt || raw?.createdAt || raw?.updatedAt || new Date().toISOString());
-    const publishedAt = String(raw?.publishedAtOverride || raw?.publishedAt || raw?.published_at || raw?.date || "");
-    const createdAt = String(raw?.createdAt || enteredAt);
+    const enteredAt = cleanMediaIsoish(raw?.enteredAt || raw?.createdAt || raw?.updatedAt) || new Date().toISOString();
+    const publishedAt = cleanMediaIsoish(raw?.publishedAt || raw?.publishedAtOverride || raw?.published_at || raw?.date);
+    const createdAt = cleanMediaIsoish(raw?.createdAt || enteredAt) || enteredAt;
     const entryType = ["livestream", "video", "short", "other"].includes(type) ? type : "video";
     const sourcePlatform = ["youtube", "rumble", "manual", "external"].includes(platform) ? platform : "manual";
 
@@ -1986,7 +2025,7 @@ import {
       scheduledAt: String(raw?.scheduledAt || raw?.scheduled_at || ""),
       publishedAt,
       enteredAt,
-      sortDate: String(raw?.sortDate || publishedAt || enteredAt || createdAt),
+      sortDate: cleanMediaIsoish(raw?.sortDate || publishedAt || enteredAt || createdAt) || enteredAt,
       featured: Boolean(raw?.featured),
       manualHeroEligible: Boolean(raw?.manualHeroEligible || raw?.featured),
       heroEmbeddable: galleryOnly ? false : Boolean(raw?.embedUrl),
@@ -2016,7 +2055,7 @@ import {
       createdAt,
       createdBy: String(raw?.createdBy || ""),
       updatedBy: String(raw?.updatedBy || ""),
-      updatedAt: String(raw?.updatedAt || new Date().toISOString())
+      updatedAt: cleanMediaIsoish(raw?.updatedAt) || new Date().toISOString()
     };
   }
 
@@ -2028,17 +2067,28 @@ import {
       }
 
       const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) {
+      const rawItems = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : [];
+      if (!rawItems.length) {
         return [];
       }
 
-      return parsed.map(normalizeMediaItem);
+      const cleaned = cleanMediaItems(rawItems);
+      if (cleaned.purgedCount) {
+        window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(cleaned.items, null, 2));
+      }
+      return cleaned.items;
     } catch {
       return [];
     }
   }
 
   function persistMediaItems() {
+    const cleaned = cleanMediaItems(mediaState.items);
+    mediaState.items = cleaned.items;
+    if (cleaned.purgedCount) {
+      mediaState.storage.purgedScaffoldCount = Number(mediaState.storage.purgedScaffoldCount || 0) + cleaned.purgedCount;
+      mediaState.message = `Removed ${cleaned.purgedCount} rejected scaffold media row(s) before save.`;
+    }
     window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
     persistCmsCollection("media");
   }
@@ -2175,7 +2225,11 @@ import {
         storageKey: MEDIA_STORAGE_KEY,
         getItems: () => mediaState.items,
         setItems: (items) => {
-          mediaState.items = items.map(normalizeMediaItem);
+          const cleaned = cleanMediaItems(items);
+          mediaState.items = cleaned.items;
+          if (cleaned.purgedCount) {
+            mediaState.storage.purgedScaffoldCount = Number(mediaState.storage.purgedScaffoldCount || 0) + cleaned.purgedCount;
+          }
         },
         render: renderMedia
       };
@@ -2271,7 +2325,7 @@ import {
 
   async function hydrateMerchOrders(renderAfter = false) {
     merchOrderState.loading = true;
-    merchOrderState.message = "Loading merch orders from DC_MERCH_ORDERS_KV...";
+    merchOrderState.message = "Loading merch orders from dedicated merch order storage...";
     if (renderAfter && activePageIs("merch-orders")) renderMerchOrders();
     try {
       const response = await fetch("/api/admin/merch-orders", { credentials: "include", headers: { accept: "application/json" } });
@@ -2281,13 +2335,13 @@ import {
       merchOrderState.orders = Array.isArray(payload?.orders) ? payload.orders : [];
       merchOrderState.checkedAt = payload?.checkedAt || new Date().toISOString();
       merchOrderState.message = response.ok && payload?.ok
-        ? (merchOrderState.orders.length ? "Merch orders loaded from DC_MERCH_ORDERS_KV." : "No merch orders are stored yet.")
+        ? (merchOrderState.orders.length ? "Merch orders loaded from dedicated merch order storage." : "No merch orders are stored yet.")
         : (payload?.message || payload?.error || "Merch order API unavailable.");
     } catch {
       merchOrderState.loaded = true;
       merchOrderState.configured = false;
       merchOrderState.orders = [];
-      merchOrderState.message = "Merch Orders API unavailable. Local static mode cannot read DC_MERCH_ORDERS_KV.";
+      merchOrderState.message = "Merch Orders API unavailable. Local static mode cannot read merch order storage.";
     } finally {
       merchOrderState.loading = false;
       if (renderAfter && activePageIs("merch-orders")) renderMerchOrders();
@@ -2296,7 +2350,7 @@ import {
 
   async function hydrateCustomers(renderAfter = false) {
     customerManagementState.loading = true;
-    customerManagementState.message = "Loading customers from DC_CUSTOMERS_KV...";
+    customerManagementState.message = "Loading customers from dedicated customer storage...";
     if (renderAfter && activePageIs("customers")) renderCustomers();
     try {
       const response = await fetch("/api/admin/customers", { credentials: "include", headers: { accept: "application/json" } });
@@ -2306,13 +2360,13 @@ import {
       customerManagementState.customers = Array.isArray(payload?.customers) ? payload.customers : [];
       customerManagementState.checkedAt = payload?.checkedAt || new Date().toISOString();
       customerManagementState.message = response.ok && payload?.ok
-        ? (customerManagementState.customers.length ? "Customers loaded from DC_CUSTOMERS_KV." : "No customer profiles are stored yet.")
+        ? (customerManagementState.customers.length ? "Customers loaded from dedicated customer storage." : "No customer profiles are stored yet.")
         : (payload?.message || payload?.error || "Customers API unavailable.");
     } catch {
       customerManagementState.loaded = true;
       customerManagementState.configured = false;
       customerManagementState.customers = [];
-      customerManagementState.message = "Customers API unavailable. Local static mode cannot read DC_CUSTOMERS_KV.";
+      customerManagementState.message = "Customers API unavailable. Local static mode cannot read customer storage.";
     } finally {
       customerManagementState.loading = false;
       if (renderAfter && activePageIs("customers")) renderCustomers();
@@ -3105,7 +3159,9 @@ import {
         if (collection === "media") {
           config.setItems([]);
         }
-        markCmsStorage(collection, status, storageFallbackMessage(error, collection), { source: "unavailable" });
+        markCmsStorage(collection, status, storageFallbackMessage(error, collection), {
+          source: ["unauthenticated", "admin_required"].includes(error) ? "auth_required" : "unavailable"
+        });
       } else if (payload.configured === false) {
         if (collection === "media") {
           config.setItems([]);
@@ -3161,7 +3217,12 @@ import {
           source: payload.source || "kv",
           lastLoaded: payload.meta?.updatedAt || new Date().toISOString(),
           manualMediaCount: Number(payload.meta?.manualMediaCount || 0),
-          youtubeCount: Number(payload.meta?.youtubeCount || 0)
+          visibleManualMediaCount: Number(payload.meta?.visibleManualMediaCount || 0),
+          hiddenDraftMediaCount: Number(payload.meta?.hiddenDraftMediaCount || 0),
+          youtubeCount: Number(payload.meta?.youtubeCount || 0),
+          purgedScaffoldCount: Number(payload.meta?.scaffoldPurgedCount || 0),
+          cleanupUpdatedAt: payload.meta?.cleanupUpdatedAt || "",
+          cleanupAutopublished: payload.meta?.cleanupAutopublished
           }
         );
       } else {
@@ -3170,7 +3231,12 @@ import {
         }
         markCmsStorage(collection, "connected", collection === "media" ? "No watch media entries yet." : "Admin storage is reachable. No saved collection exists yet; local browser data is still shown.", {
           source: payload.source || (collection === "media" ? "live_cms_empty" : "seed"),
-          lastLoaded: payload.meta?.updatedAt || ""
+          lastLoaded: payload.meta?.updatedAt || "",
+          manualMediaCount: Number(payload.meta?.manualMediaCount || 0),
+          visibleManualMediaCount: Number(payload.meta?.visibleManualMediaCount || 0),
+          hiddenDraftMediaCount: Number(payload.meta?.hiddenDraftMediaCount || 0),
+          youtubeCount: Number(payload.meta?.youtubeCount || 0),
+          purgedScaffoldCount: Number(payload.meta?.scaffoldPurgedCount || 0)
         });
       }
     } catch {
@@ -3376,6 +3442,14 @@ import {
             // The saved API result still updates in-memory rows when localStorage is unavailable.
           }
         }
+        if (collection === "media" && Array.isArray(payload.items)) {
+          config.setItems(payload.items);
+          try {
+            window.localStorage.setItem(config.storageKey, JSON.stringify(config.getItems(), null, 2));
+          } catch {
+            // The saved API result still updates in-memory rows when localStorage is unavailable.
+          }
+        }
         const publishMessage = collection === "media" && payload.publish
           ? payload.publish.ok
             ? `Saved to admin storage and published public watch media snapshot (${payload.publish.revision || "new revision"}).`
@@ -3386,7 +3460,12 @@ import {
           lastSaved: payload.meta?.updatedAt || new Date().toISOString(),
           autopublished: collection === "media" ? Boolean(payload.publish?.published || payload.publish?.ok) : undefined,
           publicRevision: collection === "media" ? payload.publish?.revision || "" : undefined,
-          publicUpdatedAt: collection === "media" ? payload.publish?.publishedAt || payload.meta?.updatedAt || "" : undefined
+          publicUpdatedAt: collection === "media" ? payload.publish?.publishedAt || payload.meta?.updatedAt || "" : undefined,
+          manualMediaCount: collection === "media" ? Number(payload.meta?.manualMediaCount || 0) : undefined,
+          visibleManualMediaCount: collection === "media" ? Number(payload.meta?.visibleManualMediaCount || 0) : undefined,
+          hiddenDraftMediaCount: collection === "media" ? Number(payload.meta?.hiddenDraftMediaCount || 0) : undefined,
+          youtubeCount: collection === "media" ? Number(payload.meta?.youtubeCount || 0) : undefined,
+          purgedScaffoldCount: collection === "media" ? Number(payload.meta?.scaffoldPurgedCount || 0) : undefined
         });
       }
     } catch {
@@ -3399,27 +3478,29 @@ import {
 
   function storageFallbackMessage(error, collection = "") {
     if (collection === "media") {
-      if (error === "storage_not_configured") return "Media CMS unavailable: DC_ADMIN_KV is not configured.";
+      if (error === "storage_not_configured") return "Media CMS unavailable: admin storage is not configured.";
       if (error === "unauthenticated") return "Admin API authentication required.";
       if (error === "admin_required") return "Admin API authentication required.";
       return "Media CMS unavailable.";
     }
-    if (error === "storage_not_configured") return "DC_ADMIN_KV is not configured. Using local browser fallback.";
+    if (error === "storage_not_configured") return "Admin storage is not configured. Using local browser fallback.";
     if (error === "unauthenticated") return "Admin session is required. Using local browser fallback.";
     if (error === "admin_required") return "Signed-in account is not an admin. Using local browser fallback.";
     return "Admin storage is unavailable. Using local browser fallback.";
   }
 
   function watchMediaSortTime(item) {
-    const parsed = new Date(item?.sortDate || item?.publishedAt || item?.enteredAt || item?.createdAt || 0).getTime();
+    const parsed = new Date(item?.sortDate || item?.publishedAt || item?.enteredAt || item?.createdAt || item?.updatedAt || 0).getTime();
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
   function mediaStorageSourceLabel(source, status) {
-    if (source === "kv") return "live CMS";
-    if (source === "published_kv_snapshot") return "public export";
-    if (source === "live_cms_empty") return "live CMS";
-    if (status === "fallback" || status === "not-configured" || source === "unavailable") return "unavailable";
+    if (source === "kv") return "Live CMS";
+    if (source === "published_kv_snapshot") return "Public export revision";
+    if (source === "live_cms_empty") return "Live CMS";
+    if (source === "auth_required") return "Auth required";
+    if (status === "not-configured") return "KV unavailable";
+    if (status === "fallback" || source === "unavailable") return "Local fallback unavailable";
     return source || "unavailable";
   }
 
@@ -3431,7 +3512,15 @@ import {
       return text.replace(/\.\d{3}Z$/, "").replace(/Z$/, "").slice(0, 16);
     }
     const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
+    return local.toISOString().slice(0, 19);
+  }
+
+  function isoDateFromDateTimeLocal(value) {
+    const text = String(value || "").trim();
+    if (!text) return { ok: true, value: "" };
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) return { ok: false, value: "" };
+    return { ok: true, value: parsed.toISOString() };
   }
 
   function hydrateCmsCollections() {
@@ -3451,7 +3540,7 @@ import {
           status: error === "storage_not_configured" ? "not-configured" : "fallback",
           message:
             error === "storage_not_configured"
-              ? "DC_ADMIN_KV is not configured. Env master admins remain visible; local scaffold rows are non-authoritative."
+              ? "Admin storage is not configured. Env master admins remain visible; local scaffold rows are non-authoritative."
               : "Account registry API is unavailable or the session is not authorized.",
           lastChecked: new Date().toISOString()
         });
@@ -3459,8 +3548,8 @@ import {
         Object.assign(accountRegistryState, {
           status: payload.storageConfigured ? "connected" : "not-configured",
           message: payload.storageConfigured
-            ? "Loaded durable account registry from DC_ADMIN_KV."
-            : "DC_ADMIN_KV is not configured. Env master admins are synthesized only.",
+            ? "Loaded durable account registry from admin storage."
+            : "Admin storage is not configured. Env master admins are synthesized only.",
           accounts: Array.isArray(payload.accounts) ? payload.accounts : [],
           meta: payload.meta || null,
           session: payload.session || currentAdminSession(),
@@ -3517,8 +3606,8 @@ import {
     const text = apiConnected
       ? kvConnected
         ? analytics?.streamSuitesAnalyticsConnected
-          ? "Live Admin API connected. StreamSuites analytics connected; DC_ADMIN_KV status available."
-          : "Live Admin API connected. DC_ADMIN_KV/analytics status available."
+          ? "Live Admin API connected. StreamSuites analytics connected; admin storage status available."
+          : "Live Admin API connected. Admin storage/analytics status available."
         : analytics?.streamSuitesAnalyticsConnected
           ? "Live Admin API connected. StreamSuites analytics connected; durable KV bindings are incomplete."
           : "Live Admin API connected. Durable KV bindings are incomplete."
@@ -3937,21 +4026,23 @@ import {
 
   function filteredMediaItems() {
     const term = mediaState.search.trim().toLowerCase();
-    return mediaState.items.filter((item) => {
-      if (mediaState.status !== "all" && item.status !== mediaState.status) {
-        return false;
-      }
+    return mediaState.items
+      .filter((item) => {
+        if (mediaState.status !== "all" && item.status !== mediaState.status) {
+          return false;
+        }
 
-      if (mediaState.platform !== "all" && item.platform !== mediaState.platform) {
-        return false;
-      }
+        if (mediaState.platform !== "all" && item.platform !== mediaState.platform) {
+          return false;
+        }
 
-      const issues = mediaCompletenessIssues(item);
-      if (mediaState.health === "issues" && !issues.length) return false;
-      if (mediaState.health === "complete" && issues.length) return false;
+        const issues = mediaCompletenessIssues(item);
+        if (mediaState.health === "issues" && !issues.length) return false;
+        if (mediaState.health === "complete" && issues.length) return false;
 
-      return !term || mediaSearchBlob(item).includes(term);
-    });
+        return !term || mediaSearchBlob(item).includes(term);
+      })
+      .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left));
   }
 
   function alertSearchBlob(rule) {
@@ -4302,7 +4393,7 @@ import {
             <div class="card">
               <h3>Authority boundary</h3>
               <p class="muted">
-                Accounts and CMS state resolve through Pages Functions and DC_ADMIN_KV where configured. Alert delivery uses the StreamSuites ingest bridge when configured.
+                Accounts and CMS state resolve through Pages Functions and admin storage where configured. Alert delivery uses the StreamSuites ingest bridge when configured.
               </p>
               ${badge(overviewStatusState.message, overviewStatusState.status === "connected" ? "success" : "warn")}
             </div>
@@ -4316,7 +4407,7 @@ import {
             ${storageStatusCard(
               "Account registry",
               status?.accounts?.configured ? `${status.accounts.count} account(s)` : "Storage missing",
-              status?.accounts?.configured ? `Key ${status.accounts.key}; ${status.accounts.envMasterCount} env master row(s).` : "DC_ADMIN_KV is required for durable OAuth/admin roles.",
+              status?.accounts?.configured ? `Key ${status.accounts.key}; ${status.accounts.envMasterCount} env master row(s).` : "Admin storage is required for durable OAuth/admin roles.",
               status?.accounts?.configured ? "success" : "warn"
             )}
             ${storageStatusCard(
@@ -4891,7 +4982,7 @@ import {
     const operationalRows = [
       ["Admin API", status?.adminApiConnected ? "Connected" : analyticsStatusState.status === "fallback" ? "Disconnected" : "Checking"],
       ["StreamSuites analytics", status?.streamSuitesAnalyticsConnected ? "Connected" : status?.streamSuitesAnalyticsConfigured ? "Configured with errors" : "Not configured"],
-      ["DC_ADMIN_KV", status?.kvConnected ? "Connected" : "Unavailable"],
+      ["Admin storage", status?.kvConnected ? "Connected" : "Unavailable"],
       ["Analytics ingest", status?.analyticsIngestConfigured ? "Configured" : "Unavailable"],
       ["Cloudflare GraphQL", status?.cloudflareGraphqlConnected ? "Connected" : configured ? "Configured with errors/partial data" : "Unavailable"],
       ["Cloudflare configured", configured ? "Yes" : "No"],
@@ -4939,7 +5030,7 @@ import {
           `<div class="grid grid-2">
             ${storageStatusCard("StreamSuites live", status?.streamSuitesAnalyticsConnected ? "Connected" : status?.streamSuitesAnalyticsConfigured ? "Error" : "Not configured", status?.streamSuitesAnalyticsConnected ? `${formatAnalyticsNumber(status?.streamSuitesAnalytics?.rowCount || 0)} DanielClancy row(s) from StreamSuites.` : status?.streamSuitesAnalyticsConfigured ? "Configured but unavailable; local fallbacks are secondary." : "STREAMSUITES_ANALYTICS_URL is not configured.", status?.streamSuitesAnalyticsConnected ? "success" : "warn")}
             ${storageStatusCard("Cloudflare Analytics", configured ? "Connected" : "Missing config", configured ? `Last result: ${cloudflare.lastResult || "not checked"}` : `Missing: ${missingConfig.join(", ") || "unknown"}`, configured && !String(cloudflare.lastResult || "").includes("error") ? "success" : "warn")}
-            ${storageStatusCard("Page-visit event storage", pageVisits.configured ? "Connected" : "Unavailable", pageVisits.configured ? `${formatAnalyticsNumber(pageVisits.events || 0)} event(s); ${formatAnalyticsNumber(pageVisits.cityEvents || 0)} with city detail` : "DC_ADMIN_KV is required for request.cf city rollups.", pageVisits.configured ? "success" : "warn")}
+            ${storageStatusCard("Page-visit event storage", pageVisits.configured ? "Connected" : "Unavailable", pageVisits.configured ? `${formatAnalyticsNumber(pageVisits.events || 0)} event(s); ${formatAnalyticsNumber(pageVisits.cityEvents || 0)} with city detail` : "Admin storage is required for request.cf city rollups.", pageVisits.configured ? "success" : "warn")}
           </div>
           ${descriptionRows(operationalRows)}`
         )}
@@ -4988,7 +5079,7 @@ import {
                 .join("")}
               <article class="card">${badge(readiness.streamSuitesAnalyticsConfigured ? "Configured" : "Missing", readiness.streamSuitesAnalyticsConfigured ? "success" : "warn")}<p><strong>STREAMSUITES_ANALYTICS_URL</strong></p></article>
               <article class="card">${badge(status?.streamSuitesAnalyticsConnected ? "Connected" : "Disconnected", status?.streamSuitesAnalyticsConnected ? "success" : "warn")}<p><strong>StreamSuites live source</strong></p></article>
-              <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>DC_ADMIN_KV</strong></p></article>
+              <article class="card">${badge(readiness.dcAdminKvConfigured ? "Configured" : "Missing", readiness.dcAdminKvConfigured ? "success" : "warn")}<p><strong>Admin storage</strong></p></article>
               <article class="card">${badge(status?.analyticsIngestConfigured ? "Configured" : "Missing", status?.analyticsIngestConfigured ? "success" : "warn")}<p><strong>Analytics ingest</strong></p></article>
               <article class="card">${badge("Cloudflare result", sourceTone(readiness.lastCloudflareQueryResult))}<p>${escapeHtml(readiness.lastCloudflareQueryResult || "Not checked")}</p></article>
               <article class="card">${badge("Page-visit result", sourceTone(readiness.lastPageVisitStorageResult))}<p>${escapeHtml(readiness.lastPageVisitStorageResult || "Not checked")}</p></article>
@@ -5117,7 +5208,7 @@ import {
         ${pageHeader(
           "Admin workspace",
           "Accounts",
-          "Durable account registry backed by DC_ADMIN_KV when configured. Env-backed master admins are synthesized and locked.",
+          "Durable account registry backed by admin storage when configured. Env-backed master admins are synthesized and locked.",
           badge(accountRegistryStatusText(), accountRegistryTone())
         )}
 
@@ -5166,7 +5257,7 @@ import {
           descriptionRows([
             ["Root authority", "Manual env-backed master admins remain protected and locked"],
             ["OAuth default", "OAuth users become regular known accounts only and are not auto-promoted"],
-            ["Durable store", "DC_ADMIN_KV key accounts:registry stores role/status/notes only"],
+            ["Durable store", "Admin storage key accounts:registry stores role/status/notes only"],
             ["Secret safety", "No passwords, OAuth access tokens, or OAuth refresh tokens are stored"]
           ])
         )}
@@ -5271,11 +5362,11 @@ import {
 
         ${panel(
           "Printful and storage status",
-          "Storefront data is read through server-side Pages Functions. Override saves require a signed admin session and DC_ADMIN_KV.",
+          "Storefront data is read through server-side Pages Functions. Override saves require a signed admin session and admin storage.",
           metricCards([
             { label: "Printful", value: productState.health?.printful?.ok ? "Connected" : productState.loading ? "Checking" : "Unavailable", note: productState.health?.printful?.store?.name || productState.message, tone: productState.health?.printful?.ok ? "success" : "warn" },
             { label: "Products", value: String(productState.products.length), note: "Rows returned by the server-side Printful sync product feed.", tone: productState.products.length ? "success" : "warn" },
-            { label: "Overrides", value: String(productState.overrides.length), note: productState.health?.storage?.ok ? "Admin KV override rows." : "DC_ADMIN_KV unavailable or not checked.", tone: productState.health?.storage?.ok ? "success" : "warn" },
+            { label: "Overrides", value: String(productState.overrides.length), note: productState.health?.storage?.ok ? "Admin KV override rows." : "Admin storage unavailable or not checked.", tone: productState.health?.storage?.ok ? "success" : "warn" },
             { label: "Featured", value: String(featuredCount), note: "Storefront display flag only.", tone: featuredCount ? "success" : "" },
             { label: "Hidden/private", value: String(hiddenCount), note: "Excluded from public /shop after publish.", tone: hiddenCount ? "warn" : "" }
           ])
@@ -5409,12 +5500,12 @@ import {
 
         ${panel(
           "Customer storage status",
-          "Profiles and customer sessions are stored in DC_CUSTOMERS_KV. Order summaries are read from DC_MERCH_ORDERS_KV without exposing raw payment method data.",
+          "Profiles and customer sessions are stored in dedicated customer storage. Order summaries are read from dedicated merch order storage without exposing raw payment method data.",
           metricCards([
             { label: "Storage", value: customerManagementState.configured ? "Configured" : customerManagementState.loading ? "Checking" : "Config needed", note: customerManagementState.message, tone: customerManagementState.configured ? "success" : "warn" },
             { label: "Customers", value: String(customers.length), note: "Recent customer profiles visible from the customer KV index.", tone: customers.length ? "success" : "" },
             { label: "Stripe mapped", value: String(mapped), note: "Stripe customer id presence only; card details stay in Stripe.", tone: mapped ? "success" : "" },
-            { label: "Admin access", value: String(admins), note: "Explicit customer-profile admin grants in DC_CUSTOMERS_KV.", tone: admins ? "success" : "" },
+            { label: "Admin access", value: String(admins), note: "Explicit customer-profile admin grants in customer storage.", tone: admins ? "success" : "" },
             { label: "Disabled", value: String(disabled), note: "Admin status field only.", tone: disabled ? "warn" : "" }
           ])
         )}
@@ -5560,7 +5651,7 @@ import {
 
         ${panel(
           "Order storage status",
-          "Order intent, payment, and fulfillment state reads from DC_MERCH_ORDERS_KV. This page does not mutate payment or fulfillment state.",
+          "Order intent, payment, and fulfillment state reads from dedicated merch order storage. This page does not mutate payment or fulfillment state.",
           metricCards([
             { label: "Storage", value: merchOrderState.configured ? "Configured" : merchOrderState.loading ? "Checking" : "Config needed", note: merchOrderState.message, tone: merchOrderState.configured ? "success" : "warn" },
             { label: "Orders", value: String(orders.length), note: "Recent order intents visible from the merch KV index.", tone: orders.length ? "success" : "" },
@@ -5640,7 +5731,7 @@ import {
           metricCards([
             { label: "Base currency", value: productState.settings?.baseCurrency || "AUD", note: "Storefront and checkout totals are server-validated in the store currency.", tone: "success" },
             { label: "Converted default", value: productState.settings?.convertedCurrencyDefault || "USD", note: "Public display default for secondary converted estimates.", tone: "success" },
-            { label: "Storage", value: productState.health?.storage?.ok ? "Configured" : "Config needed", note: "DC_ADMIN_KV is required before settings can persist.", tone: productState.health?.storage?.ok ? "success" : "warn" },
+            { label: "Storage", value: productState.health?.storage?.ok ? "Configured" : "Config needed", note: "Admin storage is required before settings can persist.", tone: productState.health?.storage?.ok ? "success" : "warn" },
             { label: "Publish", value: publishState.revision ? "Snapshot ready" : "Auto on save", note: "Product, banner, and shop setting saves publish a sanitized storefront snapshot automatically.", tone: publishState.revision ? "success" : "warn" }
           ])
         )}
@@ -5878,6 +5969,9 @@ import {
     const issueCount = mediaState.items.filter((item) => mediaCompletenessIssues(item).length).length;
     const featuredCount = mediaState.items.filter((item) => item.heroEmbeddable && !item.galleryOnly).length;
     const rumbleCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble").length;
+    const visibleManualCount = Number(mediaState.storage.visibleManualMediaCount ?? mediaState.items.filter((item) => (item.source === "manual" || item.sourcePlatform === "rumble") && item.visible && !["draft", "hidden", "private"].includes(item.status)).length);
+    const hiddenDraftCount = Number(mediaState.storage.hiddenDraftMediaCount ?? mediaState.items.filter((item) => !item.visible || ["draft", "hidden", "private"].includes(item.status)).length);
+    const purgedScaffoldCount = Number(mediaState.storage.purgedScaffoldCount || 0);
     const rumbleShortCount = mediaState.items.filter((item) => item.sourcePlatform === "rumble" && item.entryType === "short").length;
     const youtubeCount = mediaState.items.filter((item) => item.sourcePlatform === "youtube").length;
     const storageSource = mediaStorageSourceLabel(mediaState.storage.source, mediaState.storage.status);
@@ -5897,7 +5991,9 @@ import {
           "Media",
           "Manage manual Rumble videos and shorts for DanielClancy.net /watch. YouTube rows remain auto-fetched by the public feed and can appear here when imported from public site-data.",
           `<button class="button" type="button" data-media-action="create">Add Rumble Video</button>
+           <button class="button button-secondary" type="button" data-media-action="create-short">Add Rumble Short</button>
            <button class="button button-secondary" type="button" data-media-action="sync-cms">Save / auto-publish</button>
+           <button class="button button-secondary" type="button" data-media-action="purge-scaffold">Purge scaffold rows</button>
            <button class="button button-secondary" type="button" data-media-action="copy-json">Copy JSON</button>
            <button class="button button-secondary" type="button" data-media-action="import-json">Import JSON</button>
            <button class="button button-secondary" type="button" data-media-action="reset">Clear media rows</button>`
@@ -5912,6 +6008,9 @@ import {
             { label: "Data source", value: storageSource, note: mediaState.storage.message || "CMS status pending.", tone: mediaState.storage.status === "connected" ? "success" : "warn", badgeLabel: "CMS" },
             { label: "Total media", value: String(mediaState.items.length), note: "Runtime rows from live CMS/public export only; no scaffold seed rows are rendered.", tone: mediaState.items.length ? "success" : "warn", badgeLabel: "CMS" },
             { label: "Manual Rumble", value: String(rumbleCount), note: "Rumble videos and shorts entered through Admin.", tone: rumbleCount ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "Visible manual", value: String(visibleManualCount), note: "Manual rows currently eligible for public rendering after visibility/date rules.", tone: visibleManualCount ? "success" : "warn", badgeLabel: "CMS" },
+            { label: "Hidden/draft", value: String(hiddenDraftCount), note: "Saved rows retained in CMS but not visible on public /watch.", tone: hiddenDraftCount ? "warn" : "success", badgeLabel: "CMS" },
+            { label: "Purged scaffold", value: String(purgedScaffoldCount), note: purgedScaffoldCount ? "Rejected scaffold/demo/sample media rows removed from the runtime view or KV." : "No rejected scaffold media rows reported in this session.", tone: purgedScaffoldCount ? "success" : "", badgeLabel: "Cleanup" },
             { label: "Rumble shorts", value: String(rumbleShortCount), note: "Gallery-only portrait links; never selected for hero.", tone: rumbleShortCount ? "success" : "warn", badgeLabel: "CMS" },
             { label: "YouTube autofetch", value: String(youtubeCount), note: "Public YouTube feed remains server-fetched outside this CMS.", tone: "warn", badgeLabel: "Feed" },
             { label: "Public revision", value: publicRevision, note: publicUpdatedAt ? `Updated ${formatOperationalTimestamp(publicUpdatedAt)}` : "No public watch-media revision confirmed.", tone: publicRevision !== "None" ? "success" : "warn", badgeLabel: "Export" },
@@ -6335,7 +6434,7 @@ import {
           ${badge(`${visibleCount} visible`, "warn")}
           ${badge(`${mediaState.selected.size} selected`, selectedVisible ? "success" : "warn")}
           ${badge(`${featuredCount} hero eligible`, "warn")}
-          ${badge(mediaState.storage.status === "connected" ? "Admin KV" : "Browser fallback", mediaState.storage.status === "connected" ? "success" : "warn")}
+          ${badge(mediaState.storage.status === "connected" ? "Live CMS" : "CMS unavailable", mediaState.storage.status === "connected" ? "success" : "warn")}
         </div>
       </div>
       <div class="bulk-panel ${mediaState.bulkMode ? "is-open" : ""}">
@@ -7083,10 +7182,11 @@ import {
   }
 
   function field(label, name, value, type = "text", required = false, readOnly = false) {
+    const step = type === "datetime-local" ? ' step="1"' : "";
     return `
       <label class="field">
         <span>${escapeHtml(label)}${required ? " *" : ""}</span>
-        <input class="input" type="${escapeHtml(type)}" name="${escapeHtml(name)}" value="${escapeHtml(value || "")}" ${required ? "required" : ""} ${readOnly ? "readonly" : ""} />
+        <input class="input" type="${escapeHtml(type)}" name="${escapeHtml(name)}" value="${escapeHtml(value || "")}"${step} ${required ? "required" : ""} ${readOnly ? "readonly" : ""} />
       </label>
     `;
   }
@@ -7441,7 +7541,7 @@ import {
         ["Current signed-in role", `${session.account_type || "unknown"} / ${session.admin_level || "none"} from ${session.roleSource || "pending"}`],
         ["Manual master admins", "Env-backed, root-authoritative, locked, and not removable or downgradeable in the UI"],
         ["OAuth users", "Registered as regular accounts unless a master admin promotes them"],
-        ["Durable account store", "DC_ADMIN_KV key accounts:registry stores role/status/notes; no passwords or OAuth tokens"],
+        ["Durable account store", "Admin storage key accounts:registry stores role/status/notes; no passwords or OAuth tokens"],
         ["Turnstile", "Auth gate login/signup and OAuth start flows remain Turnstile-protected"],
         ["Alert ingest secret", "DANIELCLANCY_ALERT_INGEST_SECRET is a shared generated secret; Settings never displays the value"]
       ])}
@@ -7472,7 +7572,7 @@ import {
             </div>
             <div class="card">
               <h3>Storage and security</h3>
-              <p class="muted">DC_ADMIN_KV stores CMS rows and account roles. Turnstile protects auth actions. Secrets stay server-only.</p>
+              <p class="muted">Admin storage stores CMS rows and account roles. Turnstile protects auth actions. Secrets stay server-only.</p>
             </div>
           </div>
         </section>
@@ -7482,9 +7582,9 @@ import {
           "Production CMS persistence depends on Cloudflare Pages Functions and KV.",
           descriptionRows([
             ["CMS API", "Projects, Media, and Alerts call /api/admin/cms/<collection> when an admin session is available"],
-            ["KV binding", "DC_ADMIN_KV is required for production persistence"],
+            ["KV binding", "Admin storage is required for production persistence"],
             ["Fallback", "localStorage fallback is browser-local only and remains available for static/dev views"],
-            ["Account roles", "DC_ADMIN_KV key accounts:registry stores durable account roles; OAuth users are not auto-promoted"]
+            ["Account roles", "Admin storage key accounts:registry stores durable account roles; OAuth users are not auto-promoted"]
           ])
         )}
 
@@ -7523,7 +7623,7 @@ import {
             ["Runtime requirement", "No request-time Node runtime"],
             ["Secrets", "Manual admin passwords stay in Cloudflare Pages Function env vars only"],
             ["Cloudflare Pages", "Functions auth, account registry, status, and CMS endpoints added"],
-            ["Admin CMS storage", "DC_ADMIN_KV required for production Projects, Media, and Alerts persistence"],
+            ["Admin CMS storage", "Admin storage required for production Projects, Media, and Alerts persistence"],
             ["Account registry", "accounts:registry is the durable KV key for known OAuth accounts and role/status notes"],
             ["Alert ingest secret", "Generate DANIELCLANCY_ALERT_INGEST_SECRET with node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\" and reuse the same value only in server/runtime sender environments"],
             ["DNS / live deployment", "Hosted Cloudflare bindings still need live environment confirmation"]
@@ -8435,6 +8535,9 @@ import {
     if (mediaAction === "create") {
       mediaState.modal = { mode: "create", item: emptyMediaItem() };
       renderMedia();
+    } else if (mediaAction === "create-short") {
+      mediaState.modal = { mode: "create", item: normalizeMediaItem({ ...emptyMediaItem(), type: "short", entryType: "short", galleryOnly: true, aspect: "portrait", heroEmbeddable: false }) };
+      renderMedia();
     } else if (mediaAction === "resolve-rumble") {
       resolveRumbleMedia(target);
     } else if (mediaAction === "upload-thumbnail") {
@@ -8475,6 +8578,8 @@ import {
       importMediaJson();
     } else if (mediaAction === "reset") {
       resetMedia();
+    } else if (mediaAction === "purge-scaffold") {
+      purgeScaffoldMedia();
     } else if (mediaAction === "sync-cms") {
       persistCmsCollection("media", true, true);
     }
@@ -9131,6 +9236,17 @@ import {
     const originalId = formValue(form, "originalId");
     const existingItem = mediaState.items.find((item) => item.id === originalId);
     const now = new Date().toISOString();
+    const publishedAtDate = isoDateFromDateTimeLocal(formValue(form, "publishedAt"));
+    const sortDateDate = isoDateFromDateTimeLocal(formValue(form, "sortDate"));
+    if (!publishedAtDate.ok || !sortDateDate.ok) {
+      mediaState.message = "Published date and sort date must be valid date/time values before saving.";
+      renderMedia();
+      return;
+    }
+    const enteredAt = existingItem?.enteredAt || now;
+    const createdAt = existingItem?.createdAt || now;
+    const publishedAt = publishedAtDate.value;
+    const sortDate = sortDateDate.value || publishedAt || existingItem?.sortDate || enteredAt || now;
     const saved = normalizeMediaItem({
       ...(existingItem || {}),
       id: slug,
@@ -9143,8 +9259,9 @@ import {
       platform: formValue(form, "platform"),
       sourcePlatform: formValue(form, "platform"),
       source: formValue(form, "platform") === "youtube" ? "autofetch" : "manual",
-      publishedAt: formValue(form, "publishedAt"),
-      sortDate: formValue(form, "sortDate"),
+      publishedAt,
+      sortDate,
+      publishedAtOverride: "",
       featured: Boolean(form.querySelector("[name='featured']")?.checked),
       manualHeroEligible: Boolean(form.querySelector("[name='featured']")?.checked),
       galleryOnly: Boolean(form.querySelector("[name='galleryOnly']")?.checked) || formValue(form, "type") === "short",
@@ -9165,8 +9282,8 @@ import {
       descriptionOverride: formValue(form, "descriptionOverride"),
       tags: textareaArray(formValue(form, "tags")),
       internalNotes: formValue(form, "internalNotes"),
-      enteredAt: existingItem?.enteredAt || now,
-      createdAt: existingItem?.createdAt || now,
+      enteredAt,
+      createdAt,
       updatedAt: now
     });
 
@@ -9215,6 +9332,7 @@ import {
       source: nextPlatform === "youtube" ? "autofetch" : "manual",
       publishedAt: formValue(form, "publishedAt") || base.publishedAt,
       sortDate: formValue(form, "sortDate") || base.sortDate,
+      publishedAtOverride: "",
       featured: form.querySelector("[name='featured']")?.checked ?? base.featured,
       manualHeroEligible: form.querySelector("[name='featured']")?.checked ?? base.manualHeroEligible,
       galleryOnly: (form.querySelector("[name='galleryOnly']")?.checked ?? base.galleryOnly) || nextType === "short",
@@ -9285,6 +9403,9 @@ import {
           title: formValue(form, "title") || resolved.title || current.title,
           description: formValue(form, "description") || resolved.description || current.description,
           summary: formValue(form, "summary") || resolved.description || current.summary,
+          publishedAt: formValue(form, "publishedAt") || current.publishedAt,
+          sortDate: formValue(form, "sortDate") || current.sortDate,
+          publishedAtOverride: "",
           thumbnailUrl: formValue(form, "thumbnailPath") || resolved.thumbnailUrl || current.thumbnailUrl,
           thumbnailPath: formValue(form, "thumbnailPath") || resolved.thumbnailUrl || current.thumbnailPath,
           sourceUrl: resolved.sourceUrl || formValue(form, "sourceUrl") || current.sourceUrl,
@@ -9700,24 +9821,26 @@ import {
 
     try {
       const parsed = JSON.parse(value);
-      if (!Array.isArray(parsed)) {
-        throw new Error("Expected a JSON array.");
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : null;
+      if (!rows) {
+        throw new Error("Expected a JSON array or wrapper with an items array.");
       }
 
-      const normalized = parsed.map(normalizeMediaItem);
+      const cleaned = cleanMediaItems(rows);
+      const normalized = cleaned.items;
       const ids = new Set(normalized.map((item) => item.id));
       if (ids.size !== normalized.length) {
         throw new Error("Media slug/id values must be unique.");
       }
 
-      if (!window.confirm(`Import ${normalized.length} watch media row(s) into the Media table?`)) {
+      if (!window.confirm(`Import ${normalized.length} watch media row(s) into the Media table?${cleaned.purgedCount ? ` ${cleaned.purgedCount} rejected scaffold row(s) will be discarded.` : ""}`)) {
         return;
       }
 
       mediaState.items = normalized;
       mediaState.selected.clear();
       persistMediaItems();
-      mediaState.message = "Imported watch media JSON.";
+      mediaState.message = cleaned.purgedCount ? `Imported watch media JSON and discarded ${cleaned.purgedCount} rejected scaffold row(s).` : "Imported watch media JSON.";
       renderMedia();
     } catch (error) {
       mediaState.message = `Import failed: ${error.message}`;
@@ -9794,6 +9917,54 @@ import {
     mediaState.selected.clear();
     persistMediaItems();
     mediaState.message = "Watch Media CMS rows cleared locally. Save / auto-publish to persist an empty CMS collection.";
+    renderMedia();
+  }
+
+  async function purgeScaffoldMedia() {
+    markCmsStorage("media", "saving", "Purging rejected scaffold media rows from Admin KV...");
+    renderMedia();
+    try {
+      const response = await fetch(cmsEndpoint("media"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ action: "purge_scaffold_rows" })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.ok) {
+        const error = payload?.error || `http_${response.status}`;
+        markCmsStorage("media", error === "storage_not_configured" ? "not-configured" : "fallback", storageFallbackMessage(error, "media"), {
+          source: ["unauthenticated", "admin_required"].includes(error) ? "auth_required" : "unavailable"
+        });
+        mediaState.message = payload?.message || "Scaffold media purge could not run.";
+        renderMedia();
+        return;
+      }
+
+      if (Array.isArray(payload.items)) {
+        const cleaned = cleanMediaItems(payload.items);
+        mediaState.items = cleaned.items;
+        window.localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(mediaState.items, null, 2));
+      }
+      markCmsStorage("media", "connected", payload.meta?.message || "Scaffold media purge completed.", {
+        source: payload.source || "kv",
+        lastSaved: payload.meta?.updatedAt || new Date().toISOString(),
+        autopublished: Boolean(payload.publish?.published || payload.publish?.ok),
+        publicRevision: payload.publish?.revision || mediaState.storage.publicRevision || "",
+        publicUpdatedAt: payload.publish?.publishedAt || payload.meta?.updatedAt || "",
+        manualMediaCount: Number(payload.meta?.manualMediaCount || 0),
+        visibleManualMediaCount: Number(payload.meta?.visibleManualMediaCount || 0),
+        hiddenDraftMediaCount: Number(payload.meta?.hiddenDraftMediaCount || 0),
+        youtubeCount: Number(payload.meta?.youtubeCount || 0),
+        purgedScaffoldCount: Number(payload.meta?.scaffoldPurgedCount || payload.purged || 0)
+      });
+      mediaState.message = payload.purged
+        ? `Purged ${payload.purged} rejected scaffold media row(s) from Admin KV.`
+        : "No rejected scaffold media rows were found in Admin KV.";
+    } catch {
+      markCmsStorage("media", "fallback", storageFallbackMessage("api_unavailable", "media"), { source: "unavailable" });
+      mediaState.message = "Scaffold media purge failed because the Admin API is unavailable.";
+    }
     renderMedia();
   }
 

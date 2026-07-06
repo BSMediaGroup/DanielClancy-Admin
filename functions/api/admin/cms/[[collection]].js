@@ -1,6 +1,7 @@
 import { requireAdmin as resolveAdminSession } from "../../../_shared/admin-accounts.js";
 import { postDanielClancyAlert } from "../../../_shared/alert-sender.js";
 import { publishPublicSiteData } from "../../../_shared/public-site-data.js";
+import { filterScaffoldWatchMediaEntries, normalizeWatchMediaItem, watchMediaSortTime } from "../../../_shared/rumble-watch-media.js";
 import {
   extractClientOnlyIds,
   extractRequiredCompanyIds,
@@ -173,7 +174,7 @@ function corsHeaders(request, env) {
   return {
     "access-control-allow-origin": allowedOrigin(request, env),
     "access-control-allow-credentials": "true",
-    "access-control-allow-methods": "GET,PUT,OPTIONS",
+    "access-control-allow-methods": "GET,PUT,POST,OPTIONS",
     "access-control-allow-headers": "content-type"
   };
 }
@@ -361,7 +362,7 @@ function validateProjectsPayloadSafety(items, baselinePayload, payload) {
   return "";
 }
 
-async function readCollection(request, env, collection) {
+async function readCollection(request, env, collection, session = {}) {
   const binding = env.DC_ADMIN_KV;
   const baselinePayload = collection === "projects" ? await loadProjectsBaseline(request, env) : null;
   const registryBaselines = ["companies", "platforms", "positions"].includes(collection) ? await loadRegistryBaselines(request, env) : null;
@@ -486,18 +487,35 @@ async function readCollection(request, env, collection) {
         }
       };
     }
-    const mediaMeta = collection === "media" ? mediaCollectionMeta(items) : {};
+    let responseItems = items;
+    let mediaMeta = {};
+    if (collection === "media") {
+      const filtered = filterScaffoldWatchMediaEntries(items);
+      const updatedAt = new Date().toISOString();
+      const stored = mediaStoragePayload(filtered.items, wrapper || parsed, updatedAt, { scaffoldPurgedCount: filtered.purgedCount });
+      responseItems = stored.items;
+      let publishResult = null;
+      if (filtered.purgedCount && typeof binding.put === "function") {
+        await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
+        publishResult = await publishPublicSiteData({ request, env }, session);
+      }
+      mediaMeta = mediaCollectionMeta(responseItems, {
+        scaffoldPurgedCount: filtered.purgedCount,
+        cleanupUpdatedAt: filtered.purgedCount ? updatedAt : null,
+        cleanupAutopublished: Boolean(publishResult?.ok)
+      });
+    }
     return {
       ok: true,
       configured: true,
       source: "kv",
       collection,
-      items,
+      items: responseItems,
       meta: {
         storage: "kv",
         binding: "DC_ADMIN_KV",
         key: COLLECTIONS[collection].key,
-        updatedAt: parsed?.updatedAt || null,
+        updatedAt: mediaMeta.cleanupUpdatedAt || parsed?.updatedAt || null,
         ...mediaMeta
       }
     };
@@ -562,11 +580,101 @@ function registryReadResponse(collection, merged, options = {}) {
   };
 }
 
-function mediaCollectionMeta(items = []) {
+const WATCH_MEDIA_DATE_FIELDS = ["publishedAt", "sortDate", "enteredAt", "createdAt", "updatedAt"];
+
+function mediaCollectionMeta(items = [], extra = {}) {
   const rows = Array.isArray(items) ? items : [];
+  const visibleManualRows = rows.filter((item) => (item?.source === "manual" || item?.sourcePlatform === "rumble") && item?.visible !== false && !["draft", "hidden", "private"].includes(String(item?.status || item?.visibility || "").toLowerCase()));
+  const hiddenRows = rows.filter((item) => item?.visible === false || ["draft", "hidden", "private"].includes(String(item?.status || item?.visibility || "").toLowerCase()));
   return {
     manualMediaCount: rows.filter((item) => item?.source === "manual" || item?.sourcePlatform === "rumble").length,
-    youtubeCount: rows.filter((item) => item?.sourcePlatform === "youtube" || item?.platform === "youtube").length
+    visibleManualMediaCount: visibleManualRows.length,
+    hiddenDraftMediaCount: hiddenRows.length,
+    youtubeCount: rows.filter((item) => item?.sourcePlatform === "youtube" || item?.platform === "youtube").length,
+    scaffoldPurgedCount: Number(extra.scaffoldPurgedCount || 0),
+    cleanupUpdatedAt: extra.cleanupUpdatedAt || null,
+    cleanupAutopublished: extra.cleanupAutopublished
+  };
+}
+
+function validateWatchMediaDates(items = []) {
+  for (const row of Array.isArray(items) ? items : []) {
+    for (const field of WATCH_MEDIA_DATE_FIELDS) {
+      const value = row?.[field];
+      if (value === undefined || value === null || String(value).trim() === "") continue;
+      const parsed = new Date(String(value).trim());
+      if (Number.isNaN(parsed.getTime())) return `${field}_invalid`;
+    }
+  }
+  return "";
+}
+
+function normalizeMediaRowsForStorage(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({ ...item, ...normalizeWatchMediaItem(item) }))
+    .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left));
+}
+
+function mediaStoragePayload(items, wrapper = {}, updatedAt = new Date().toISOString(), cleanup = {}) {
+  return {
+    ...(wrapper && typeof wrapper === "object" && !Array.isArray(wrapper) ? wrapper : {}),
+    collection: "media",
+    items: normalizeMediaRowsForStorage(items),
+    updatedAt,
+    scaffoldPurgedCount: Number(wrapper?.scaffoldPurgedCount || 0) + Number(cleanup.scaffoldPurgedCount || 0),
+    scaffoldPurgedAt: cleanup.scaffoldPurgedCount ? updatedAt : wrapper?.scaffoldPurgedAt || null
+  };
+}
+
+async function cleanupMediaCollection(context, session, options = {}) {
+  const { request, env } = context;
+  const binding = env.DC_ADMIN_KV;
+  if (!binding || typeof binding.get !== "function" || typeof binding.put !== "function") {
+    return {
+      ok: false,
+      status: 503,
+      error: "storage_not_configured",
+      message: "DC_ADMIN_KV is required to purge persisted Media rows.",
+      items: []
+    };
+  }
+
+  const raw = await binding.get(COLLECTIONS.media.key);
+  const parsed = raw ? JSON.parse(raw) : { collection: "media", items: [] };
+  const { items, wrapper } = normalizeStoredCollection(parsed);
+  const filtered = filterScaffoldWatchMediaEntries(items);
+  const updatedAt = new Date().toISOString();
+  const stored = mediaStoragePayload(filtered.items, wrapper || parsed, updatedAt, { scaffoldPurgedCount: filtered.purgedCount });
+  const responseItems = stored.items;
+  let publishResult = null;
+
+  if (filtered.purgedCount || options.forceWrite) {
+    await binding.put(COLLECTIONS.media.key, JSON.stringify(stored, null, 2));
+    publishResult = await publishPublicSiteData(context, session);
+  }
+
+  return {
+    ok: true,
+    configured: true,
+    storageConfigured: true,
+    source: "kv",
+    collection: "media",
+    rows: responseItems,
+    items: responseItems,
+    purged: filtered.purgedCount,
+    publish: publishResult || undefined,
+    meta: {
+      storage: "kv",
+      binding: "DC_ADMIN_KV",
+      key: COLLECTIONS.media.key,
+      updatedAt: stored.updatedAt || updatedAt,
+      message: filtered.purgedCount ? `Purged ${filtered.purgedCount} scaffold watch media row(s).` : "No scaffold watch media rows were found.",
+      ...mediaCollectionMeta(responseItems, {
+        scaffoldPurgedCount: filtered.purgedCount,
+        cleanupUpdatedAt: filtered.purgedCount ? updatedAt : null,
+        cleanupAutopublished: Boolean(publishResult?.ok)
+      })
+    }
   };
 }
 
@@ -591,7 +699,19 @@ async function writeCollection(context, collection, session) {
     return json({ ok: false, error: "invalid_json" }, { status: 400 });
   }
 
-  const items = Array.isArray(payload) ? payload : payload?.items;
+  let items = Array.isArray(payload) ? payload : payload?.items;
+  let mediaCleanup = { purgedCount: 0 };
+  if (collection === "media") {
+    if (!Array.isArray(items)) {
+      return json({ ok: false, error: "payload_collection_must_be_array" }, { status: 400 });
+    }
+    const mediaDateError = validateWatchMediaDates(items);
+    if (mediaDateError) {
+      return json({ ok: false, error: mediaDateError, message: "Invalid watch media date field." }, { status: 400 });
+    }
+    mediaCleanup = filterScaffoldWatchMediaEntries(items);
+    items = normalizeMediaRowsForStorage(mediaCleanup.items);
+  }
   const validationError = ["companies", "platforms", "positions"].includes(collection)
     ? validateRegistryWritePayload(collection, payload)
     : validateRows(collection, items);
@@ -652,7 +772,9 @@ async function writeCollection(context, collection, session) {
       excludedRowsCount: merged.meta?.excludedRowsCount || 0
     };
   } else if (collection === "media") {
-    responseMeta = mediaCollectionMeta(items);
+    stored = mediaStoragePayload(items, payload, updatedAt, { scaffoldPurgedCount: mediaCleanup.purgedCount });
+    responseItems = stored.items;
+    responseMeta = mediaCollectionMeta(responseItems, { scaffoldPurgedCount: mediaCleanup.purgedCount });
   }
   await binding.put(COLLECTIONS[collection].key, JSON.stringify(stored, null, 2));
   const publishResult = collection === "media" ? await publishPublicSiteData(context, session) : null;
@@ -734,7 +856,9 @@ export async function onRequest(context) {
       if (admin.response) {
         response = admin.response;
       } else if (request.method === "GET") {
-        response = await readCollection(request, env, collection);
+        response = await readCollection(request, env, collection, admin.session);
+      } else if (request.method === "POST" && collection === "media") {
+        response = await cleanupMediaCollection(context, admin.session, { forceWrite: true });
       } else if (request.method === "PUT") {
         response = await writeCollection(context, collection, admin.session);
       } else {

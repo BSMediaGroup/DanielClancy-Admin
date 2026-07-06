@@ -109,7 +109,7 @@ test("country-only rows are country precision and popups include flag metadata",
   assert.ok(mapModule.includes("coordinateSource"));
   assert.ok(mapModule.includes("plottedPrecision"));
   assert.ok(mapModule.includes("Country fallback location"));
-  assert.ok(mapModule.includes("Flag path"));
+  assert.ok(mapModule.includes("flagPath"));
   assert.ok(mapModule.includes("buildPopupHtml"));
 });
 
@@ -127,7 +127,7 @@ test("analytics UI exposes diagnostics and dynamic sidebar API status", async ()
   const index = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.ok(index.includes('id="sidebar-status-note"'));
   assert.ok(app.includes("function updateSidebarApiStatus()"));
-  assert.ok(app.includes("Live Admin API connected. DC_ADMIN_KV/analytics status available."));
+  assert.ok(app.includes("Live Admin API connected. Admin storage/analytics status available."));
   assert.ok(app.includes("Static/local fallback. No live admin API connected."));
   assert.ok(app.includes("Source breakdown"));
   assert.ok(app.includes("Stale analytics rows ignored."));

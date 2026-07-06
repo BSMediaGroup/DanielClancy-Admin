@@ -5,7 +5,7 @@ import {
   reconcilePositionsCollection,
   reconcileRegistryCollection
 } from "./registry-reconciliation.js";
-import { sanitizeWatchMediaItem } from "./rumble-watch-media.js";
+import { filterScaffoldWatchMediaEntries, sanitizeWatchMediaItem, watchMediaSortTime } from "./rumble-watch-media.js";
 
 const COLLECTIONS = {
   projects: { key: "cms:projects" },
@@ -91,7 +91,9 @@ export async function buildPublicSiteData(context, options = {}) {
     (id) => companyNameById(companiesResult.items, id)
   );
   const projectsResult = mergeProjectsBaselineWithKv(projectsPayload, projectsStored.items, projectsStored.wrapper);
-  const publicWatchMedia = mediaStored.items
+  const mediaFilter = filterScaffoldWatchMediaEntries(mediaStored.items);
+  if (mediaFilter.purgedCount) warnings.push(`watch_media_scaffold_rows_filtered_${mediaFilter.purgedCount}`);
+  const publicWatchMedia = mediaFilter.items
     .map((item) => sanitizeWatchMediaItem(item))
     .filter(Boolean)
     .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left));
@@ -127,6 +129,7 @@ export async function buildPublicSiteData(context, options = {}) {
       watchMediaCount: publicWatchMedia.length,
       manualMediaCount: publicWatchMedia.filter((item) => item.source === "manual").length,
       youtubeCount: publicWatchMedia.filter((item) => item.sourcePlatform === "youtube").length,
+      scaffoldMediaPurgedCount: mediaFilter.purgedCount,
       productOverrideCount: publicProductOverrides.length,
       bannerRegistryCount: Array.isArray(publicProductSettings.banners) ? publicProductSettings.banners.length : 0,
       assetCatalogGeneratedAt: assetCatalog?.metadata?.generatedAt || null
@@ -135,11 +138,6 @@ export async function buildPublicSiteData(context, options = {}) {
   };
   payload.revision = options.revision || await publicSiteDataRevision(payload);
   return payload;
-}
-
-function watchMediaSortTime(item = {}) {
-  const parsed = new Date(item.sortDate || item.publishedAt || item.enteredAt || item.createdAt || 0).getTime();
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export async function readPublishedSiteData(context) {
@@ -158,9 +156,10 @@ export async function readPublishedSiteData(context) {
     if (payload?.schemaVersion !== "danielclancy-public-site-data.v1" || payload?.ok !== true) {
       return { payload: null, meta: null, warning: "published_snapshot_invalid_fallback_used" };
     }
+    const filtered = filterPublishedWatchMedia(payload);
     return {
       payload: {
-        ...payload,
+        ...filtered.payload,
         source: "published_kv_snapshot",
         revision: String(payload.revision || meta?.revision || ""),
         publishedAt: payload.publishedAt || meta?.publishedAt || null
@@ -171,6 +170,37 @@ export async function readPublishedSiteData(context) {
   } catch {
     return { payload: null, meta: null, warning: "published_snapshot_read_failed_fallback_used" };
   }
+}
+
+function filterPublishedWatchMedia(payload = {}) {
+  const collections = payload.collections || {};
+  const rawWatchMedia = Array.isArray(collections.watchMedia) ? collections.watchMedia : [];
+  const filtered = filterScaffoldWatchMediaEntries(rawWatchMedia);
+  const watchMedia = filtered.items
+    .map((item) => sanitizeWatchMediaItem(item))
+    .filter(Boolean)
+    .sort((left, right) => watchMediaSortTime(right) - watchMediaSortTime(left));
+  const warnings = filtered.purgedCount
+    ? Array.from(new Set([...(payload.warnings || []), `published_watch_media_scaffold_rows_filtered_${filtered.purgedCount}`]))
+    : payload.warnings || [];
+  return {
+    payload: {
+      ...payload,
+      warnings,
+      collections: {
+        ...collections,
+        watchMedia
+      },
+      meta: {
+        ...(payload.meta || {}),
+        watchMediaCount: watchMedia.length,
+        manualMediaCount: watchMedia.filter((item) => item.source === "manual").length,
+        youtubeCount: watchMedia.filter((item) => item.sourcePlatform === "youtube").length,
+        scaffoldMediaPurgedCount: Number(payload.meta?.scaffoldMediaPurgedCount || 0) + filtered.purgedCount
+      }
+    },
+    purgedCount: filtered.purgedCount
+  };
 }
 
 export async function buildPublicSiteDataResponse(context) {

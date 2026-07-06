@@ -3,6 +3,12 @@
 ## Watch Media Hard Repair Follow-Up
 
 ### Technical notes
+- Added a shared `isScaffoldWatchMediaEntry()` purge rule for Watch Media rows whose `id`, `slug`, or `title` contains rejected scaffold/demo/sample/placeholder terms, including the exact legacy rows `latest-youtube-release-scaffold`, `scheduled-livestream-scaffold`, and `archived-replay-scaffold`.
+- Authenticated `GET /api/admin/cms/media`, `PUT /api/admin/cms/media`, and the protected `POST /api/admin/cms/media` cleanup action now filter scaffold rows before returning or saving data; GET/POST cleanup rewrites `cms:media` without rejected rows and republishes the sanitized public site-data snapshot when `DC_ADMIN_KV` is available.
+- Public site-data export and already-published KV snapshots filter rejected watch media before returning `collections.watchMedia`, and export metadata reports `scaffoldMediaPurgedCount`.
+- Admin `#/media` now filters old `danielclancy-admin.media.scaffold.v1` localStorage rows, rewrites that known media key with only accepted rows, and exposes a visible `Purge scaffold rows` action.
+- The Media loader now keeps real CMS rows newest-first and reports visible manual media, hidden/draft media, purged scaffold count, public revision, and last auto-publish state.
+- Media saves validate date fields, convert browser `datetime-local` values to ISO strings, keep edited `publishedAt` ahead of stale `publishedAtOverride`, and persist `sortDate`, `enteredAt`, `createdAt`, and `updatedAt` consistently.
 - Removed the runtime Media page dependency on scaffold/sample seed rows: `loadMediaItems()` now starts empty unless real saved media exists, `assets/js/scaffold-data.js` has an empty `media` seed, and unavailable/auth/KV states clear media rows instead of rendering fake placeholders.
 - Replaced the Media reset seed path with a clear-empty action so rejected sample media cannot be restored from the UI.
 - Preserved Add Rumble Video/Short, metadata resolve, thumbnail upload, JSON import/copy, bulk editing, and save/auto-publish controls.
@@ -10,8 +16,11 @@
 - Media row saves preserve `enteredAt` and `createdAt`, update `updatedAt`, and keep `publishedAt` / `sortDate` editable through browser-compatible `datetime-local` values.
 - Public watch-media export now includes `createdAt`, sorts visible entries newest-first by `sortDate`, `publishedAt`, `enteredAt`, then `createdAt`, and reports `manualMediaCount` / `youtubeCount` metadata.
 - Rumble shorts are normalized as portrait gallery-only rows with `heroEmbeddable: false` even if a bad stored flag says otherwise; Rumble videos derive hero eligibility from safe embed URLs.
+- Browser-visible Admin status text now uses generic storage labels for server-side KV bindings so client assets do not expose binding names while server docs/tests still verify the real environment contract.
 
 ### Human-readable notes
+- The rejected scaffold rows are removed instead of hidden: Latest YouTube release scaffold, Scheduled livestream scaffold, and Archived replay scaffold.
+- If old scaffold rows still exist in Admin KV, opening `#/media` or pressing `Purge scaffold rows` removes them from persisted Media storage and keeps them out of the public export.
 - Admin `#/media` now shows truthful empty/config/auth states instead of demo media.
 - Saved manual Rumble videos and shorts are the only rows Admin contributes to public `/watch`.
 - Newest dated embeddable Rumble videos can become the public hero; Rumble shorts remain gallery-only.
@@ -19,6 +28,7 @@
 ### Known limitations
 - Live save/refresh proof still requires the deployed Pages Functions environment with `DC_ADMIN_KV`; static preview can only show the truthful unavailable/empty state.
 - Rumble metadata resolution can still fail if Rumble blocks server-side fetches, so manual overrides remain supported.
+- The public `/watch` YouTube feed count and hero behavior are owned by the DanielClancy public repo; Admin verifies the sanitized `watchMedia` export and revision.
 
 ## Watch Media CMS, Rumble Resolver, And Public Autopublish Milestone
 

@@ -1,4 +1,50 @@
 const RUMBLE_PUB_CODE = "vmzw3";
+const SCAFFOLD_WATCH_MEDIA_EXACT = new Set([
+  "latest-youtube-release-scaffold",
+  "latest youtube release scaffold",
+  "scheduled-livestream-scaffold",
+  "scheduled livestream scaffold",
+  "archived-replay-scaffold",
+  "archived replay scaffold"
+]);
+const SCAFFOLD_WATCH_MEDIA_TERMS = [
+  "scaffold",
+  "demo",
+  "sample",
+  "placeholder",
+  "seeded watch media",
+  "local placeholder"
+];
+
+export function isScaffoldWatchMediaEntry(raw = {}) {
+  const candidates = [raw?.id, raw?.slug, raw?.title]
+    .map((value) => cleanText(value, 300).toLowerCase())
+    .filter(Boolean);
+  if (!candidates.length) return false;
+  return candidates.some((value) => SCAFFOLD_WATCH_MEDIA_EXACT.has(value) || SCAFFOLD_WATCH_MEDIA_TERMS.some((term) => value.includes(term)));
+}
+
+export function filterScaffoldWatchMediaEntries(items = []) {
+  const kept = [];
+  const rejected = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    if (isScaffoldWatchMediaEntry(item)) {
+      rejected.push(item);
+    } else {
+      kept.push(item);
+    }
+  }
+  return {
+    items: kept,
+    rejected,
+    purgedCount: rejected.length
+  };
+}
+
+export function watchMediaSortTime(item = {}) {
+  const parsed = new Date(item.sortDate || item.publishedAt || item.enteredAt || item.createdAt || item.updatedAt || 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export function parseRumbleInput(value = "") {
   const input = cleanText(value, 2000);
@@ -87,8 +133,8 @@ export function normalizeWatchMediaItem(raw = {}) {
   const embedUrl = safeEmbedUrl(raw.embedUrl);
   const heroEmbeddable = galleryOnly ? false : Boolean(embedUrl);
   const enteredAt = cleanIsoish(raw.enteredAt || raw.createdAt || raw.updatedAt) || new Date().toISOString();
-  const publishedAt = cleanIsoish(raw.publishedAtOverride || raw.publishedAt || raw.date) || "";
-  const sortDate = cleanIsoish(raw.sortDate || raw.publishedAtOverride || raw.publishedAt || raw.enteredAt || raw.createdAt || raw.updatedAt) || enteredAt;
+  const publishedAt = cleanIsoish(raw.publishedAt || raw.publishedAtOverride || raw.date) || "";
+  const sortDate = cleanIsoish(raw.sortDate || raw.publishedAt || raw.publishedAtOverride || raw.enteredAt || raw.createdAt || raw.updatedAt) || enteredAt;
   const title = cleanText(raw.titleOverride || raw.title || "Untitled media", 240);
   const id = cleanSlug(raw.id || raw.slug || `${sourcePlatform}-${entryType}-${title}-${sortDate}`) || `media-${Date.now()}`;
   const sourceUrl = safeHttpsUrl(raw.sourceUrl || raw.videoUrl || raw.url || "");
@@ -141,6 +187,7 @@ export function normalizeWatchMediaItem(raw = {}) {
 }
 
 export function sanitizeWatchMediaItem(raw = {}) {
+  if (isScaffoldWatchMediaEntry(raw)) return null;
   const item = normalizeWatchMediaItem(raw);
   if (!item.visible) return null;
   if (!item.title || (!item.sourceUrl && !item.externalUrl && !item.embedUrl)) return null;
