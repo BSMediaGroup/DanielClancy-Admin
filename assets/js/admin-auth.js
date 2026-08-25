@@ -152,7 +152,7 @@
     const signup = authUiState.mode === "signup";
     gate.innerHTML = `
       <section class="auth-card" aria-labelledby="admin-auth-title">
-        <span class="auth-brand-mark" aria-hidden="true"><img src="./assets/logos/logo.webp" alt="" /></span>
+        <span class="auth-brand-mark" aria-hidden="true"><img src="./assets/logos/logo-danielclancy.svg" alt="" /></span>
         <div class="auth-card-header">
           <span class="section-kicker">Restricted dashboard</span>
           <h1 id="admin-auth-title">${denied ? "Admin access required" : signup ? "Create account" : "Sign in"}</h1>

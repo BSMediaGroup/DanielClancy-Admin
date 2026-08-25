@@ -1,5 +1,50 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Professional Admin Typography And Theme Milestone
+
+### Technical notes
+- Adopted the completed public professional typography roles using the byte-matching local Source Sans 3 variable display asset, Blinker Regular/SemiBold/Bold UI assets, and SUSE Mono variable technical asset with `font-display: swap` and synthesis disabled.
+- Replaced the active Recharge/Sui Generis dashboard presentation with semantic display, UI/body, and technical font mappings while retaining the older asset files for preservation and compatibility.
+- Added a semantic dark Admin token layer for page, elevated, inset, panel, card, navigation, input, overlay, text, border, accent, interaction, status, focus, shadow, type, spacing, radius, and control-height values derived from the public graphite/paper professional system.
+- Refined the application shell, sidebar states, primary navigation, top bar, page headers, restrained section dividers, footer/version area, cards, panels, action hierarchy, forms, validation/read-only/disabled states, tables, horizontal table wrappers, record-management controls, upload/asset surfaces, status badges, empty states, authentication surfaces, menus, dialogs, modals, and analytics overlays.
+- Replaced the sidebar and authentication presentation with the final public-site Daniel Clancy symbol and a compact single-line `DANIEL CLANCY` lockup plus `ADMIN` system label; no new logo was invented.
+- Reduced the expanded sidebar from 288px to 256px to recover content space while preserving the existing 72px collapsed mode and every navigation label.
+- Removed the redundant `Professional Portfolio Administration` top-bar label so the compact shell presents only the active route title.
+- Added scoped cache-busting query tokens to the changed Admin stylesheet and auth presentation script after browser validation proved the unchanged static asset URLs could retain the superseded theme in cache.
+- Reconciled legacy purple/neon Products route accents with the shared restrained Admin accent system while preserving banner-theme preview chips and every existing Products workflow.
+- Kept the existing single intended dark theme and documented that limitation rather than inventing an unverified light-theme architecture.
+- Added compact/tablet/phone refinements, deliberate table scrolling, viewport-bounded modals, reduced-motion handling, forced-colour handling, global visible focus treatment, and native checkbox/radio accent mapping.
+- Standardized every document, content, navigation, table, modal, popover, auth, and analytics scrollbar on narrow native rails with semantic dark/light track and thumb tokens.
+- Preserved all existing hash routes, auth behavior, API endpoints, Cloudflare Pages Functions, KV/storage boundaries, publishing/autosave behavior, form payloads, media/project/livestream data, and route destinations.
+
+### Human-readable notes
+- Admin now visually belongs to the redesigned DanielClancy.net professional website family while remaining a compact, information-dense control surface.
+- Page and section hierarchy is clearer, typography is more consistent, and long editors/forms remain efficient to scan.
+- Record-management tables, status feedback, upload controls, and modal workflows now share one coherent presentation language.
+- Existing workflows and data behavior are unchanged.
+
+### Files / Areas Changed
+- `assets/css/admin.css`
+- `assets/js/admin-auth.js`
+- `assets/logos/logo-danielclancy.svg` (new deployment-local copy of the public production symbol)
+- `index.html`
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+- `node --check assets/js/admin-auth.js` and `node --check assets/js/admin-app.js` passed.
+- `npm run manifests:check` found valid counts (259 assets, 71 thumbnails, 182 portfolio images, 6 documents, 16 projects, 9 companies, 6 platforms, and 9 positions) with no warnings, but correctly exited nonzero because the pre-existing `assets/data/public-asset-catalog.json` would be regenerated from current public-file timestamps. This presentation milestone does not rewrite that unrelated generated catalog.
+- `npm run test:registries` passed all 25 registry tests; the complete `node --test` run passed all 119 repository tests.
+- `git diff --check` passed.
+- A real Edge browser rendered and audited every registered Admin route plus the intentionally disabled direct `#/alerts` route at 1920x1080, 1440x900, 1280x720, 1024x768, 768x1024, and 390x844 without document, body, or main-content overflow.
+- Browser-computed typography resolved to Blinker for body/UI, Source Sans 3 for headings, and SUSE Mono for technical metadata. The header/auth symbol filter, one-line brand lockup, 256px expanded sidebar, removed top-bar label, and 5px semantic scrollbars were verified in the rendered UI.
+- The project creation modal was verified at 390x844: it remains inside the viewport, scrolls internally, and closes with Escape. Shared `:focus-visible`, reduced-motion, and forced-colour rules were also checked in the final stylesheet.
+- The public DanielClancy repository completed its production build and remained clean/read-only. No deployment or live API acceptance is implied by these local/static checks.
+
+### Risks / Follow-Ups
+- The Admin currently supports only its established dark theme; a light-theme toggle was intentionally not invented without existing architectural evidence.
+- Local static browser validation reports expected 404 responses for Pages Function API routes and 501 responses for POST tracking on the read-only static server; configured KV, auth-provider, upload, publish, Printful, and live analytics acceptance still requires the deployed environment.
+
 ## Admin Livestream Configuration Milestone
 
 ### Technical notes

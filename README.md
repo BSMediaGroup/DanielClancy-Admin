@@ -21,6 +21,10 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 `_redirects` keeps direct dashboard routes on the SPA entrypoint. The auth endpoints under `functions/api/auth/[[path]].js`, account endpoints under `functions/api/admin/accounts/[[path]].js`, operational status endpoint under `functions/api/admin/status.js`, CMS endpoints under `functions/api/admin/cms/[[collection]].js`, Products endpoints under `functions/api/admin/products/[[path]].js`, Customers endpoints under `functions/api/admin/customers/[[id]].js`, Merch Orders endpoint under `functions/api/admin/merch-orders.js`, and public publish endpoint under `functions/api/admin/publish/site-data.js` are Cloudflare Pages-compatible and use Web Crypto/HMAC signing for admin session checks, but this repo does not claim that DNS, the Cloudflare Pages project, provider OAuth apps, production env vars, or the KV binding have been configured live.
 
+## Professional Presentation System
+
+The Admin shell adapts the production DanielClancy.net professional design system for a compact operational dashboard. It uses the same locally hosted Source Sans 3 display face, Blinker UI/body face, SUSE Mono technical face, graphite foundations, restrained warm/cool accents, precise dividers, and Daniel Clancy symbol as the public professional routes. The Admin currently has one intentional dark theme; no unsupported light-theme workflow is claimed. Shared semantic tokens in `assets/css/admin.css` cover shell, navigation, forms, tables, overlays, feedback states, responsive behavior, reduced motion, and forced-colour support without changing the existing hash routes or CMS/auth workflows.
+
 ## Auth Foundation
 
 Implemented endpoints:
@@ -418,6 +422,8 @@ DanielClancy-Admin/
 │   ├── fonts/
 │   │   ├── Recharge-Bold.otf
 │   │   ├── SuiGeneris-Regular.otf
+│   │   ├── body/
+│   │   ├── heading/
 │   │   ├── mono/
 │   │   └── other/
 │   ├── icons/
@@ -439,6 +445,7 @@ DanielClancy-Admin/
 │   │       └── maplibre-gl.js
 │   └── logos/
 │       ├── company-*.svg
+│       ├── logo-danielclancy.svg
 │       ├── software-*.svg
 │       └── logo*.png/webp
 ├── functions/
