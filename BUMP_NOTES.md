@@ -1,5 +1,31 @@
 # CURRENT VER= v1.0 / PENDING VER= v1.0.1
 
+## Cloudflare Pages Git Build Repair
+
+### Technical notes
+- Added a deterministic `npm run build` pipeline that creates a dedicated `dist` asset directory instead of asking Cloudflare Pages to validate the repository root.
+- The build copies the Admin shell and runtime assets, promotes `public/` contents to their correct public URL roots, retains `_redirects`, and deliberately excludes `.git`, environment files, Functions source, tests, tools, and non-runtime font source archives from the static artifact.
+- Pages Functions remain in the repository-root `functions/` directory and continue to compile separately through Cloudflare Pages.
+- Added `dist/` to `.gitignore`; no generated deployment output is committed.
+
+### Human-readable notes
+- Automatic Git deployments no longer need to scan the repository clone and its Git metadata as website assets, preventing the asset-validation timeout that blocked commit `08e655f`.
+
+### Files / Areas Changed
+- `.gitignore`
+- `package.json`
+- `tools/build-pages.mjs` (new)
+- `README.md`
+- `BUMP_NOTES.md`
+
+### Testing / Validation Notes
+- `npm run build` passed and produced 1,098 deployable files (191,523,552 bytes) in ignored `dist/`; the build aborts if required runtime paths are missing or `.git`, `.env`, Functions source, tests, or tools leak into the static artifact.
+- `node --check tools/build-pages.mjs`, the complete 119-test repository suite, and `git diff --check` passed.
+- Cloudflare Pages project `danielclancy-admin` now records a `dist` destination and a compatibility build command that uses `npm run build` when present and constructs the same bounded artifact for already-pushed commits that predate this script.
+- Failed Git deployment `b67f3299-e2b1-43a2-908f-dd51a984205a` was retried as production deployment `39c89825-f5e6-4553-b748-a9495f5e1873`; queued, initialize, clone, build, and deploy stages all completed successfully. The build took 10.5 seconds and deploy took 10.4 seconds.
+- Deployment `39c89825-f5e6-4553-b748-a9495f5e1873` became both latest and canonical, with `https://admin.danielclancy.net` attached as its production alias.
+- The immutable deployment and custom domain returned the cache-busted professional Admin shell. Representative promoted `/media/portfolio/...` WebP and `/docs/...` PDF paths returned HTTP 200 with correct content types.
+
 ## Professional Admin Typography And Theme Milestone
 
 ### Technical notes

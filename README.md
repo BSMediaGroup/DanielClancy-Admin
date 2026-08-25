@@ -25,6 +25,10 @@ When Pages Functions are unavailable in local static/file mode, the login gate e
 
 The Admin shell adapts the production DanielClancy.net professional design system for a compact operational dashboard. It uses the same locally hosted Source Sans 3 display face, Blinker UI/body face, SUSE Mono technical face, graphite foundations, restrained warm/cool accents, precise dividers, and Daniel Clancy symbol as the public professional routes. The Admin currently has one intentional dark theme; no unsupported light-theme workflow is claimed. Shared semantic tokens in `assets/css/admin.css` cover shell, navigation, forms, tables, overlays, feedback states, responsive behavior, reduced motion, and forced-colour support without changing the existing hash routes or CMS/auth workflows.
 
+## Cloudflare Pages Build
+
+Git-connected production deployments use `npm run build` with `dist` as the build output directory. `tools/build-pages.mjs` creates that directory from the deployable shell/assets only, promotes the contents of `public/` to the public URL root, and excludes repository metadata, Functions source, tests, tools, environment files, and source font archives from static-asset validation. Pages Functions remain in the root `functions/` directory for Cloudflare's separate Functions compilation step.
+
 ## Auth Foundation
 
 Implemented endpoints:
@@ -506,6 +510,7 @@ DanielClancy-Admin/
 │   ├── source-audit-completeness.test.mjs
 │   └── version-consistency.test.mjs
 ├── tools/
+│   ├── build-pages.mjs
 │   └── rebuild-manifests.mjs
 ├── BUMP_NOTES.md
 ├── RELEASE_NOTES_v1.0.md
